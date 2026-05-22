@@ -32,6 +32,7 @@ This document records which agent owns each section of the COURSER project, what
 | 2026-05-22 | Codex | Split the logged-in courses page into a dashboard-library experience that keeps COURSER styling but removes public login/signup prompts from the signed-in course flow | `frontend/src/pages/CoursesPage.tsx`, `frontend/src/pages/CourseDetailPage.tsx`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` |
 | 2026-05-22 | Codex | Added accessible show/hide password controls to the login and signup forms | `frontend/src/components/auth/LoginForm.tsx`, `frontend/src/components/auth/SignupForm.tsx`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` |
 | 2026-05-22 | Codex | Prepared the project for the new `COURSER2.0` GitHub repository, added a README, and recorded that future completed changes should be committed and pushed | `README.md`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` |
+| 2026-05-22 | Codex | Added a free Render deployment blueprint and production same-origin serving so the FastAPI service can host both the API and React app | `render.yaml`, `backend/app/main.py`, `frontend/src/api/client.ts`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` |
 
 ## Current Runtime Status
 | Service | URL | Latest Verification |

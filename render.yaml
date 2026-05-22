@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: courser2
+    runtime: python
+    plan: free
+    repo: https://github.com/Kolo-Michael/COURSER2.0.git
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt && npm ci --prefix frontend && npm run build --prefix frontend
+    preDeployCommand: cd backend && python init_db.py
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
