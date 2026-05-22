@@ -1,0 +1,21 @@
+# COURSER - Project Rules
+
+## Project Context
+- **Project Name:** COURSER AI-Powered Learning Platform
+- **Document Reference:** Always adhere to `SRS.md` for logic, table schemas, and UI requirements.
+- **Tech Stack:** FastAPI (Backend), React + TypeScript (Frontend), Neon PostgreSQL (Database).
+
+## UI/UX Standards (SRS Section 4.3)
+- **Primary Blue:** #2563EB (Tailwind: `blue-600`)
+- **Accent Orange:** #F97316 (Tailwind: `orange-500`)
+- **Icons:** Use Font Awesome strictly.
+- **Components:** Ensure all dashboards (Student, Super Admin) are responsive with a mobile burger menu.
+
+## Backend Standards (SRS Section 5.2)
+- **Security:** Use SHA-256 for password hashing. Implement JWT (30m access, 7d refresh).
+- **Architecture:** Follow the modular structure: `models/`, `schemas/`, `api/`, `services/`.
+- **Database:** Use Async SQLAlchemy 2.0 with the Neon PostgreSQL connection string.
+
+## Reporting
+- Every successful file generation or refactor must be logged in `AGENTS.md`.
+- Cursor frontend ownership has been handed to Codex as of 2026-05-10; Codex should follow these UI/UX standards for frontend work unless reassigned.
