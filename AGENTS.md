@@ -29,6 +29,7 @@
 | 2026-05-22 | Codex | Split logged-in courses into a distinct dashboard-library experience while keeping the COURSER visual design and removing login/signup prompts from the signed-in course flow | `frontend/src/pages/CoursesPage.tsx`, `frontend/src/pages/CourseDetailPage.tsx`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` | Completed |
 | 2026-05-22 | Codex | Added show/hide password controls to login and signup forms | `frontend/src/components/auth/LoginForm.tsx`, `frontend/src/components/auth/SignupForm.tsx`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` | Completed |
 | 2026-05-22 | Codex | Prepared repository handoff for GitHub, added README, and set project push policy for future completed changes | `README.md`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` | Completed |
+| 2026-05-22 | Codex | Added free Render deployment blueprint and production same-origin frontend/API serving | `render.yaml`, `backend/app/main.py`, `frontend/src/api/client.ts`, `AGENTS.md`, `docs/AGENT_ACTIVITY.md` | Completed |
 
 ## Current Instructions
 - **Next Task (Claude):** Review backend startup fixes, wire real database configuration/migrations, validate `backend/app/api/courses.py` against SRS Section 6.2, and complete any missing auth/course API behavior.
