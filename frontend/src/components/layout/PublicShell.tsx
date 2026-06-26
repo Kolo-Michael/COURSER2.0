@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { AnimatedBackground } from '@/components/landing/AnimatedBackground'
 import { SiteFooter } from './SiteFooter'
 import { SiteHeader } from './SiteHeader'
 
@@ -8,7 +9,8 @@ type PublicShellProps = {
 
 export function PublicShell({ children }: PublicShellProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col">
+      <AnimatedBackground />
       <SiteHeader />
       <div className="flex-1">{children}</div>
       <SiteFooter />
