@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
-import { register } from '@/api/auth'
-import { roleDashboards, saveSession } from '@/auth/session'
+import { signup } from '@/api/auth'
+import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 
 export function SignupForm() {
@@ -21,19 +21,28 @@ export function SignupForm() {
     setSubmitting(true)
 
     try {
-      const user = await register({
+      // POST /auth/signup
+      const response = await signup({
         username,
         email,
         password,
         role: 'student',
       })
+
+      // Access + refresh token handling plug in here.
       saveSession({
-        identifier: user.full_name || user.username,
-        email: user.email,
-        fullName: user.full_name,
-        role: user.role,
+        identifier: response.user.full_name || response.user.username,
+        email: response.user.email,
+        fullName: response.user.full_name,
+        role: response.user.role,
+        token: response.access_token,
+        refreshToken: response.refresh_token,
       })
-      navigate(roleDashboards[user.role], { replace: true })
+
+      // Role-based redirect — signup always lands as student for now, but
+      // we still go through dashboardFor so admin/super_admin signups would
+      // route correctly if you enable those in the future.
+      navigate(dashboardFor(response.user.role), { replace: true })
     } catch {
       setError('Could not create this account. Try another email or username.')
     } finally {
@@ -54,7 +63,7 @@ export function SignupForm() {
           autoComplete="username"
           required
           maxLength={50}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
       </div>
       <div>
@@ -67,7 +76,7 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
       </div>
       <div>
@@ -82,12 +91,12 @@ export function SignupForm() {
             autoComplete="new-password"
             required
             minLength={8}
-            className="w-full rounded-lg border border-slate-200 py-2 pl-3 pr-11 text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-11 text-slate-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
           <button
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primary"
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-accent"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             aria-pressed={showPassword}
           >
@@ -106,6 +115,9 @@ export function SignupForm() {
       >
         {submitting ? 'Creating account...' : 'Create account'}
       </button>
+      <p className="text-center text-xs text-slate-500">
+        Hits <code className="rounded bg-slate-100 px-1 py-0.5">/auth/signup</code> when the API is available.
+      </p>
     </form>
   )
 }

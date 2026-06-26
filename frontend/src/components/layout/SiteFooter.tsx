@@ -43,7 +43,7 @@ export function SiteFooter() {
           {/* Brand column */}
           <div className="md:col-span-5">
             <Link to="/" className="inline-flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-white shadow-lg">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shadow-lg">
                 <i className="fa-solid fa-graduation-cap" aria-hidden />
               </span>
               <span className="text-lg font-bold tracking-wide text-white">COURSER</span>

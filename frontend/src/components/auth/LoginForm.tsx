@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { login } from '@/api/auth'
-import { roleDashboards, saveSession } from '@/auth/session'
+import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 
 export function LoginForm() {
@@ -20,15 +20,25 @@ export function LoginForm() {
     setSubmitting(true)
 
     try {
+      // POST /auth/login
       const response = await login(email, password)
+
+      // Access + refresh token handling plug in here.
+      // Access token is used for authenticated requests; refresh token lets
+      // the client silently renew sessions without forcing the user back to
+      // the login screen.
       saveSession({
         identifier: response.user.full_name || response.user.username,
         email: response.user.email,
         fullName: response.user.full_name,
         role: response.user.role,
         token: response.access_token,
+        refreshToken: response.refresh_token,
       })
-      navigate(roleDashboards[response.user.role], { replace: true })
+
+      // Role-based redirect: student → /dashboard, admin → /admin,
+      // super_admin → /super-admin.
+      navigate(dashboardFor(response.user.role), { replace: true })
     } catch {
       setError('Login failed. Check your email and password, then try again.')
     } finally {
@@ -48,7 +58,7 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
       </div>
       <div>
@@ -62,12 +72,12 @@ export function LoginForm() {
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             required
-            className="w-full rounded-lg border border-slate-200 py-2 pl-3 pr-11 text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-11 text-slate-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
           <button
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primary"
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-accent"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             aria-pressed={showPassword}
           >
@@ -83,6 +93,9 @@ export function LoginForm() {
       >
         {submitting ? 'Logging in...' : 'Log in'}
       </button>
+      <p className="text-center text-xs text-slate-500">
+        Hits <code className="rounded bg-slate-100 px-1 py-0.5">/auth/login</code> when the API is available.
+      </p>
     </form>
   )
 }
