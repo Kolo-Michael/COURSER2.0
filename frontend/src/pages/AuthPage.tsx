@@ -54,40 +54,18 @@ export function AuthPage() {
             </div>
             <div className="rounded-xl border border-slate-200/70 bg-white/70 p-4 backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-                <i className="fa-solid fa-sliders" aria-hidden />
+                <i className="fa-solid fa-compass" aria-hidden />
               </div>
-              <p className="mt-3 text-sm font-semibold text-slate-900">Admins</p>
-              <p className="mt-1 text-xs text-slate-500">Curate the catalog</p>
+              <p className="mt-3 text-sm font-semibold text-slate-900">Curated paths</p>
+              <p className="mt-1 text-xs text-slate-500">Hand-picked, AI-shaped</p>
             </div>
             <div className="rounded-xl border border-slate-200/70 bg-white/70 p-4 backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
-                <i className="fa-solid fa-shield-halved" aria-hidden />
+                <i className="fa-solid fa-comments" aria-hidden />
               </div>
-              <p className="mt-3 text-sm font-semibold text-slate-900">Super admins</p>
-              <p className="mt-1 text-xs text-slate-500">Manage every workspace</p>
+              <p className="mt-3 text-sm font-semibold text-slate-900">Cora, your tutor</p>
+              <p className="mt-1 text-xs text-slate-500">Built into every lesson</p>
             </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-200/70 bg-white/70 p-4 backdrop-blur">
-            <p className="text-sm font-semibold text-slate-900">What happens next</p>
-            <ul className="mt-2 space-y-2 text-sm text-slate-600">
-              <li className="flex items-start gap-2">
-                <i className="fa-solid fa-check mt-0.5 text-xs text-emerald-600" aria-hidden />
-                <span>
-                  We hit <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">/auth/login</code> and{' '}
-                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">/auth/signup</code> when the API
-                  is available.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <i className="fa-solid fa-check mt-0.5 text-xs text-emerald-600" aria-hidden />
-                <span>You land on the dashboard that matches your role.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <i className="fa-solid fa-check mt-0.5 text-xs text-emerald-600" aria-hidden />
-                <span>Access and refresh tokens plug in here once auth is live.</span>
-              </li>
-            </ul>
           </div>
         </section>
 
