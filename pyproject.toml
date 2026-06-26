@@ -1,0 +1,15 @@
+[project]
+name = "courser-api"
+version = "0.1.0"
+description = "COURSER FastAPI backend — runs on Vercel Functions"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn[standard]==0.34.2",
+    "SQLAlchemy==2.0.40",
+    "asyncpg==0.30.0",
+    "pydantic[email]==2.11.4",
+]
+
+[tool.vercel]
+entrypoint = "api.index:app"

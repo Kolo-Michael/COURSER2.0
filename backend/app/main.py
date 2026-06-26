@@ -1,13 +1,33 @@
 import os
-from pathlib import Path
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-from app.api import auth, courses
 
-app = FastAPI(title="SmartTutor API", description="Course management API", version="1.0.0")
+from app.api import auth, courses
+from app.core.database import engine
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Vercel Functions are serverless — the engine is created lazily on
+    each cold start. We yield immediately and dispose the engine on
+    shutdown (Vercel gives ~500ms for cleanup).
+    """
+    yield
+    try:
+        await engine.dispose()
+    except Exception:
+        # Best-effort — never fail the response because of cleanup.
+        pass
+
+
+app = FastAPI(
+    title="COURSER API",
+    description="Course management API",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 frontend_origin = os.getenv("FRONTEND_ORIGIN")
 allowed_origins = [
@@ -22,7 +42,9 @@ allowed_origins = [
 # changes.
 extra_origins = os.getenv("FRONTEND_ORIGINS")
 if extra_origins:
-    allowed_origins.extend([origin.strip() for origin in extra_origins.split(",") if origin.strip()])
+    allowed_origins.extend(
+        [origin.strip() for origin in extra_origins.split(",") if origin.strip()]
+    )
 
 if frontend_origin:
     allowed_origins.append(frontend_origin)
@@ -51,24 +73,9 @@ app.include_router(courses.router, prefix="/courses", tags=["courses"])
 
 @app.get("/")
 async def root():
-    return {"message": "SmartTutor API"}
+    return {"message": "COURSER API"}
 
 
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
-
-
-frontend_dist = Path(__file__).resolve().parents[3] / "frontend" / "dist"
-
-if frontend_dist.exists():
-    assets_path = frontend_dist / "assets"
-    if assets_path.exists():
-        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
-
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_frontend(full_path: str):
-        requested_path = frontend_dist / full_path
-        if requested_path.is_file():
-            return FileResponse(requested_path)
-        return FileResponse(frontend_dist / "index.html")
