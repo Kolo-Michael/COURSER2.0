@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 export function Hero() {
   return (
     <section
@@ -61,12 +63,12 @@ export function Hero() {
               Get started free
               <i className="fa-solid fa-arrow-right text-sm opacity-90" aria-hidden="true" />
             </a>
-            <a
-              href="/courses"
+            <Link
+              to="/courses"
               className="inline-flex items-center justify-center rounded-lg bg-white/70 px-6 py-3.5 text-base font-semibold text-slate-800 ring-1 ring-slate-200 backdrop-blur transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               Explore courses
-            </a>
+            </Link>
           </div>
 
           <dl className="mt-14 grid gap-8 sm:grid-cols-3">
