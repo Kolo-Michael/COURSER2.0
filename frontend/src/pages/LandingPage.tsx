@@ -6,7 +6,6 @@ const stats = [
   { label: 'Free courses prepared', value: '12', detail: 'Web, data, AI, mobile, DevOps' },
   { label: 'Guided lessons', value: '86', detail: 'Structured for start-today learning' },
   { label: 'Mascot help', value: '24/7', detail: 'Cora is built into the learning workspace' },
-  { label: 'Admin controls', value: '3', detail: 'Cover, layout, and mascot setup' },
 ]
 
 const tracks = [
@@ -21,7 +20,7 @@ export function LandingPage() {
       <Hero />
 
       <section className="border-y border-slate-200/70 bg-white/60 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
+        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">
           {stats.map((item) => (
             <div
               key={item.label}
