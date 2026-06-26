@@ -9,3 +9,7 @@ html {
 body {
   @apply m-0 min-h-screen antialiased text-slate-900 bg-white;
 }
+
+.dark body {
+  @apply text-slate-100 bg-slate-950;
+}

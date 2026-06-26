@@ -1,11 +1,20 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        primary: '#2563EB',
-        accent: '#F97316',
+        primary: {
+          DEFAULT: '#2563EB',
+          // Slightly cooler/lighter blue for dark mode surfaces
+          dark: '#3B82F6',
+        },
+        accent: {
+          DEFAULT: '#F97316',
+          // Brighter orange so it pops on dark surfaces
+          dark: '#FB923C',
+        },
       },
       animation: {
         blob: 'blob 14s infinite ease-in-out',

@@ -9,7 +9,7 @@ const productLinks = [
 const resourceLinks = [
   { label: 'Learning tracks', to: '/courses' },
   { label: 'AI course builder', to: '/courses' },
-  { label: 'Admin console', to: '/auth?mode=login' },
+  { label: 'Browse catalog', to: '/courses' },
 ]
 
 const socialLinks = [
@@ -131,13 +131,13 @@ export function SiteFooter() {
             </h3>
             <ul className="mt-4 space-y-2 text-sm text-slate-400">
               <li className="flex items-center gap-2">
-                <i className="fa-solid fa-envelope text-xs text-primary" aria-hidden />
+                <i className="fa-solid fa-envelope text-xs text-accent" aria-hidden />
                 <a href="mailto:hello@courser.app" className="hover:text-white">
                   hello@courser.app
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <i className="fa-solid fa-location-dot text-xs text-primary" aria-hidden />
+                <i className="fa-solid fa-location-dot text-xs text-accent" aria-hidden />
                 Remote-first team
               </li>
             </ul>
@@ -146,7 +146,7 @@ export function SiteFooter() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-6 text-xs text-slate-500 sm:flex-row">
-          <p>© {year} COURSER. Built for learners, admins, and platform owners.</p>
+          <p>© {year} COURSER. Built for learners who want clear, structured paths to skill up.</p>
           <div className="flex items-center gap-4">
             <Link to="/auth?mode=login" className="hover:text-white">
               Privacy
@@ -158,8 +158,8 @@ export function SiteFooter() {
             <span className="h-1 w-1 rounded-full bg-slate-700" />
             <span className="inline-flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
               </span>
               All systems operational
             </span>

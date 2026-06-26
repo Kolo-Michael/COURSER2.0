@@ -13,8 +13,8 @@ function categoryIcon(category: ApiCategory | null) {
 
 function CourseCard({ course }: { course: ApiCourse }) {
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-lg">
-      <div className="flex items-start justify-between gap-3 rounded-t-2xl bg-gradient-to-r from-accent/90 via-orange-500 to-amber-500 p-5 text-white">
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/75">
+      <div className="flex items-start justify-between gap-3 rounded-t-2xl bg-gradient-to-r from-accent/90 via-orange-500 to-amber-500 p-5 text-white dark:from-accent-dark/90 dark:via-orange-600 dark:to-amber-600">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
             <i className={`${categoryIcon(course.category)} text-lg`} aria-hidden />
@@ -34,24 +34,24 @@ function CourseCard({ course }: { course: ApiCourse }) {
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-5">
-        <p className="flex-1 text-sm leading-relaxed text-slate-700">
+        <p className="flex-1 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
           {course.short_description ?? course.description ?? 'Open this course to review the full outline.'}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <span className="rounded-full bg-slate-100/80 px-3 py-1 capitalize text-slate-700">
+          <span className="rounded-full bg-slate-100/80 px-3 py-1 capitalize text-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
             {course.level}
           </span>
-          <span className="rounded-full bg-slate-100/80 px-3 py-1 text-slate-700">
+          <span className="rounded-full bg-slate-100/80 px-3 py-1 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
             <i className="fa-regular fa-clock mr-1" aria-hidden />
             {course.duration ?? 'Self-paced'}
           </span>
-          <span className="rounded-full bg-emerald-100/90 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">
+          <span className="rounded-full bg-primary/15 px-3 py-1 text-primary ring-1 ring-primary/25 dark:bg-primary-dark/15 dark:text-primary-dark dark:ring-primary-dark/30">
             Free
           </span>
         </div>
         <Link
           to={`/courses/${course.slug}`}
-          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-primary-dark"
         >
           View details
           <i className="fa-solid fa-arrow-right ml-2 text-xs" aria-hidden />
@@ -408,13 +408,13 @@ export function CoursesPage() {
 
   return (
     <PublicShell>
-      <div className="border-b border-slate-200/60 bg-white/65 backdrop-blur-md">
+      <div className="border-b border-slate-200/60 bg-white/65 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/65">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-accent">Catalog</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Catalog</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             Browse courses
           </h1>
-          <p className="mt-3 max-w-2xl text-slate-600">
+          <p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">
             Filter by topic, search by title, then open a course detail view powered by the live
             FastAPI catalog.
           </p>
@@ -430,7 +430,7 @@ export function CoursesPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by title..."
                 aria-label="Search courses"
-                className="w-full rounded-xl border border-slate-200/70 bg-white/80 py-3 pl-10 pr-3 text-sm shadow-sm backdrop-blur-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                className="w-full rounded-xl border border-slate-200/70 bg-white/80 py-3 pl-10 pr-3 text-sm shadow-sm backdrop-blur-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-slate-700 dark:bg-slate-900/80 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
               />
             </div>
           </div>
@@ -439,8 +439,8 @@ export function CoursesPage() {
 
       <div className="mx-auto flex max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-24 rounded-2xl border border-slate-200/70 bg-white/75 p-4 shadow-sm backdrop-blur-md">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="sticky top-24 rounded-2xl border border-slate-200/70 bg-white/75 p-4 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/75">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Categories
             </p>
             <nav className="flex flex-col gap-1" aria-label="Course categories">
@@ -452,8 +452,8 @@ export function CoursesPage() {
                   className={[
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition',
                     category === cat.id
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-slate-100/70',
+                      ? 'bg-primary text-white shadow-sm dark:bg-primary-dark'
+                      : 'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-800/70',
                   ].join(' ')}
                 >
                   <i className={`${cat.icon} w-5 text-center`} aria-hidden />
@@ -466,14 +466,14 @@ export function CoursesPage() {
 
         <div className="flex-1">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 lg:hidden">
-            <label className="text-sm font-semibold text-slate-700" htmlFor="category-select">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="category-select">
               Category
             </label>
             <select
               id="category-select"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-800 backdrop-blur-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-800 backdrop-blur-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-slate-700 dark:bg-slate-900/80 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
             >
               {categoryOptions.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -484,19 +484,19 @@ export function CoursesPage() {
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-slate-200/70 bg-white/75 p-10 text-center text-slate-600 shadow-sm backdrop-blur-md">
-              <i className="fa-solid fa-spinner mb-3 text-2xl text-accent" aria-hidden />
-              <p className="font-semibold text-slate-800">Loading courses...</p>
+            <div className="rounded-2xl border border-slate-200/70 bg-white/75 p-10 text-center text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/75 dark:text-slate-300">
+              <i className="fa-solid fa-spinner mb-3 text-2xl text-accent dark:text-accent-dark" aria-hidden />
+              <p className="font-semibold text-slate-800 dark:text-white">Loading courses...</p>
             </div>
           ) : error ? (
-            <div className="rounded-2xl border border-red-200/70 bg-red-50/85 p-10 text-center text-red-700 shadow-sm backdrop-blur-md">
+            <div className="rounded-2xl border border-red-200/70 bg-red-50/85 p-10 text-center text-red-700 shadow-sm backdrop-blur-md dark:border-red-800/70 dark:bg-red-950/60 dark:text-red-300">
               <i className="fa-solid fa-circle-exclamation mb-3 text-2xl" aria-hidden />
               <p className="font-semibold">{error}</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300/70 bg-white/75 p-10 text-center text-slate-600 shadow-sm backdrop-blur-md">
+            <div className="rounded-2xl border border-dashed border-slate-300/70 bg-white/75 p-10 text-center text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/75 dark:text-slate-300">
               <i className="fa-regular fa-face-frown mb-3 text-2xl text-slate-400" aria-hidden />
-              <p className="font-semibold text-slate-800">No courses match your filters.</p>
+              <p className="font-semibold text-slate-800 dark:text-white">No courses match your filters.</p>
               <p className="mt-1 text-sm">Try another category or clear your search.</p>
             </div>
           ) : (

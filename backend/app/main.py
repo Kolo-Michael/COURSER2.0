@@ -17,8 +17,25 @@ allowed_origins = [
     "http://127.0.0.1:3000",
 ]
 
+# Comma-separated list of extra allowed origins — used so Vercel preview
+# URLs and the production deployment can hit the API without per-deploy env
+# changes.
+extra_origins = os.getenv("FRONTEND_ORIGINS")
+if extra_origins:
+    allowed_origins.extend([origin.strip() for origin in extra_origins.split(",") if origin.strip()])
+
 if frontend_origin:
     allowed_origins.append(frontend_origin)
+
+# Allow any vercel.app subdomain (preview + production) — wildcard isn't
+# supported by the CORS spec, so we just list the common host roots here and
+# rely on FRONTEND_ORIGINS for additional environments.
+allowed_origins.extend(
+    [
+        "https://courser2.vercel.app",
+        "https://courser-frontend.vercel.app",
+    ]
+)
 
 app.add_middleware(
     CORSMiddleware,

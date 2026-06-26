@@ -67,3 +67,18 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
     result = await db.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
+
+
+async def get_session_by_token(db: AsyncSession, token: str) -> Optional[UserSession]:
+    """Look up an active, non-expired session by its token.
+
+    Used by the /auth/refresh endpoint to validate refresh tokens and
+    re-issue access tokens for the owning user.
+    """
+    result = await db.execute(
+        select(UserSession).where(
+            UserSession.token == token,
+            UserSession.expires_at > datetime.utcnow(),
+        )
+    )
+    return result.scalar_one_or_none()

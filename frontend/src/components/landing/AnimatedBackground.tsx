@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
+import { useTheme } from '@/theme'
 
 /**
  * Subtle animated background used on public/landing pages.
+ * Reduced palette: only brand blue and brand orange — no emerald/purple.
  * Renders soft floating gradient blobs plus a sparse constellation of
  * particles that drift slowly across the viewport. Pure CSS animation,
  * no external libraries — kept performant (will-change + pointer-events
@@ -9,6 +11,8 @@ import { useEffect, useRef } from 'react'
  */
 export function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -33,6 +37,10 @@ export function AnimatedBackground() {
     const particles: Particle[] = []
     const PARTICLE_COUNT = 60
     const MAX_LINK_DIST = 140
+
+    // Theme-aware colors: blue + orange only.
+    const particleColor = isDark ? '249, 115, 22' : '37, 99, 235' // orange in dark, blue in light
+    const lineColor = isDark ? '249, 115, 22' : '37, 99, 235'
 
     const resize = () => {
       width = window.innerWidth
@@ -79,8 +87,8 @@ export function AnimatedBackground() {
           const dy = a.y - b.y
           const dist = Math.sqrt(dx * dx + dy * dy)
           if (dist < MAX_LINK_DIST) {
-            const opacity = (1 - dist / MAX_LINK_DIST) * 0.18
-            ctx.strokeStyle = `rgba(37, 99, 235, ${opacity})`
+            const opacity = (1 - dist / MAX_LINK_DIST) * (isDark ? 0.14 : 0.18)
+            ctx.strokeStyle = `rgba(${lineColor}, ${opacity})`
             ctx.lineWidth = 1
             ctx.beginPath()
             ctx.moveTo(a.x, a.y)
@@ -91,7 +99,7 @@ export function AnimatedBackground() {
       }
 
       for (const p of particles) {
-        ctx.fillStyle = `rgba(37, 99, 235, ${p.alpha})`
+        ctx.fillStyle = `rgba(${particleColor}, ${p.alpha})`
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
         ctx.fill()
@@ -109,17 +117,17 @@ export function AnimatedBackground() {
       window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
     }
-  }, [])
+  }, [isDark])
 
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-gradient-to-b from-white via-slate-50 to-white"
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-gradient-to-b from-white via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
     >
-      {/* Floating gradient blobs */}
-      <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl animate-blob" />
-      <div className="animation-delay-2000 absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-accent/20 blur-3xl animate-blob" />
-      <div className="animation-delay-4000 absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-emerald-300/20 blur-3xl animate-blob" />
+      {/* Floating gradient blobs — blue + orange only */}
+      <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl animate-blob dark:bg-primary-dark/30" />
+      <div className="animation-delay-2000 absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-accent/20 blur-3xl animate-blob dark:bg-accent-dark/30" />
+      <div className="animation-delay-4000 absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-primary/15 blur-3xl animate-blob dark:bg-primary-dark/20" />
 
       {/* Particle canvas overlay */}
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />

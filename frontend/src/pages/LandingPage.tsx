@@ -8,10 +8,11 @@ const stats = [
   { label: 'Mascot help', value: '24/7', detail: 'Cora is built into the learning workspace' },
 ]
 
+// Reduced palette — only blue and orange for category icons.
 const tracks = [
-  { title: 'Frontend Developer', icon: 'fa-code', lessons: '18 lessons', color: 'bg-blue-50 text-primary' },
-  { title: 'Data Analyst', icon: 'fa-chart-simple', lessons: '16 lessons', color: 'bg-emerald-50 text-emerald-700' },
-  { title: 'AI Course Builder', icon: 'fa-brain', lessons: '14 lessons', color: 'bg-orange-50 text-accent' },
+  { title: 'Frontend Developer', icon: 'fa-code', lessons: '18 lessons', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
+  { title: 'Data Analyst', icon: 'fa-chart-simple', lessons: '16 lessons', color: 'bg-orange-50 text-accent dark:bg-orange-950/40 dark:text-accent-dark' },
+  { title: 'AI Course Builder', icon: 'fa-brain', lessons: '14 lessons', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
 ]
 
 export function LandingPage() {
@@ -19,16 +20,16 @@ export function LandingPage() {
     <PublicShell>
       <Hero />
 
-      <section className="border-y border-slate-200/70 bg-white/60 backdrop-blur-sm">
+      <section className="border-y border-slate-200/70 bg-white/60 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/60">
         <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">
           {stats.map((item) => (
             <div
               key={item.label}
-              className="rounded-lg border border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md"
+              className="rounded-lg border border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/70"
             >
-              <p className="text-2xl font-bold text-slate-900">{item.value}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">{item.label}</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.detail}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{item.value}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{item.label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{item.detail}</p>
             </div>
           ))}
         </div>
@@ -38,15 +39,15 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Start learning now</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Career paths built inside COURSER</h2>
-              <p className="mt-3 max-w-2xl text-slate-600">
-                Students can begin with free, guided courses. Admins can tune the learning environment while Cora stays available for questions.
+              <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Start learning now</p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Career paths built inside COURSER</h2>
+              <p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">
+                Begin with free, guided courses, follow structured lessons, and keep Cora on hand whenever you need a nudge.
               </p>
             </div>
             <Link
               to="/courses"
-              className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90"
+              className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 dark:bg-primary-dark"
             >
               Browse free courses
               <i className="fa-solid fa-arrow-right ml-2 text-xs" aria-hidden />
@@ -57,15 +58,15 @@ export function LandingPage() {
             {tracks.map((track) => (
               <article
                 key={track.title}
-                className="rounded-lg border border-slate-200/70 bg-white/80 p-5 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:shadow-lg"
+                className="rounded-lg border border-slate-200/70 bg-white/80 p-5 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/80"
               >
                 <span className={`inline-flex h-12 w-12 items-center justify-center rounded-lg ${track.color}`}>
                   <i className={`fa-solid ${track.icon}`} aria-hidden />
                 </span>
-                <h3 className="mt-4 text-lg font-bold text-slate-900">{track.title}</h3>
-                <p className="mt-2 text-sm text-slate-600">{track.lessons} with projects, notes, progress checkpoints, and Cora support.</p>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full w-3/4 rounded-full bg-accent" />
+                <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">{track.title}</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{track.lessons} with projects, notes, progress checkpoints, and Cora support.</p>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div className="h-full w-3/4 rounded-full bg-accent dark:bg-accent-dark" />
                 </div>
               </article>
             ))}
