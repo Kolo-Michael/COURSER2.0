@@ -1,0 +1,41 @@
+# Fly.io configuration for the COURSER FastAPI backend.
+# Docs: https://fly.io/docs/reference/configuration/
+#
+# Deploy flow:
+#   1. fly launch --no-deploy            # generates app, picks region
+#   2. fly postgres create --name courser-db
+#   3. fly postgres attach courser-db     # sets DATABASE_URL automatically
+#   4. fly secrets set SECRET_KEY=...    # not ALLOWED_ORIGINS yet — set after frontend is live
+#   5. fly deploy
+
+app = "courser-api"
+primary_region = "iad"  # closest to most users; change to e.g. "lhr", "fra", "sin"
+
+[build]
+  # The FastAPI app lives in backend/, but uvicorn imports `app.main:app`
+  # using the `app` package's own sys.path. We cd into backend/ for build
+  # and runtime so `import app.main` resolves.
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  PYTHONUNBUFFERED = "1"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"   # free tier: stop when idle, restart on request
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

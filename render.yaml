@@ -1,0 +1,47 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploys the COURSER FastAPI backend as a Web Service and provisions a
+# managed Postgres database. The frontend is NOT included (deploy separately).
+#
+# How to use:
+#   1. Push this file to GitHub.
+#   2. In Render Dashboard → New → Blueprint → pick this repo.
+#   3. Render reads render.yaml and creates the services + DB.
+#   4. After first deploy, run init_db / create_super_admin / seed_courses
+#      via the Render Shell tab on the web service.
+#
+# Local dev still uses .env / uvicorn — this file only matters for Render.
+
+services:
+  - type: web
+    name: courser-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    # Render's Python runtime autodetects a WSGI/ASGI app if you give it
+    # the right start command. We pin uvicorn explicitly to control host/port
+    # and proxy-headers (Render sits behind a TLS-terminating load balancer).
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    autoDeploy: true
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: courser-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true   # Render generates a random value on first deploy
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      # Comma-separated allowlist for browser origins. Set to your deployed
+      # frontend URL once you have one (Vercel/Netlify/etc.). Localhost
+      # origins are already allowed in main.py.
+      - key: FRONTEND_ORIGINS
+        value: ""
+
+databases:
+  - name: courser-db
+    plan: free
+    databaseName: courser
+    user: courser
