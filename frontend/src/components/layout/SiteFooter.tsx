@@ -41,7 +41,7 @@ export function SiteFooter() {
   }
 
   return (
-    <footer className="relative mt-16 border-t border-stone-800 bg-stone-950 text-stone-300">
+    <footer className="courser-bg-dots relative mt-16 border-t border-stone-800 bg-stone-950 text-stone-300">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-12">
           {/* Brand column */}

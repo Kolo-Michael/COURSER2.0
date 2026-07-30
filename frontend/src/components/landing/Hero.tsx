@@ -4,7 +4,7 @@ export function Hero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950"
+      className="courser-bg-dots border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950"
     >
       <div className="relative mx-auto flex max-w-6xl flex-col gap-12 px-4 pb-20 pt-16 sm:px-6 lg:flex-row lg:items-center lg:gap-16 lg:px-8 lg:pb-28 lg:pt-24">
         <div className="flex-1">

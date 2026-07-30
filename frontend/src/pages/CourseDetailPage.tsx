@@ -232,7 +232,7 @@ export function CourseDetailPage() {
 
   return (
     <CourseDetailShell session={session} title={course.title}>
-      <div className="border-b border-stone-200 bg-white">
+      <div className="courser-bg-dots border-b border-stone-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <Link
             to="/courses"
@@ -266,7 +266,7 @@ export function CourseDetailPage() {
                 {course.duration ?? 'Self-paced'}
               </p>
             </div>
-            <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-stone-100 p-6 shadow-inner dark:border-stone-700 dark:bg-stone-800">
+            <div className="courser-card w-full max-w-sm p-6">
               <p className="text-sm font-semibold text-stone-900">{session ? 'Ready to learn' : 'Enroll'}</p>
               <p className="mt-2 text-sm text-stone-600">
                 {session
@@ -305,12 +305,9 @@ export function CourseDetailPage() {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="courser-card p-6">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-stone-900">Modules & lessons</h2>
-            <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-primary dark:bg-stone-800">
-              Live outline
-            </span>
           </div>
           {course.modules?.length ? (
             <ol className="mt-6 space-y-4">
@@ -346,7 +343,7 @@ export function CourseDetailPage() {
           )}
         </section>
 
-        <section className="mt-8 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+        <section className="mt-8 courser-card overflow-hidden">
           <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -453,7 +450,7 @@ export function CourseDetailPage() {
               </div>
             </div>
 
-            <aside className="border-t border-stone-200 bg-stone-100 p-6 dark:border-stone-700 dark:bg-stone-800 lg:border-l lg:border-t-0">
+            <aside className="courser-bg-dots-dense border-t border-stone-200 bg-stone-50 p-6 dark:border-stone-700 dark:bg-stone-900 lg:border-l lg:border-t-0">
               <div className="flex items-center gap-3">
                 <div className="relative h-16 w-16 rounded-full bg-primary">
                   <span className="absolute left-4 top-5 h-2 w-2 rounded-full bg-white" />

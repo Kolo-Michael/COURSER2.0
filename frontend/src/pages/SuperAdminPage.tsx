@@ -89,7 +89,7 @@ export function SuperAdminPage() {
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-4">
           {platformStats.map((stat) => (
-            <div key={stat.label} className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+            <div key={stat.label} className="courser-card p-5">
               <p className="text-sm font-semibold text-stone-600">{stat.label}</p>
               <p className="mt-2 text-3xl font-bold text-stone-900">{stat.value}</p>
             </div>
@@ -97,7 +97,7 @@ export function SuperAdminPage() {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <section className="courser-card p-6 lg:col-span-2">
             <p className="text-sm font-semibold text-primary">Admins</p>
             <h2 className="text-xl font-bold text-stone-900">Create and review admin accounts</h2>
             <p className="mt-3 text-sm text-stone-600">
@@ -169,7 +169,7 @@ export function SuperAdminPage() {
           </section>
 
           <aside className="space-y-4">
-            <div className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+            <div className="courser-card p-6">
               <p className="text-sm font-semibold text-stone-900">Platform pulse</p>
               <dl className="mt-4 space-y-4">
                 {platformStats.slice(0, 3).map((stat) => (
@@ -183,7 +183,7 @@ export function SuperAdminPage() {
                 COURSER-owned sample metrics until reporting endpoints are connected.
               </p>
             </div>
-            <div className="rounded-lg border border-stone-200 bg-primary/5 p-6 shadow-inner">
+            <div className="courser-card p-6 ring-1 ring-primary/10">
               <p className="text-sm font-semibold text-primary">Admin quality queue</p>
               <p className="mt-2 text-sm text-stone-700">
                 3 new course environments need review, 2 mascot scripts need approval, and 6 lessons are ready to publish.

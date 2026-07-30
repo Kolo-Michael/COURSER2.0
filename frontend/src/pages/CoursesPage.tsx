@@ -13,7 +13,7 @@ function categoryIcon(category: ApiCategory | null) {
 
 function CourseCard({ course }: { course: ApiCourse }) {
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-stone-700 dark:bg-stone-900">
+    <article className="courser-card overflow-hidden">
       <div className="flex items-start justify-between gap-3 rounded-t-2xl bg-stone-100 p-5 text-stone-900 dark:bg-stone-800 dark:text-stone-100">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-stone-700 ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-700">
@@ -136,8 +136,8 @@ function LoggedInCoursesPage({
       navItems={sessionNav(session)}
     >
       <div className="space-y-6">
-        <section className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm dark:border-stone-700 dark:bg-stone-900">
-          <div className="grid gap-6 border-b border-stone-200 bg-stone-100 p-6 text-stone-900 lg:grid-cols-[minmax(0,1fr)_340px] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100">
+        <section className="courser-card overflow-hidden">
+          <div className="courser-bg-dots grid gap-6 border-b border-stone-200 bg-stone-50 p-6 text-stone-900 lg:grid-cols-[minmax(0,1fr)_340px] dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-100">
                 {admin ? 'Admin view' : `Welcome back, ${learnerName}`}
@@ -187,7 +187,7 @@ function LoggedInCoursesPage({
         </section>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+          <section className="courser-card p-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-stone-900">Available courses</p>
@@ -243,7 +243,7 @@ function LoggedInCoursesPage({
                   <Link
                     key={course.id}
                     to={`/courses/${course.slug}`}
-                    className="group grid min-h-40 gap-4 rounded-lg border border-stone-200 bg-white p-4 transition hover:border-primary/40 hover:shadow-md sm:grid-cols-[112px_minmax(0,1fr)]"
+                    className="group courser-card grid min-h-40 gap-4 p-4 sm:grid-cols-[112px_minmax(0,1fr)]"
                   >
                     <div className={`flex h-28 items-center justify-center rounded-lg ${index % 2 === 0 ? 'bg-blue-50 text-primary' : 'bg-orange-50 text-accent'}`}>
                       <i className={`${categoryIcon(course.category)} text-3xl`} aria-hidden />
@@ -408,15 +408,14 @@ export function CoursesPage() {
 
   return (
     <PublicShell>
-      <div className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950">
+      <div className="courser-bg-dots border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
           <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Catalog</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-4xl">
             Browse courses
           </h1>
           <p className="mt-3 max-w-2xl text-stone-600 dark:text-stone-300">
-            Filter by topic, search by title, then open a course detail view powered by the live
-            FastAPI catalog.
+            Search by title or filter by topic to find a course that fits your goals.
           </p>
           <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -439,7 +438,7 @@ export function CoursesPage() {
 
       <div className="mx-auto flex max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-24 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-900">
+          <div className="sticky top-24 courser-card p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
               Categories
             </p>

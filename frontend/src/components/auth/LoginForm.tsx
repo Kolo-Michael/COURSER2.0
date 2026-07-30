@@ -90,9 +90,6 @@ export function LoginForm() {
       >
         {submitting ? 'Logging in...' : 'Log in'}
       </button>
-      <p className="text-center text-xs text-stone-500 dark:text-stone-400">
-        Hits <code className="rounded bg-stone-100 px-1 py-0.5 dark:bg-stone-800">/auth/login</code> when the API is available.
-      </p>
     </form>
   )
 }

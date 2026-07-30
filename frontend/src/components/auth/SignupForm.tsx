@@ -100,9 +100,6 @@ export function SignupForm() {
             <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
           </button>
         </div>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          Use 8+ characters with upper, lower, and a digit (AUTH-2).
-        </p>
       </div>
       {error ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p> : null}
       <button
@@ -112,9 +109,6 @@ export function SignupForm() {
       >
         {submitting ? 'Creating account...' : 'Create account'}
       </button>
-      <p className="text-center text-xs text-stone-500 dark:text-stone-400">
-        Hits <code className="rounded bg-stone-100 px-1 py-0.5 dark:bg-stone-800">/auth/signup</code> when the API is available.
-      </p>
     </form>
   )
 }

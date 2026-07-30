@@ -25,7 +25,7 @@ export function DashboardLayout({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
+    <div className="courser-bg-dots min-h-screen bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
       <div className="flex min-h-screen gap-0 lg:gap-4 lg:p-4">
         <aside
           className={[

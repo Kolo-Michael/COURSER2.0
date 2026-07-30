@@ -193,7 +193,7 @@ export function AdminPage() {
       navItems={adminNav}
     >
       <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="courser-card p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-primary">Course setup</p>
@@ -404,7 +404,7 @@ export function AdminPage() {
         </section>
 
         <aside className="space-y-6">
-          <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+          <section className="courser-card p-5">
             <p className="text-sm font-bold text-stone-900">Learning environment</p>
             <p className="mt-1 text-sm text-stone-600">Only admins can change this setup. Learners receive the default environment with a question-answering mascot.</p>
 
@@ -448,7 +448,7 @@ export function AdminPage() {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+          <section className="courser-card overflow-hidden">
             <div className="h-36 bg-stone-100">
               {coverPreview ? (
                 <img src={coverPreview} alt="" className="h-full w-full object-cover" />

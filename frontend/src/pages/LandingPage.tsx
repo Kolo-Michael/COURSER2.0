@@ -20,12 +20,12 @@ export function LandingPage() {
     <PublicShell>
       <Hero />
 
-      <section className="border-y border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
-        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">
+      <section className="courser-bg-dots border-y border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950/50">
+        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">
           {stats.map((item) => (
             <div
               key={item.label}
-              className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-stone-700 dark:bg-stone-900"
+              className="courser-card p-4"
             >
               <p className="text-2xl font-bold text-stone-900 dark:text-stone-100">{item.value}</p>
               <p className="mt-1 text-sm font-semibold text-stone-800 dark:text-stone-100">{item.label}</p>
@@ -35,7 +35,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section>
+      <section className="courser-bg-dots-dense">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -58,7 +58,7 @@ export function LandingPage() {
             {tracks.map((track) => (
               <article
                 key={track.title}
-                className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-stone-700 dark:bg-stone-900"
+                className="courser-card p-5"
               >
                 <span className={`inline-flex h-12 w-12 items-center justify-center rounded-lg ${track.color}`}>
                   <i className={`fa-solid ${track.icon}`} aria-hidden />

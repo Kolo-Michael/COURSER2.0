@@ -29,7 +29,7 @@ export function DashboardPage() {
       navItems={studentNav}
     >
       <div className="space-y-6">
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="courser-card p-6">
           <p className="text-sm font-semibold text-primary">Welcome</p>
           <h2 className="mt-2 text-2xl font-bold text-stone-900">Hi, {displayName}</h2>
           <p className="mt-2 max-w-3xl text-stone-600">
@@ -63,7 +63,7 @@ export function DashboardPage() {
 
         <section className="grid gap-4 md:grid-cols-3">
           {learningStats.map((item) => (
-            <div key={item.label} className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+            <div key={item.label} className="courser-card p-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-stone-600">{item.label}</p>
                 <i className={`fa-solid ${item.icon} text-primary`} aria-hidden />
@@ -73,16 +73,13 @@ export function DashboardPage() {
           ))}
         </section>
 
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="courser-card p-6">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-bold text-stone-900">Continue learning</h3>
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-              Live-ready
-            </span>
           </div>
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
             {activeCourses.map((course) => (
-              <article key={course.title} className="rounded-lg border border-stone-200 p-4">
+              <article key={course.title} className="rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800">
                 <p className="font-bold leading-snug text-stone-900">{course.title}</p>
                 <p className="mt-2 text-sm text-stone-600">Next: {course.next}</p>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100">
@@ -98,7 +95,7 @@ export function DashboardPage() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="courser-card p-6">
             <h3 className="text-lg font-bold text-stone-900">Weekly plan</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {['Watch', 'Practice', 'Review'].map((step, index) => (
