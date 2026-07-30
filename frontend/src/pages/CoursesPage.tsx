@@ -13,35 +13,35 @@ function categoryIcon(category: ApiCategory | null) {
 
 function CourseCard({ course }: { course: ApiCourse }) {
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/75">
-      <div className="flex items-start justify-between gap-3 rounded-t-2xl bg-gradient-to-r from-accent/90 via-orange-500 to-amber-500 p-5 text-white dark:from-accent-dark/90 dark:via-orange-600 dark:to-amber-600">
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-stone-700 dark:bg-stone-900">
+      <div className="flex items-start justify-between gap-3 rounded-t-2xl bg-stone-100 p-5 text-stone-900 dark:bg-stone-800 dark:text-stone-100">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-stone-700 ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-700">
             <i className={`${categoryIcon(course.category)} text-lg`} aria-hidden />
           </span>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/85">
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-600 dark:text-stone-300">
               {course.category?.name ?? 'General'}
             </p>
             <h2 className="text-lg font-bold leading-snug">{course.title}</h2>
           </div>
         </div>
         {course.is_featured ? (
-          <span className="rounded-full bg-white/20 px-2 py-1 text-[11px] font-semibold text-white ring-1 ring-white/30">
+          <span className="rounded-full bg-accent px-2 py-1 text-[11px] font-semibold text-white">
             Featured
           </span>
         ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-5">
-        <p className="flex-1 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+        <p className="flex-1 text-sm leading-relaxed text-stone-700 dark:text-stone-300">
           {course.short_description ?? course.description ?? 'Open this course to review the full outline.'}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <span className="rounded-full bg-slate-100/80 px-3 py-1 capitalize text-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+          <span className="rounded-full bg-stone-100 px-3 py-1 capitalize text-stone-700 dark:bg-stone-800 dark:text-stone-200">
             {course.level}
           </span>
-          <span className="rounded-full bg-slate-100/80 px-3 py-1 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+          <span className="rounded-full bg-stone-100 px-3 py-1 text-stone-700 dark:bg-stone-800 dark:text-stone-200">
             <i className="fa-regular fa-clock mr-1" aria-hidden />
             {course.duration ?? 'Self-paced'}
           </span>
@@ -88,8 +88,8 @@ function CourseMascot() {
         </span>
       </div>
       <div>
-        <p className="text-sm font-bold text-slate-900">Cora is ready</p>
-        <p className="text-xs leading-relaxed text-slate-600">
+        <p className="text-sm font-bold text-stone-900">Cora is ready</p>
+        <p className="text-xs leading-relaxed text-stone-600">
           Your course guide keeps lessons, progress, and next actions in one place.
         </p>
       </div>
@@ -136,8 +136,8 @@ function LoggedInCoursesPage({
       navItems={sessionNav(session)}
     >
       <div className="space-y-6">
-        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div className="grid gap-6 border-b border-slate-200 bg-gradient-to-r from-primary to-blue-800 p-6 text-white lg:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm dark:border-stone-700 dark:bg-stone-900">
+          <div className="grid gap-6 border-b border-stone-200 bg-stone-100 p-6 text-stone-900 lg:grid-cols-[minmax(0,1fr)_340px] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-100">
                 {admin ? 'Admin view' : `Welcome back, ${learnerName}`}
@@ -145,7 +145,7 @@ function LoggedInCoursesPage({
               <h2 className="mt-2 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
                 {featured?.title ?? 'Your course library is ready'}
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-200">
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-stone-200">
                 {featured?.short_description ??
                   'Browse the same COURSER catalog from inside your workspace, with course progress and lesson actions close by.'}
               </p>
@@ -162,7 +162,7 @@ function LoggedInCoursesPage({
                 {admin ? (
                   <Link
                     to="/admin"
-                    className="inline-flex items-center rounded-lg border border-white/25 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
+                    className="inline-flex items-center rounded-lg border border-stone-700 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-100 dark:border-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:hover:bg-stone-800"
                   >
                     <i className="fa-solid fa-plus mr-2 text-xs" aria-hidden />
                     Add a course
@@ -170,16 +170,16 @@ function LoggedInCoursesPage({
                 ) : null}
               </div>
             </div>
-            <div className="rounded-lg bg-white p-4 text-slate-900 shadow-sm">
+            <div className="rounded-lg bg-white p-4 text-stone-900 shadow-sm">
               <CourseMascot />
               <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-slate-50 p-3">
-                  <dt className="text-xs font-semibold uppercase text-slate-500">Courses</dt>
+                <div className="rounded-lg bg-stone-50 p-3">
+                  <dt className="text-xs font-semibold uppercase text-stone-500">Courses</dt>
                   <dd className="mt-1 font-bold text-primary">{courses.length}</dd>
                 </div>
-                <div className="rounded-lg bg-slate-50 p-3">
-                  <dt className="text-xs font-semibold uppercase text-slate-500">Lessons</dt>
-                  <dd className="mt-1 font-bold text-slate-900">{lessonCount || 'Ready'}</dd>
+                <div className="rounded-lg bg-stone-50 p-3">
+                  <dt className="text-xs font-semibold uppercase text-stone-500">Lessons</dt>
+                  <dd className="mt-1 font-bold text-stone-900">{lessonCount || 'Ready'}</dd>
                 </div>
               </dl>
             </div>
@@ -187,11 +187,11 @@ function LoggedInCoursesPage({
         </section>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-slate-900">Available courses</p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="text-sm font-bold text-stone-900">Available courses</p>
+                <p className="mt-1 text-sm text-stone-600">
                   Search by topic, open a course, and start directly from your workspace.
                 </p>
               </div>
@@ -202,7 +202,7 @@ function LoggedInCoursesPage({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
               <div className="relative flex-1">
                 <i
-                  className="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-3 text-sm text-slate-400"
+                  className="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-3 text-sm text-stone-400"
                   aria-hidden
                 />
                 <input
@@ -211,13 +211,13 @@ function LoggedInCoursesPage({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search courses..."
                   aria-label="Search courses"
-                  className="w-full rounded-lg border border-slate-200 py-3 pl-10 pr-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                  className="w-full rounded-lg border border-stone-200 py-3 pl-10 pr-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
                 />
               </div>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                className="rounded-lg border border-stone-200 px-3 py-3 text-sm font-semibold text-stone-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
                 aria-label="Filter by category"
               >
                 {categoryOptions.map((cat) => (
@@ -229,9 +229,9 @@ function LoggedInCoursesPage({
             </div>
 
             {loading ? (
-              <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-slate-600">
+              <div className="mt-6 rounded-lg border border-stone-200 bg-stone-50 p-8 text-center text-stone-600">
                 <i className="fa-solid fa-spinner mb-3 text-2xl text-primary" aria-hidden />
-                <p className="font-semibold text-slate-800">Loading courses...</p>
+                <p className="font-semibold text-stone-800">Loading courses...</p>
               </div>
             ) : error ? (
               <div className="mt-6 rounded-lg border border-red-100 bg-red-50 p-8 text-center text-red-700">
@@ -243,29 +243,29 @@ function LoggedInCoursesPage({
                   <Link
                     key={course.id}
                     to={`/courses/${course.slug}`}
-                    className="group grid min-h-40 gap-4 rounded-lg border border-slate-200 bg-white p-4 transition hover:border-primary/40 hover:shadow-md sm:grid-cols-[112px_minmax(0,1fr)]"
+                    className="group grid min-h-40 gap-4 rounded-lg border border-stone-200 bg-white p-4 transition hover:border-primary/40 hover:shadow-md sm:grid-cols-[112px_minmax(0,1fr)]"
                   >
                     <div className={`flex h-28 items-center justify-center rounded-lg ${index % 2 === 0 ? 'bg-blue-50 text-primary' : 'bg-orange-50 text-accent'}`}>
                       <i className={`${categoryIcon(course.category)} text-3xl`} aria-hidden />
                     </div>
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-stone-500">
                         <span className="inline-flex items-center gap-1">
                           <i className={categoryIcon(course.category)} aria-hidden />
                           {course.category?.name ?? 'General'}
                         </span>
-                        <span className="h-1 w-1 rounded-full bg-slate-300" />
+                        <span className="h-1 w-1 rounded-full bg-stone-300" />
                         <span className="capitalize">{course.level}</span>
-                        <span className="h-1 w-1 rounded-full bg-slate-300" />
+                        <span className="h-1 w-1 rounded-full bg-stone-300" />
                         <span>{course.duration ?? 'Self-paced'}</span>
                       </div>
-                      <h3 className="mt-2 font-bold leading-snug text-slate-900 group-hover:text-primary">
+                      <h3 className="mt-2 font-bold leading-snug text-stone-900 group-hover:text-primary">
                         {course.title}
                       </h3>
-                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-600">
+                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone-600">
                         {course.short_description ?? course.description ?? 'Open this course to continue learning.'}
                       </p>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-100">
                         <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(72, 24 + index * 11)}%` }} />
                       </div>
                       <div className="mt-3 inline-flex items-center text-xs font-bold text-primary">
@@ -280,21 +280,21 @@ function LoggedInCoursesPage({
           </section>
 
           <aside className="space-y-6">
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-900">Learning interface</p>
-              <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
-                <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+            <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-bold text-stone-900">Learning interface</p>
+              <div className="mt-4 overflow-hidden rounded-lg border border-stone-200">
+                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-500">
                   <span>Lesson view</span>
                   <span>Cora</span>
                 </div>
                 <div className="grid grid-cols-[1fr_72px]">
                   <div className="space-y-3 p-3">
-                    <div className="h-3 w-24 rounded bg-slate-200" />
+                    <div className="h-3 w-24 rounded bg-stone-200" />
                     <div className="h-16 rounded bg-primary/10" />
-                    <div className="h-2 rounded bg-slate-200" />
-                    <div className="h-2 w-3/4 rounded bg-slate-200" />
+                    <div className="h-2 rounded bg-stone-200" />
+                    <div className="h-2 w-3/4 rounded bg-stone-200" />
                   </div>
-                  <div className="border-l border-slate-200 bg-blue-50 p-3">
+                  <div className="border-l border-stone-200 bg-blue-50 p-3">
                     <div className="h-10 w-10 rounded-full bg-primary" />
                     <div className="mt-3 h-2 rounded bg-blue-200" />
                     <div className="mt-2 h-2 rounded bg-blue-200" />
@@ -303,15 +303,15 @@ function LoggedInCoursesPage({
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-900">Categories</p>
+            <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-bold text-stone-900">Categories</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.slug)}
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-primary/40 hover:text-primary"
+                    className="rounded-lg border border-stone-200 px-3 py-2 text-xs font-semibold text-stone-700 hover:border-primary/40 hover:text-primary"
                   >
                     <i className={`${cat.icon ? `fa-solid ${cat.icon}` : 'fa-solid fa-book-open'} mr-1`} aria-hidden />
                     {cat.name}
@@ -408,20 +408,20 @@ export function CoursesPage() {
 
   return (
     <PublicShell>
-      <div className="border-b border-slate-200/60 bg-white/65 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/65">
+      <div className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
           <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Catalog</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-4xl">
             Browse courses
           </h1>
-          <p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">
+          <p className="mt-3 max-w-2xl text-stone-600 dark:text-stone-300">
             Filter by topic, search by title, then open a course detail view powered by the live
             FastAPI catalog.
           </p>
           <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <i
-                className="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-3 text-sm text-slate-400"
+                className="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-3 text-sm text-stone-400"
                 aria-hidden
               />
               <input
@@ -430,7 +430,7 @@ export function CoursesPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by title..."
                 aria-label="Search courses"
-                className="w-full rounded-xl border border-slate-200/70 bg-white/80 py-3 pl-10 pr-3 text-sm shadow-sm backdrop-blur-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-slate-700 dark:bg-slate-900/80 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+                className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-10 pr-3 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
               />
             </div>
           </div>
@@ -439,8 +439,8 @@ export function CoursesPage() {
 
       <div className="mx-auto flex max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-24 rounded-2xl border border-slate-200/70 bg-white/75 p-4 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/75">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <div className="sticky top-24 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-900">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
               Categories
             </p>
             <nav className="flex flex-col gap-1" aria-label="Course categories">
@@ -453,7 +453,7 @@ export function CoursesPage() {
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition',
                     category === cat.id
                       ? 'bg-primary text-white shadow-sm dark:bg-primary-dark'
-                      : 'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-800/70',
+                      : 'text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800',
                   ].join(' ')}
                 >
                   <i className={`${cat.icon} w-5 text-center`} aria-hidden />
@@ -466,14 +466,14 @@ export function CoursesPage() {
 
         <div className="flex-1">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 lg:hidden">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="category-select">
+            <label className="text-sm font-semibold text-stone-700 dark:text-stone-200" htmlFor="category-select">
               Category
             </label>
             <select
               id="category-select"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-800 backdrop-blur-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-slate-700 dark:bg-slate-900/80 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+              className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
             >
               {categoryOptions.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -484,19 +484,19 @@ export function CoursesPage() {
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-slate-200/70 bg-white/75 p-10 text-center text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/75 dark:text-slate-300">
+            <div className="rounded-2xl border border-stone-200 bg-white p-10 text-center text-stone-600 shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300">
               <i className="fa-solid fa-spinner mb-3 text-2xl text-accent dark:text-accent-dark" aria-hidden />
-              <p className="font-semibold text-slate-800 dark:text-white">Loading courses...</p>
+              <p className="font-semibold text-stone-800 dark:text-white">Loading courses...</p>
             </div>
           ) : error ? (
-            <div className="rounded-2xl border border-red-200/70 bg-red-50/85 p-10 text-center text-red-700 shadow-sm backdrop-blur-md dark:border-red-800/70 dark:bg-red-950/60 dark:text-red-300">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-red-700 shadow-sm dark:border-red-800 dark:bg-red-950 dark:text-red-300">
               <i className="fa-solid fa-circle-exclamation mb-3 text-2xl" aria-hidden />
               <p className="font-semibold">{error}</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300/70 bg-white/75 p-10 text-center text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/75 dark:text-slate-300">
-              <i className="fa-regular fa-face-frown mb-3 text-2xl text-slate-400" aria-hidden />
-              <p className="font-semibold text-slate-800 dark:text-white">No courses match your filters.</p>
+            <div className="rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center text-stone-600 shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300">
+              <i className="fa-regular fa-face-frown mb-3 text-2xl text-stone-400" aria-hidden />
+              <p className="font-semibold text-stone-800 dark:text-white">No courses match your filters.</p>
               <p className="mt-1 text-sm">Try another category or clear your search.</p>
             </div>
           ) : (

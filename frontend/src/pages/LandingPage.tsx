@@ -20,28 +20,28 @@ export function LandingPage() {
     <PublicShell>
       <Hero />
 
-      <section className="border-y border-slate-200/70 bg-white/60 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/60">
+      <section className="border-y border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
         <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">
           {stats.map((item) => (
             <div
               key={item.label}
-              className="rounded-lg border border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/70"
+              className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-stone-700 dark:bg-stone-900"
             >
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{item.value}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{item.label}</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{item.detail}</p>
+              <p className="text-2xl font-bold text-stone-900 dark:text-stone-100">{item.value}</p>
+              <p className="mt-1 text-sm font-semibold text-stone-800 dark:text-stone-100">{item.label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{item.detail}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="bg-transparent">
+      <section>
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Start learning now</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Career paths built inside COURSER</h2>
-              <p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">Career paths built inside COURSER</h2>
+              <p className="mt-3 max-w-2xl text-stone-600 dark:text-stone-300">
                 Begin with free, guided courses, follow structured lessons, and keep Cora on hand whenever you need a nudge.
               </p>
             </div>
@@ -58,14 +58,14 @@ export function LandingPage() {
             {tracks.map((track) => (
               <article
                 key={track.title}
-                className="rounded-lg border border-slate-200/70 bg-white/80 p-5 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/80"
+                className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-stone-700 dark:bg-stone-900"
               >
                 <span className={`inline-flex h-12 w-12 items-center justify-center rounded-lg ${track.color}`}>
                   <i className={`fa-solid ${track.icon}`} aria-hidden />
                 </span>
-                <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">{track.title}</h3>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{track.lessons} with projects, notes, progress checkpoints, and Cora support.</p>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <h3 className="mt-4 text-lg font-bold text-stone-900 dark:text-stone-100">{track.title}</h3>
+                <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{track.lessons} with projects, notes, progress checkpoints, and Cora support.</p>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
                   <div className="h-full w-3/4 rounded-full bg-accent dark:bg-accent-dark" />
                 </div>
               </article>

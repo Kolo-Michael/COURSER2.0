@@ -22,6 +22,13 @@ def normalize_database_url(url: str) -> str:
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+    # SQLite URLs (sqlite+aiosqlite:///<path> or sqlite+aiosqlite:///<abs>)
+    # have no host. urlsplit treats the third slash as the start of the
+    # path; urlunsplit then collapses back to only one slash, which
+    # SQLAlchemy rejects. Pass the URL through untouched.
+    if url.startswith("sqlite"):
+        return url
+
     parsed = urlsplit(url)
     query = [
         (key, value)
@@ -47,7 +54,19 @@ def get_settings():
 class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    # Short-lived access token. Frontend reads nothing from it; the backend
+    # uses it to authorize mutating endpoints. 60 min is the sweet spot
+    # between forcing reloads and reducing exposure window.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    # Refresh token lives longer; rotated on use.
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # Bcrypt cost factor. 12 ≈ 250ms on a modern CPU — slow enough to
+    # make brute force expensive, fast enough not to sign-up-spam users.
+    BCRYPT_ROUNDS: int = int(os.getenv("BCRYPT_ROUNDS", "12"))
+    # After this many consecutive failed logins the account is locked.
+    MAX_FAILED_LOGINS: int = 5
+    # Lockout window before the counter resets.
+    LOCKOUT_DURATION_MINUTES: int = 15
     DEBUG_SQL: bool = os.getenv("DEBUG_SQL", "false").lower() == "true"
 
     DATABASE_URL: str = normalize_database_url(
@@ -56,7 +75,14 @@ class Settings:
             "postgresql+asyncpg://user:password@localhost/courser",
         )
     )
-    DATABASE_CONNECT_ARGS: dict = {"ssl": True} if database_requires_ssl(DATABASE_URL) else {}
+    # Neon's pooler endpoint takes a few seconds for the cold-start TLS
+    # handshake; asyncpg's default `timeout` of 60s is what we want so the
+    # first request after a fresh worker boot doesn't race the connection
+    # setup. The `ssl: True` is required for Neon — config above sets it
+    # based on the URL contents (sslmode=require or "neon.tech" in the host).
+    DATABASE_CONNECT_ARGS: dict = (
+        {"ssl": True, "timeout": 60} if database_requires_ssl(DATABASE_URL) else {"timeout": 60}
+    )
 
 
 settings = get_settings()

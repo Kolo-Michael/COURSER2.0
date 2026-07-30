@@ -14,13 +14,10 @@ export type ApiUser = {
   last_login: string | null
 }
 
-export type AuthTokens = {
-  access_token: string
-  refresh_token?: string
-  token_type: string
-}
-
-export type LoginResponse = AuthTokens & {
+// Tokens are stored in HttpOnly cookies by the backend; the JSON body
+// carries only the user identity so the client can render the right
+// dashboard without an extra /auth/me round-trip.
+export type LoginResponse = {
   user: ApiUser
 }
 
@@ -32,7 +29,7 @@ export type SignupPayload = {
   role?: UserRole
 }
 
-export type RefreshResponse = AuthTokens
+export type RefreshResponse = { user: ApiUser }
 
 /**
  * POST /auth/login
@@ -58,13 +55,27 @@ export function signup(payload: SignupPayload) {
 
 /**
  * POST /auth/refresh
- * Exchange a refresh token for a new access token.
- * Wired in here so the auth layer is ready when the API ships refresh support.
+ * The refresh token is read from the HttpOnly cookie set by the backend,
+ * so no body is required. Issues a fresh access token + rotates the refresh.
  */
-export function refresh(refreshToken: string) {
-  return apiRequest<RefreshResponse>('/auth/refresh', {
+export function refresh() {
+  return apiRequest<{ user: ApiUser }>('/auth/refresh', {
     method: 'POST',
-    body: JSON.stringify({ refresh_token: refreshToken }),
+  })
+}
+
+export type AdminCreatePayload = {
+  username: string
+  email: string
+  password: string
+  full_name?: string
+  role: 'admin' | 'super_admin'
+}
+
+export function createAdmin(payload: AdminCreatePayload) {
+  return apiRequest<ApiUser>('/auth/admin', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   })
 }
 

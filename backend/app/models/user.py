@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -21,6 +21,11 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
+    # Brute-force defense: after MAX_FAILED_LOGINS consecutive bad
+    # passwords the account is locked until `locked_until`. The auth
+    # service resets `failed_login_attempts` on a successful login.
+    failed_login_attempts = Column(Integer, nullable=False, default=0)
+    locked_until = Column(DateTime, nullable=True)
 
     creator = relationship("User", remote_side=[id], back_populates="created_users")
     created_users = relationship("User", back_populates="creator")

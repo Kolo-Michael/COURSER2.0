@@ -9,7 +9,19 @@ dependencies = [
     "SQLAlchemy==2.0.40",
     "asyncpg==0.30.0",
     "pydantic[email]==2.11.4",
+    # fastapi==0.115.12 targets starlette 0.41.x — keep this upper bound so
+    # Vercel's resolver doesn't pull a newer starlette that drops the
+    # on_startup/on_shutdown kwargs APIRouter still passes.
+    "starlette>=0.41.0,<0.47",
 ]
+
+# Pyrefly/IDE hint: the `app` package lives under backend/, not at the repo
+# root. The scripts in backend/ (init_db.py, create_super_admin.py,
+# seed_courses.py) are run with CWD=backend/, so `import app.*` resolves.
+# Pointing the IDE at backend/ as the source root lets it resolve imports
+# the same way Python does at runtime.
+[tool.pyrefly]
+project-includes = ["backend/**/*.py"]
 
 [tool.vercel]
 entrypoint = "api.index:app"

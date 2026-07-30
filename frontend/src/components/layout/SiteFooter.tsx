@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { subscribeNewsletter } from '@/api/courses'
 
 const productLinks = [
   { label: 'Courses', to: '/courses' },
@@ -22,41 +24,43 @@ const socialLinks = [
 export function SiteFooter() {
   const year = new Date().getFullYear()
 
-  return (
-    <footer className="relative mt-16 overflow-hidden border-t border-slate-200 bg-slate-950 text-slate-300">
-      {/* Decorative gradient accents */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-24 left-1/4 h-64 w-64 rounded-full bg-primary/20 blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-24 right-1/4 h-64 w-64 rounded-full bg-accent/20 blur-3xl"
-      />
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
 
-      <div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+  async function handleSubscribe(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!email.trim()) return
+    setStatus('sending')
+    try {
+      await subscribeNewsletter(email.trim())
+      setStatus('ok')
+      setEmail('')
+    } catch {
+      setStatus('error')
+    }
+  }
+
+  return (
+    <footer className="relative mt-16 border-t border-stone-800 bg-stone-950 text-stone-300">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-12">
           {/* Brand column */}
           <div className="md:col-span-5">
             <Link to="/" className="inline-flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shadow-lg">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white">
                 <i className="fa-solid fa-graduation-cap" aria-hidden />
               </span>
               <span className="text-lg font-bold tracking-wide text-white">COURSER</span>
             </Link>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-stone-400">
               AI-assisted learning paths with the structure learners expect — from discovery to
               enrollment and progress, all in one workspace with Cora, your built-in study companion.
             </p>
 
             {/* Newsletter */}
             <form
-              className="mt-6 flex max-w-md overflow-hidden rounded-lg border border-slate-800 bg-slate-900/60 backdrop-blur"
-              onSubmit={(e) => e.preventDefault()}
+              className="mt-6 flex max-w-md overflow-hidden rounded-lg border border-stone-800 bg-stone-900"
+              onSubmit={handleSubscribe}
             >
               <label htmlFor="footer-newsletter" className="sr-only">
                 Email address
@@ -64,16 +68,27 @@ export function SiteFooter() {
               <input
                 id="footer-newsletter"
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@email.com"
-                className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                required
+                disabled={status === 'sending'}
+                className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder:text-stone-500 focus:outline-none disabled:opacity-50"
               />
               <button
                 type="submit"
-                className="bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90"
+                disabled={status === 'sending'}
+                className="bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-60"
               >
-                Subscribe
+                {status === 'sending' ? '…' : 'Subscribe'}
               </button>
             </form>
+            {status === 'ok' ? (
+              <p className="mt-2 text-xs font-semibold text-green-400">Subscribed.</p>
+            ) : null}
+            {status === 'error' ? (
+              <p className="mt-2 text-xs font-semibold text-red-400">Couldn't subscribe. Try again.</p>
+            ) : null}
 
             {/* Socials */}
             <div className="mt-5 flex items-center gap-2">
@@ -81,8 +96,10 @@ export function SiteFooter() {
                 <a
                   key={s.label}
                   href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={s.label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 bg-slate-900/60 text-slate-400 transition hover:border-primary/60 hover:text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-800 bg-stone-900 text-stone-400 transition hover:border-primary/60 hover:text-white"
                 >
                   <i className={`${s.icon} text-sm`} aria-hidden />
                 </a>
@@ -92,7 +109,7 @@ export function SiteFooter() {
 
           {/* Link columns */}
           <div className="md:col-span-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-200">
               Product
             </h3>
             <ul className="mt-4 space-y-3 text-sm">
@@ -100,7 +117,7 @@ export function SiteFooter() {
                 <li key={link.label}>
                   <Link
                     to={link.to}
-                    className="text-slate-400 transition hover:text-white"
+                    className="text-stone-400 transition hover:text-white"
                   >
                     {link.label}
                   </Link>
@@ -110,7 +127,7 @@ export function SiteFooter() {
           </div>
 
           <div className="md:col-span-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-200">
               Resources
             </h3>
             <ul className="mt-4 space-y-3 text-sm">
@@ -118,7 +135,7 @@ export function SiteFooter() {
                 <li key={link.label}>
                   <Link
                     to={link.to}
-                    className="text-slate-400 transition hover:text-white"
+                    className="text-stone-400 transition hover:text-white"
                   >
                     {link.label}
                   </Link>
@@ -126,10 +143,10 @@ export function SiteFooter() {
               ))}
             </ul>
 
-            <h3 className="mt-8 text-xs font-semibold uppercase tracking-wider text-slate-200">
+            <h3 className="mt-8 text-xs font-semibold uppercase tracking-wider text-stone-200">
               Contact
             </h3>
-            <ul className="mt-4 space-y-2 text-sm text-slate-400">
+            <ul className="mt-4 space-y-2 text-sm text-stone-400">
               <li className="flex items-center gap-2">
                 <i className="fa-solid fa-envelope text-xs text-accent" aria-hidden />
                 <a href="mailto:hello@courser.app" className="hover:text-white">
@@ -145,24 +162,16 @@ export function SiteFooter() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-6 text-xs text-slate-500 sm:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-stone-800 pt-6 text-xs text-stone-500 sm:flex-row">
           <p>© {year} COURSER. Built for learners who want clear, structured paths to skill up.</p>
           <div className="flex items-center gap-4">
             <Link to="/auth?mode=login" className="hover:text-white">
               Privacy
             </Link>
-            <span className="h-1 w-1 rounded-full bg-slate-700" />
+            <span className="h-1 w-1 rounded-full bg-stone-700" />
             <Link to="/auth?mode=login" className="hover:text-white">
               Terms
             </Link>
-            <span className="h-1 w-1 rounded-full bg-slate-700" />
-            <span className="inline-flex items-center gap-1.5">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-              </span>
-              All systems operational
-            </span>
           </div>
         </div>
       </div>

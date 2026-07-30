@@ -96,3 +96,35 @@ export function createCourse(payload: CreateCoursePayload) {
     body: JSON.stringify(payload),
   })
 }
+
+export type ApiEnrollment = {
+  id: string
+  user_id: string
+  course_id: string
+  progress: number
+  created_at: string
+}
+
+export type AskResponse = {
+  answer: string
+}
+
+export function enrollInCourse(slug: string) {
+  return apiRequest<ApiEnrollment>(`/courses/slug/${slug}/enroll`, {
+    method: 'POST',
+  })
+}
+
+export function askCora(slug: string, question: string) {
+  return apiRequest<AskResponse>(`/courses/slug/${slug}/ask`, {
+    method: 'POST',
+    body: JSON.stringify({ question }),
+  })
+}
+
+export function subscribeNewsletter(email: string) {
+  return apiRequest<{ ok: boolean; message?: string }>('/newsletter/subscribe', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}

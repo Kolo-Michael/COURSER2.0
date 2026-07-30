@@ -1,8 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
-
 
 class CategoryBase(BaseModel):
     name: str
@@ -127,3 +126,23 @@ class EnrollmentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class EnrollmentCreate(BaseModel):
+    """Body for POST /courses/{slug}/enroll. Empty — slug is in the path
+    and the user comes from the access token."""
+    pass
+
+
+class AskRequest(BaseModel):
+    """Body for POST /courses/{slug}/ask (the 'Ask Cora' widget)."""
+    question: str = Field(min_length=1, max_length=2000)
+
+
+class AskResponse(BaseModel):
+    answer: str
+
+
+class NewsletterSubscribe(BaseModel):
+    """Body for POST /newsletter/subscribe."""
+    email: EmailStr

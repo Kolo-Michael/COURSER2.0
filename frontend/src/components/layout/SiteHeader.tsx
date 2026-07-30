@@ -7,20 +7,20 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     'rounded-md px-3 py-2 text-sm font-semibold transition',
     isActive
       ? 'bg-primary text-white dark:bg-primary-dark dark:text-white'
-      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
+      : 'text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800',
   ].join(' ')
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
+    <header className="sticky top-0 z-50 border-b border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-950">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm text-white dark:bg-primary-dark">
             <i className="fa-solid fa-graduation-cap" aria-hidden />
           </span>
-          <span className="text-lg text-slate-900 dark:text-white">COURSER</span>
+          <span className="text-lg text-stone-900 dark:text-stone-100">COURSER</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
@@ -36,7 +36,7 @@ export function SiteHeader() {
           <ThemeToggle />
           <Link
             to="/auth"
-            className="text-sm font-semibold text-slate-700 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-slate-200 dark:hover:text-primary-dark"
+            className="text-sm font-semibold text-stone-700 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-stone-200 dark:hover:text-primary-dark"
           >
             Log in
           </Link>
@@ -52,7 +52,7 @@ export function SiteHeader() {
           <ThemeToggle />
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-800 dark:border-slate-700 dark:text-slate-200"
+            className="inline-flex items-center justify-center rounded-lg border border-stone-200 p-2 text-stone-800 dark:border-stone-700 dark:text-stone-200"
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label={open ? 'Close menu' : 'Open menu'}
@@ -66,14 +66,14 @@ export function SiteHeader() {
       {open ? (
         <div
           id="mobile-nav"
-          className="border-t border-slate-200/70 bg-white/95 px-4 py-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95 md:hidden"
+          className="border-t border-stone-200 bg-white px-4 py-4 dark:border-stone-800 dark:bg-stone-950 md:hidden"
         >
           <div className="flex flex-col gap-2">
             <NavLink
               to="/"
               end
               onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2 text-base font-semibold text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="rounded-lg px-3 py-2 text-base font-semibold text-stone-800 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800"
             >
               <i className="fa-solid fa-house mr-2 text-primary dark:text-primary-dark" aria-hidden />
               Home
@@ -81,7 +81,7 @@ export function SiteHeader() {
             <NavLink
               to="/courses"
               onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2 text-base font-semibold text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="rounded-lg px-3 py-2 text-base font-semibold text-stone-800 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800"
             >
               <i className="fa-solid fa-book-open mr-2 text-primary dark:text-primary-dark" aria-hidden />
               Courses
@@ -89,13 +89,12 @@ export function SiteHeader() {
             <Link
               to="/auth"
               onClick={() => setOpen(false)}
-              className="mt-2 rounded-lg border border-slate-200 px-3 py-2 text-center text-base font-semibold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="mt-2 rounded-lg border border-stone-200 px-3 py-2 text-center text-base font-semibold text-stone-800 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
             >
               Log in
             </Link>
             <Link
               to="/auth?mode=signup"
-              onClick={() => setOpen(false)}
               className="rounded-lg bg-accent px-3 py-2 text-center text-base font-semibold text-white dark:bg-accent-dark"
             >
               Sign up

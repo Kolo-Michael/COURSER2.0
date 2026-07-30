@@ -1,7 +1,32 @@
+# Project secrets
 backend/.env
+backend/.env.local
+
+# Python cache
 backend/__pycache__/
 backend/app/**/__pycache__/
 api/__pycache__/
+**/__pycache__/
+*.pyc
+
+# Node
 frontend/dist/
 frontend/node_modules/
+node_modules/
+
+# Vercel
 .vercel/
+
+# IDE
+.vscode/
+.idea/
+
+# Personal / dissertation files
+*.docx
+~$*.docx
+*.pdf
+generate_chapters.py
+
+# OS
+.DS_Store
+Thumbs.db

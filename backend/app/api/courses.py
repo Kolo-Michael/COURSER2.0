@@ -1,23 +1,70 @@
+"""Course catalog + management, including the new /enroll and /ask endpoints
+that the wired-up buttons on the frontend depend on.
+
+Mutating endpoints (create/update/delete) are now gated by
+`get_current_user_id` and a role check so unauthenticated and
+non-privileged users can't write to the catalog.
+"""
+
+from __future__ import annotations
+
+import uuid
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models import Category, Course, Lesson, Module
+from app.core.security import get_current_user_id
+from app.models import Category, Course, Enrollment, Lesson, Module, User
 from app.schemas.course import (
+    AskRequest,
+    AskResponse,
     CategoryResponse,
     CourseCreate,
     CourseListResponse,
     CourseResponse,
     CourseUpdate,
+    EnrollmentResponse,
 )
+from app.services import auth_service
 
 router = APIRouter()
+
+
+async def _require_admin_or_above(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Resolve the current user and confirm role ∈ {admin, super_admin}."""
+    # Inline rather than `Depends(get_current_user_id)` so we can also
+    # return the User object for the caller — the dependency chain on
+    # its own stops at the UUID.
+    from app.core.security import get_access_token
+
+    token = get_access_token(request)
+    if not token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+
+    from app.core.security import decode_token
+
+    payload = decode_token(token, expected_type="access")
+    try:
+        user_id = uuid.UUID(payload["sub"])
+    except (KeyError, ValueError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token subject")
+
+    user = await auth_service.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
+    if user.role not in ("admin", "super_admin"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Admin only")
+    return user
+
 
 NOW = datetime(2026, 5, 13, 12, 0, 0)
 
@@ -190,6 +237,9 @@ def fallback_course_by_slug(slug: str):
     return next((course for course in FALLBACK_COURSES if course["slug"] == slug), None)
 
 
+# --- public read endpoints ------------------------------------------------
+
+
 @router.get("/categories", response_model=List[CategoryResponse])
 async def list_categories(db: AsyncSession = Depends(get_db)):
     try:
@@ -224,8 +274,51 @@ async def list_courses(
         return courses
 
 
+@router.get("/{course_id}", response_model=CourseResponse)
+async def get_course(course_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Course)
+        .where(Course.id == course_id)
+        .options(
+            selectinload(Course.category),
+            selectinload(Course.modules).selectinload(Module.lessons),
+        )
+    )
+    course = result.scalar_one_or_none()
+    if course is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    return course
+
+
+@router.get("/slug/{slug}", response_model=CourseResponse)
+async def get_course_by_slug(slug: str, db: AsyncSession = Depends(get_db)):
+    try:
+        result = await db.execute(
+            select(Course)
+            .where(Course.slug == slug)
+            .options(
+                selectinload(Course.category),
+                selectinload(Course.modules).selectinload(Module.lessons),
+            )
+        )
+        course = result.scalar_one_or_none()
+    except Exception:
+        course = fallback_course_by_slug(slug)
+
+    if course is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    return course
+
+
+# --- admin-only write endpoints ------------------------------------------
+
+
 @router.post("", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
-async def create_course(course_data: CourseCreate, db: AsyncSession = Depends(get_db)):
+async def create_course(
+    course_data: CourseCreate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(_require_admin_or_above),
+):
     course = Course(**course_data.model_dump(exclude={"modules"}))
     db.add(course)
     await db.flush()
@@ -262,47 +355,12 @@ async def create_course(course_data: CourseCreate, db: AsyncSession = Depends(ge
     return result.scalar_one()
 
 
-@router.get("/{course_id}", response_model=CourseResponse)
-async def get_course(course_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Course)
-        .where(Course.id == course_id)
-        .options(
-            selectinload(Course.category),
-            selectinload(Course.modules).selectinload(Module.lessons),
-        )
-    )
-    course = result.scalar_one_or_none()
-    if course is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    return course
-
-
-@router.get("/slug/{slug}", response_model=CourseResponse)
-async def get_course_by_slug(slug: str, db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(
-            select(Course)
-            .where(Course.slug == slug)
-            .options(
-                selectinload(Course.category),
-                selectinload(Course.modules).selectinload(Module.lessons),
-            )
-        )
-        course = result.scalar_one_or_none()
-    except Exception:
-        course = fallback_course_by_slug(slug)
-
-    if course is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    return course
-
-
 @router.patch("/{course_id}", response_model=CourseResponse)
 async def update_course(
-    course_id: UUID,
+    course_id: uuid.UUID,
     course_data: CourseUpdate,
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(_require_admin_or_above),
 ):
     course = await db.get(Course, course_id)
     if course is None:
@@ -317,10 +375,80 @@ async def update_course(
 
 
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_course(course_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_course(
+    course_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(_require_admin_or_above),
+):
     course = await db.get(Course, course_id)
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
     await db.delete(course)
     await db.commit()
+
+
+# --- student actions ------------------------------------------------------
+
+
+@router.post("/slug/{slug}/enroll", response_model=EnrollmentResponse, status_code=status.HTTP_201_CREATED)
+async def enroll_in_course(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """Authenticated enroll — creates an Enrollment row.
+
+    Idempotent: returns the existing enrollment if one already exists
+    (so double-clicking the Start button doesn't error out)."""
+    result = await db.execute(select(Course).where(Course.slug == slug))
+    course = result.scalar_one_or_none()
+    if course is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Course not found")
+
+    existing = await db.execute(
+        select(Enrollment).where(
+            Enrollment.user_id == user_id,
+            Enrollment.course_id == course.id,
+        )
+    )
+    enrollment = existing.scalar_one_or_none()
+    if enrollment is not None:
+        return enrollment
+
+    enrollment = Enrollment(
+        user_id=user_id,
+        course_id=course.id,
+        progress=0.0,
+    )
+    db.add(enrollment)
+    await db.commit()
+    await db.refresh(enrollment)
+    return enrollment
+
+
+@router.post("/slug/{slug}/ask", response_model=AskResponse)
+async def ask_cora(
+    slug: str,
+    payload: AskRequest,
+    db: AsyncSession = Depends(get_db),
+    _user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """Stub tutor endpoint. Logs the question; returns a canned reply.
+
+    Replace with a real LLM call when the tutor service is wired up.
+    Validates the course slug exists so a typo'd path doesn't 404
+    silently."""
+    result = await db.execute(select(Course).where(Course.slug == slug))
+    course = result.scalar_one_or_none()
+    if course is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Course not found")
+
+    print(f"[cora] ask on course={course.slug!r}: {payload.question!r}")
+    return AskResponse(
+        answer=(
+            "Cora is in placeholder mode right now — this stub just confirms "
+            "your message was received. A real tutor backend will replace "
+            "this reply once the AI service is wired up."
+        )
+    )

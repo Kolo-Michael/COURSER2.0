@@ -1,18 +1,29 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Literal
 from uuid import UUID
 from datetime import datetime
 
 
 class UserBase(BaseModel):
-    username: str
+    username: str = Field(min_length=3, max_length=50)
     email: EmailStr
-    full_name: Optional[str] = None
-    role: str = "student"
+    full_name: Optional[str] = Field(default=None, max_length=100)
+    role: Literal["student", "admin", "super_admin"] = "student"
 
 
 class UserCreate(UserBase):
-    password: str
+    # Password strength is enforced by auth_service via validation, plus
+    # the frontend form. Server-side length floor of 8 chars here.
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AdminCreate(BaseModel):
+    """Body for POST /auth/admin (super-admin only)."""
+    username: str = Field(min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    full_name: Optional[str] = Field(default=None, max_length=100)
+    role: Literal["admin", "super_admin"] = "admin"
 
 
 class UserUpdate(BaseModel):
@@ -36,14 +47,25 @@ class UserResponse(UserBase):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=128)
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    """Body for legacy refresh flow when the cookie isn't available (rare).
+
+    In the cookie flow, /auth/refresh reads from the HttpOnly cookie
+    and the body is optional."""
+    refresh_token: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
+    """Auth response. Tokens are also set as HttpOnly cookies on the
+    response, so the JSON is mainly informational for the frontend.
+
+    `refresh_token` was missing from the previous version, which the
+    frontend's `signup`/`login` handlers were silently reading as
+    undefined."""
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserResponse
