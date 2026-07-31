@@ -33,6 +33,7 @@ This document records which agent owns each section of the COURSER project, what
 | 2026-05-22 | Codex | Added accessible show/hide password controls to the login and signup forms | `frontend/src/components/auth/LoginForm.tsx`, `frontend/src/components/auth/SignupForm.tsx`, `AGENTS.md`, `AGENT_ACTIVITY.md` |
 | 2026-05-22 | Codex | Prepared the project for the new `COURSER2.0` GitHub repository, added a README, and recorded that future completed changes should be committed and pushed | `README.md`, `AGENTS.md`, `AGENT_ACTIVITY.md` |
 | 2026-05-22 | Codex | Added a free Render deployment blueprint and production same-origin serving so the FastAPI service can host both the API and React app | `render.yaml`, `backend/app/main.py`, `frontend/src/api/client.ts`, `AGENTS.md`, `AGENT_ACTIVITY.md` |
+| 2026-07-31 | Claude Code | Aligned live Neon schema with current models (dropped NOT NULL on `courses.instructor_id`, added `lessons.is_published`, added `conversations.course_id` FK), cleaned stale catalog (orphan modules with NULL `course_id`, legacy `python-beginners` course, legacy categories), seeded the canonical 6-category/6-course free catalog, and removed leaked `backend/.env.local` from git tracking (kept in `.gitignore`) | `backend/seed_courses.py`, `.gitignore`, `AGENTS.md`, `AGENT_ACTIVITY.md` |
 
 ## Current Runtime Status
 | Service | URL | Latest Verification |
