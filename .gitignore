@@ -30,3 +30,6 @@ generate_chapters.py
 # OS
 .DS_Store
 Thumbs.db
+
+.vercel
+.env*
