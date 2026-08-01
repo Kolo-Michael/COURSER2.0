@@ -79,19 +79,19 @@ export type CreateCourseModule = {
 }
 
 export function listCourses() {
-  return apiRequest<ApiCourse[]>('/courses?published=true')
+  return apiRequest<ApiCourse[]>('/api/courses?published=true')
 }
 
 export function listCategories() {
-  return apiRequest<ApiCategory[]>('/courses/categories')
+  return apiRequest<ApiCategory[]>('/api/courses/categories')
 }
 
 export function getCourseBySlug(slug: string) {
-  return apiRequest<ApiCourse>(`/courses/slug/${slug}`)
+  return apiRequest<ApiCourse>(`/api/courses/slug/${slug}`)
 }
 
 export function createCourse(payload: CreateCoursePayload) {
-  return apiRequest<ApiCourse>('/courses', {
+  return apiRequest<ApiCourse>('/api/courses', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -110,20 +110,20 @@ export type AskResponse = {
 }
 
 export function enrollInCourse(slug: string) {
-  return apiRequest<ApiEnrollment>(`/courses/slug/${slug}/enroll`, {
+  return apiRequest<ApiEnrollment>(`/api/courses/slug/${slug}/enroll`, {
     method: 'POST',
   })
 }
 
 export function askCora(slug: string, question: string) {
-  return apiRequest<AskResponse>(`/courses/slug/${slug}/ask`, {
+  return apiRequest<AskResponse>(`/api/courses/slug/${slug}/ask`, {
     method: 'POST',
     body: JSON.stringify({ question }),
   })
 }
 
 export function subscribeNewsletter(email: string) {
-  return apiRequest<{ ok: boolean; message?: string }>('/newsletter/subscribe', {
+  return apiRequest<{ ok: boolean; message?: string }>('/api/newsletter/subscribe', {
     method: 'POST',
     body: JSON.stringify({ email }),
   })

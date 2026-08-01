@@ -32,34 +32,34 @@ export type SignupPayload = {
 export type RefreshResponse = { user: ApiUser }
 
 /**
- * POST /auth/login
+ * POST /api/auth/login
  * Returns access + (optional) refresh tokens plus the authenticated user.
  */
 export function login(email: string, password: string) {
-  return apiRequest<LoginResponse>('/auth/login', {
+  return apiRequest<LoginResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   })
 }
 
 /**
- * POST /auth/signup
+ * POST /api/auth/signup
  * Registers a new user and returns access + (optional) refresh tokens plus the new user.
  */
 export function signup(payload: SignupPayload) {
-  return apiRequest<LoginResponse>('/auth/signup', {
+  return apiRequest<LoginResponse>('/api/auth/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
 }
 
 /**
- * POST /auth/refresh
+ * POST /api/auth/refresh
  * The refresh token is read from the HttpOnly cookie set by the backend,
  * so no body is required. Issues a fresh access token + rotates the refresh.
  */
 export function refresh() {
-  return apiRequest<{ user: ApiUser }>('/auth/refresh', {
+  return apiRequest<{ user: ApiUser }>('/api/auth/refresh', {
     method: 'POST',
   })
 }
@@ -73,7 +73,7 @@ export type AdminCreatePayload = {
 }
 
 export function createAdmin(payload: AdminCreatePayload) {
-  return apiRequest<ApiUser>('/auth/admin', {
+  return apiRequest<ApiUser>('/api/auth/admin', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

@@ -42,7 +42,7 @@ def _build_csp_header() -> str:
     `unsafe-inline` is required for styles because Vite injects inline
     `<style>` tags at runtime; tightening this further needs nonces."""
     frontend_origins = os.getenv("FRONTEND_ORIGINS", "https://courser2.vercel.app")
-    api_origin = os.getenv("API_ORIGIN", "https://courser-api.onrender.com")
+    api_origin = os.getenv("API_ORIGIN", "https://courser2.vercel.app")
     connect = " ".join(
         ["'self'", api_origin] + [o.strip() for o in frontend_origins.split(",") if o.strip()]
     )
@@ -105,18 +105,22 @@ async def lifespan(app: FastAPI):
 # --- app construction ----------------------------------------------------
 
 
-app = FastAPI(
+# The API itself — every route and middleware lives here. It is mounted
+# under `/api` by the gateway below so a single Vercel project can serve
+# both the SPA and the API on one origin (/api/auth/login, /api/courses,
+# /api/health). Local dev runs the same gateway (`uvicorn app.main:app`),
+# so what you hit locally matches production exactly.
+api_app = FastAPI(
     title="COURSER API",
     description="Course management API",
     version="1.0.0",
-    lifespan=lifespan,
 )
 
 # Rate limiter state — slowapi looks this up to apply per-route limits.
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
+api_app.state.limiter = limiter
+api_app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+api_app.add_middleware(SlowAPIMiddleware)
+api_app.add_middleware(SecurityHeadersMiddleware)
 
 
 # CORS — cookies are required, so origins must be explicit (no "*").
@@ -148,7 +152,7 @@ allowed_origins.extend(
     ]
 )
 
-app.add_middleware(
+api_app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
@@ -160,16 +164,42 @@ app.add_middleware(
 
 # --- routers -------------------------------------------------------------
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(courses.router, prefix="/courses", tags=["courses"])
-app.include_router(newsletter.router, prefix="/newsletter", tags=["newsletter"])
+api_app.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_app.include_router(courses.router, prefix="/courses", tags=["courses"])
+api_app.include_router(newsletter.router, prefix="/newsletter", tags=["newsletter"])
 
 
-@app.get("/")
+@api_app.get("/")
 async def root():
     return {"message": "COURSER API"}
 
 
-@app.get("/health")
+@api_app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+# --- Vercel gateway ------------------------------------------------------
+#
+# The ASGI app uvicorn and Vercel load (`app.main:app`). It mounts api_app
+# under `/api` so the SPA and API share one origin and auth cookies work
+# with SameSite=Lax. The lifespan runs here because Starlette does NOT run
+# the lifespan of mounted sub-apps.
+app = FastAPI(
+    title="COURSER API",
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+    lifespan=lifespan,
+)
+
+# For mounted requests `request.app` resolves to this gateway — slowapi
+# reads the limiter off it, so mirror the state here too.
+app.state.limiter = limiter
+app.mount("/api", api_app)
+
+
+@app.get("/")
+async def gateway_root():
+    return {"message": "COURSER API", "docs": "/api/docs", "health": "/api/health"}
