@@ -1,0 +1,24 @@
+# COURSER API - Railway Deployment
+# 
+# 1. Push this repo to GitHub
+# 2. Go to https://railway.app → New Project → Deploy from GitHub
+# 3. Select this repo, set Root Directory to "backend"
+# 4. Add these environment variables:
+#    - DATABASE_URL (your Neon PostgreSQL URL)
+#    - SECRET_KEY (your secret key)
+#    - APP_ENV=production
+#    - FRONTEND_ORIGINS=https://courser-2-0.vercel.app
+#    - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, FROM_EMAIL (for emails)
+# 5. Deploy!
+
+[build]
+builder = "nixpacks"
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+
+[nixpacks]
+aptPkgs = ["gcc", "libpq-dev"]
