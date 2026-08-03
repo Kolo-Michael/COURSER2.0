@@ -60,10 +60,11 @@ export function VerifyCodeForm() {
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault()
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    const newDigits = pasted.split('').padEnd(6, '')
+    const newDigits = pasted.split('')
+    while (newDigits.length < 6) newDigits.push('')
     setCodeDigits(newDigits)
     // Focus the last filled input or the next empty one
-    const lastIndex = newDigits.findIndex((d) => !d)
+    const lastIndex = newDigits.findIndex((d: string) => !d)
     const focusIndex = lastIndex === -1 ? 5 : lastIndex
     const input = document.getElementById(`code-${focusIndex}`)
     input?.focus()
@@ -123,9 +124,6 @@ export function VerifyCodeForm() {
       setError('Failed to resend code. Please try again.')
     }
   }
-
-  // Need to import forgotPassword for resend
-  const { forgotPassword } = await import('@/api/auth')
 
   if (!email) return null
 

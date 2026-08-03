@@ -14,7 +14,6 @@ export function AuthPage() {
   const isSignup = mode === 'signup'
   const isForgot = mode === 'forgot-password'
   const isVerify = mode === 'verify-code'
-  const isReset = mode === 'reset-password'
 
   const pageConfig = {
     login: {
