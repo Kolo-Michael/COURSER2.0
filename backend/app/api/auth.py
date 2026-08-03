@@ -316,7 +316,11 @@ async def logout(request: Request, response: Response, db: AsyncSession = Depend
         await auth_service.revoke_session(db, cookie_token)
     _clear_auth_cookies(response)
     response.delete_cookie("courser_session", path="/")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    # Returning `response` (mutated) instead of a fresh `Response(...)`
+    # preserves the Set-Cookie deletion headers that delete_cookie()
+    # queued onto the injected response.
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.get("/me", response_model=UserResponse)

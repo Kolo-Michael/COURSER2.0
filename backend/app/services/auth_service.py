@@ -11,7 +11,7 @@ are signed JWTs (see `app.core.security`).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select, delete
@@ -27,6 +27,19 @@ from app.core.security import (
 from app.models import User, UserSession, PasswordResetToken
 from app.schemas.auth import UserCreate
 from app.services.email_service import generate_reset_code, send_password_reset_email
+
+
+def _utcnow_naive() -> datetime:
+    """Naive UTC "now", safe to compare against naive DateTime columns.
+
+    Postgres stores our `timestamp` columns without time zone; asyncpg /
+    SQLAlchemy sometimes returns them with tzinfo=UTC on the Vercel
+    runtime. Comparing those against `datetime.utcnow()` (naive) raises
+    `TypeError: can't compare offset-naive and offset-aware datetimes`,
+    which surfaces as a 500 on `/api/auth/refresh`. Returning a naive UTC
+    `datetime` for every comparison (and for values being written to
+    naive columns) avoids that mismatch."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def create_user(
@@ -66,7 +79,7 @@ async def authenticate_user(
         verify_password(password, "$2b$12$" + "x" * 53)
         return None
 
-    now = datetime.utcnow()
+    now = _utcnow_naive()
 
     # Lockout check — short-circuits before bcrypt even runs.
     if user.locked_until and user.locked_until > now:
@@ -97,7 +110,7 @@ async def issue_tokens(db: AsyncSession, user: User) -> tuple[str, str]:
     access_token = create_access_token(user.id, user.role)
     refresh_token = create_refresh_token(user.id, user.role)
 
-    now = datetime.utcnow()
+    now = _utcnow_naive()
     session = UserSession(
         user_id=user.id,
         refresh_token=refresh_token,
@@ -137,7 +150,7 @@ async def rotate_refresh_token(
     if session is None:
         return None
 
-    if session.expires_at <= datetime.utcnow():
+    if session.expires_at <= _utcnow_naive():
         return None
 
     user_result = await db.execute(select(User).where(User.id == session.user_id))
@@ -147,11 +160,11 @@ async def rotate_refresh_token(
 
     # Rotate: revoke the old row, mint a fresh one.
     session.is_revoked = True
-    session.last_used = datetime.utcnow()
+    session.last_used = _utcnow_naive()
 
     new_access = create_access_token(user.id, user.role)
     new_refresh = create_refresh_token(user.id, user.role)
-    now = datetime.utcnow()
+    now = _utcnow_naive()
     db.add(
         UserSession(
             user_id=user.id,
@@ -194,7 +207,7 @@ async def get_session_by_token(db: AsyncSession, refresh_token: str) -> Optional
         select(UserSession).where(
             UserSession.refresh_token == refresh_token,
             UserSession.is_revoked == False,  # noqa: E712 — SQLAlchemy needs the IS FALSE comparison
-            UserSession.expires_at > datetime.utcnow(),
+            UserSession.expires_at > _utcnow_naive(),
         )
     )
     return result.scalar_one_or_none()
@@ -220,7 +233,7 @@ async def request_password_reset(db: AsyncSession, email: str) -> bool:
 
     # Generate new code
     code = generate_reset_code()
-    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    expires_at = _utcnow_naive() + timedelta(minutes=15)
 
     reset_token = PasswordResetToken(
         user_id=user.id,
@@ -250,7 +263,7 @@ async def verify_reset_code(db: AsyncSession, email: str, code: str) -> tuple[bo
     result = await db.execute(
         select(PasswordResetToken).where(
             PasswordResetToken.user_id == user.id,
-            PasswordResetToken.expires_at > datetime.utcnow(),
+            PasswordResetToken.expires_at > _utcnow_naive(),
         )
     )
     reset_token = result.scalar_one_or_none()
@@ -286,7 +299,7 @@ async def reset_password(db: AsyncSession, email: str, code: str, new_password: 
     result = await db.execute(
         select(PasswordResetToken).where(
             PasswordResetToken.user_id == user.id,
-            PasswordResetToken.expires_at > datetime.utcnow(),
+            PasswordResetToken.expires_at > _utcnow_naive(),
         )
     )
     reset_token = result.scalar_one_or_none()
