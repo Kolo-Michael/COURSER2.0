@@ -57,16 +57,15 @@ def _cookie_secure() -> bool:
 def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
     """Set the access + refresh tokens as HttpOnly cookies.
 
-    `SameSite=Lax` allows the cookie on top-level navigations (so navigating
-    to a course detail from a link keeps you logged in) but blocks it from
-    cross-site POSTs (CSRF defense)."""
+    `SameSite=None` with `Secure` allows cross-origin requests (needed when
+    frontend and API are on different Vercel projects)."""
     secure = _cookie_secure()
     response.set_cookie(
         key="access_token",
         value=access,
         httponly=True,
         secure=secure,
-        samesite="lax",
+        samesite="none",
         path="/",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -75,7 +74,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
         value=refresh,
         httponly=True,
         secure=secure,
-        samesite="lax",
+        samesite="none",
         path="/",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
     )
@@ -105,7 +104,7 @@ def _set_session_cookie(response: Response, user) -> None:
         value=json.dumps(payload),
         httponly=False,  # JS reads this for routing decisions
         secure=secure,
-        samesite="lax",
+        samesite="none",
         path="/",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
