@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { login } from '@/api/auth'
 import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 export function LoginForm() {
   const navigate = useNavigate()
@@ -81,6 +82,21 @@ export function LoginForm() {
             <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
           </button>
         </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400 cursor-pointer">
+          <input
+            type="checkbox"
+            className="rounded border-stone-300 text-accent focus:ring-accent h-4 w-4"
+          />
+          Remember me
+        </label>
+        <Link
+          to="/auth?mode=forgot-password"
+          className="text-sm text-accent hover:underline dark:text-accent-dark"
+        >
+          Forgot password?
+        </Link>
       </div>
       {error ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p> : null}
       <button

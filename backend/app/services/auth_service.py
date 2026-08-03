@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -24,8 +24,9 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.models import User, UserSession
+from app.models import User, UserSession, PasswordResetToken
 from app.schemas.auth import UserCreate
+from app.services.email_service import generate_reset_code, send_password_reset_email
 
 
 async def create_user(
@@ -197,3 +198,112 @@ async def get_session_by_token(db: AsyncSession, refresh_token: str) -> Optional
         )
     )
     return result.scalar_one_or_none()
+
+
+# --- Password Reset Methods -------------------------------------------------
+
+
+async def request_password_reset(db: AsyncSession, email: str) -> bool:
+    """
+    Request a password reset for the given email.
+    
+    Always returns True to prevent email enumeration.
+    If user exists, generates a code and sends it via email.
+    """
+    user = await get_user_by_email(db, email)
+    if user is None:
+        # Don't reveal whether the email exists
+        return True
+
+    # Delete any existing reset tokens for this user
+    await db.execute(delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id))
+
+    # Generate new code
+    code = generate_reset_code()
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        code=code,
+        attempts=0,
+        expires_at=expires_at,
+    )
+    db.add(reset_token)
+    await db.commit()
+
+    # Send email (async, don't wait)
+    await send_password_reset_email(email, code)
+    return True
+
+
+async def verify_reset_code(db: AsyncSession, email: str, code: str) -> tuple[bool, str]:
+    """
+    Verify a password reset code.
+    
+    Returns (success, message).
+    After 3 failed attempts, the token is deleted and user must request a new one.
+    """
+    user = await get_user_by_email(db, email)
+    if user is None:
+        return False, "Invalid code."
+
+    result = await db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.expires_at > datetime.utcnow(),
+        )
+    )
+    reset_token = result.scalar_one_or_none()
+
+    if reset_token is None:
+        return False, "Code expired or not found. Please request a new one."
+
+    if reset_token.code != code:
+        reset_token.attempts += 1
+        await db.commit()
+        
+        if reset_token.attempts >= 3:
+            await db.delete(reset_token)
+            await db.commit()
+            return False, "Too many failed attempts. Please request a new code."
+        
+        return False, f"Invalid code. {3 - reset_token.attempts} attempts remaining."
+
+    # Code is valid
+    return True, "Code verified successfully."
+
+
+async def reset_password(db: AsyncSession, email: str, code: str, new_password: str) -> tuple[bool, str]:
+    """
+    Reset the user's password using a verified code.
+    
+    Returns (success, message).
+    """
+    user = await get_user_by_email(db, email)
+    if user is None:
+        return False, "Invalid request."
+
+    result = await db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.expires_at > datetime.utcnow(),
+        )
+    )
+    reset_token = result.scalar_one_or_none()
+
+    if reset_token is None:
+        return False, "Code expired or not found. Please request a new one."
+
+    if reset_token.code != code:
+        return False, "Invalid code."
+
+    # Update password
+    user.hashed_password = hash_password(new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    
+    # Delete the used reset token
+    await db.delete(reset_token)
+    await db.commit()
+    
+    return True, "Password reset successfully."

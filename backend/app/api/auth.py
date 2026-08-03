@@ -34,10 +34,13 @@ from app.core.security import (
 )
 from app.schemas.auth import (
     AdminCreate,
+    ForgotPasswordRequest,
     LoginRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserCreate,
     UserResponse,
+    VerifyCodeRequest,
 )
 from app.services import auth_service
 
@@ -167,6 +170,9 @@ signup_limit = _InMemoryLimit(*_parse_spec("3/hour"))
 login_limit = _InMemoryLimit(*_parse_spec("5/minute"))
 refresh_limit = _InMemoryLimit(*_parse_spec("30/minute"))
 admin_limit = _InMemoryLimit(*_parse_spec("20/hour"))
+forgot_limit = _InMemoryLimit(*_parse_spec("3/hour"))
+verify_limit = _InMemoryLimit(*_parse_spec("10/minute"))
+reset_limit = _InMemoryLimit(*_parse_spec("5/hour"))
 
 
 def _rate_limit_dependency(limit: _InMemoryLimit):
@@ -189,6 +195,9 @@ signup_dep = _rate_limit_dependency(signup_limit)
 login_dep = _rate_limit_dependency(login_limit)
 refresh_dep = _rate_limit_dependency(refresh_limit)
 admin_dep = _rate_limit_dependency(admin_limit)
+forgot_dep = _rate_limit_dependency(forgot_limit)
+verify_dep = _rate_limit_dependency(verify_limit)
+reset_dep = _rate_limit_dependency(reset_limit)
 
 
 # --- endpoints ------------------------------------------------------------
@@ -361,3 +370,63 @@ async def create_admin(
         created_by=caller.id,
     )
     return new_user
+
+
+# --- Password Reset Endpoints ----------------------------------------------
+
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(forgot_dep)],
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Request a password reset code for the given email.
+    
+    Always returns success to prevent email enumeration.
+    """
+    await auth_service.request_password_reset(db, payload.email)
+    return {"message": "If an account exists for that email, a reset code has been sent."}
+
+
+@router.post(
+    "/verify-code",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(verify_dep)],
+)
+async def verify_code(
+    payload: VerifyCodeRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Verify a password reset code.
+    
+    Returns success if code is valid, error with remaining attempts if not.
+    After 3 failed attempts, the code is invalidated.
+    """
+    success, message = await auth_service.verify_reset_code(db, payload.email, payload.code)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+    return {"message": message, "valid": True}
+
+
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(reset_dep)],
+)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reset the user's password using a verified code.
+    """
+    success, message = await auth_service.reset_password(db, payload.email, payload.code, payload.new_password)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+    return {"message": message}

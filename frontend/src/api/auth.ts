@@ -29,6 +29,21 @@ export type SignupPayload = {
   role?: UserRole
 }
 
+export type ForgotPasswordPayload = {
+  email: string
+}
+
+export type VerifyCodePayload = {
+  email: string
+  code: string
+}
+
+export type ResetPasswordPayload = {
+  email: string
+  code: string
+  new_password: string
+}
+
 export type RefreshResponse = { user: ApiUser }
 
 /**
@@ -48,6 +63,39 @@ export function login(email: string, password: string) {
  */
 export function signup(payload: SignupPayload) {
   return apiRequest<LoginResponse>('/api/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/forgot-password
+ * Requests a password reset code for the given email.
+ */
+export function forgotPassword(payload: ForgotPasswordPayload) {
+  return apiRequest<{ message: string }>('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/verify-code
+ * Verifies a password reset code.
+ */
+export function verifyCode(payload: VerifyCodePayload) {
+  return apiRequest<{ message: string; valid: boolean }>('/api/auth/verify-code', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/reset-password
+ * Resets the user's password using a verified code.
+ */
+export function resetPassword(payload: ResetPasswordPayload) {
+  return apiRequest<{ message: string }>('/api/auth/reset-password', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

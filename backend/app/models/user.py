@@ -33,3 +33,17 @@ class User(Base):
     enrollments = relationship("Enrollment", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
     conversations = relationship("Conversation", back_populates="user")
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    code = Column(String(6), nullable=False)
+    attempts = Column(Integer, nullable=False, default=0)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="password_reset_tokens")
