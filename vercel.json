@@ -5,7 +5,8 @@
   "functions": {
     "api/index.py": {
       "runtime": "@vercel/python@4.5.0",
-      "includeFiles": "backend/**"
+      "includeFiles": "backend/**",
+      "pythonVersion": "3.13"
     }
   },
   "rewrites": [
