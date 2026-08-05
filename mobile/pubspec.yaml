@@ -1,0 +1,40 @@
+name: courser_mobile
+description: "COURSER mobile app — Flutter learner client for the FastAPI backend."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Networking
+  dio: ^5.7.0
+
+  # Token storage (Keychain on iOS, EncryptedSharedPreferences on Android)
+  flutter_secure_storage: ^9.2.2
+
+  # State management
+  provider: ^6.1.2
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Images
+  cached_network_image: ^3.4.1
+
+  # Typography — keeps the look consistent with the web app
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
