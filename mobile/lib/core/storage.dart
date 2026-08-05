@@ -19,6 +19,9 @@ class SecureStore {
   static const _kRefreshToken = 'refresh_token';
   static const _kSessionExpiresAt = 'session_expires_at';
   static const _kRememberMe = 'remember_me';
+  static const _kOnboardingPage = 'onboarding_page';
+  static const _kOnboardingInterests = 'onboarding_interests';
+  static const _kOnboardingGoal = 'onboarding_goal';
 
   Future<String?> readAccessToken() => _storage.read(key: _kAccessToken);
   Future<String?> readRefreshToken() => _storage.read(key: _kRefreshToken);
@@ -55,6 +58,47 @@ class SecureStore {
         value: sessionExpiresAt.toUtc().toIso8601String(),
       );
     }
+  }
+
+  /// Onboarding progress. Persisted so that when the app is reopened without
+  /// a logged-in account the user resumes where they left off instead of
+  /// starting over. Choices are kept across launches until onboarding is
+  /// deliberately finished.
+  Future<int> readOnboardingPage() async {
+    final raw = await _storage.read(key: _kOnboardingPage);
+    return int.tryParse(raw ?? '') ?? 0;
+  }
+
+  Future<List<String>> readOnboardingInterests() async {
+    final raw = await _storage.read(key: _kOnboardingInterests);
+    if (raw == null || raw.isEmpty) return const [];
+    return raw
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  Future<String?> readOnboardingGoal() async {
+    return _storage.read(key: _kOnboardingGoal);
+  }
+
+  Future<void> saveOnboardingProgress({
+    required int page,
+    required List<String> interests,
+    String? goal,
+  }) async {
+    await _storage.write(key: _kOnboardingPage, value: '$page');
+    await _storage.write(key: _kOnboardingInterests, value: interests.join(','));
+    if (goal != null) {
+      await _storage.write(key: _kOnboardingGoal, value: goal);
+    }
+  }
+
+  Future<void> clearOnboardingProgress() async {
+    await _storage.delete(key: _kOnboardingPage);
+    await _storage.delete(key: _kOnboardingInterests);
+    await _storage.delete(key: _kOnboardingGoal);
   }
 
   Future<void> clear() async {

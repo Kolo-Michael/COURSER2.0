@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/config.dart';
+import '../core/storage.dart';
 import '../theme/app_theme.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -15,8 +16,58 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _page = 0;
   final Set<String> _interests = {};
   String? _goal;
+  late final SecureStore _store;
 
   static const _pages = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _store = SecureStore();
+    _restoreProgress();
+  }
+
+  /// Reloads any saved onboarding progress so an interrupted session resumes
+  /// exactly where the user left off (page index + selected choices).
+  Future<void> _restoreProgress() async {
+    final page = await _store.readOnboardingPage();
+    final interests = await _store.readOnboardingInterests();
+    final goal = await _store.readOnboardingGoal();
+    if (!mounted) return;
+    final restored = page.clamp(0, _pages - 1);
+    setState(() {
+      _page = restored;
+      _interests.addAll(interests);
+      _goal = goal;
+    });
+    if (restored > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _controller.jumpToPage(restored);
+      });
+    }
+  }
+
+  void _saveProgress() {
+    _store.saveOnboardingProgress(
+      page: _page,
+      interests: _interests.toList(),
+      goal: _goal,
+    );
+  }
+
+  void _toggleInterest(String name) {
+    setState(() {
+      _interests.contains(name)
+          ? _interests.remove(name)
+          : _interests.add(name);
+    });
+    _saveProgress();
+  }
+
+  void _selectGoal(String goal) {
+    setState(() => _goal = goal);
+    _saveProgress();
+  }
 
   @override
   void dispose() {
@@ -25,6 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _finish() {
+    _saveProgress();
     context.go('/login');
   }
 
@@ -64,20 +116,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView(
                 controller: _controller,
-                onPageChanged: (i) => setState(() => _page = i),
+                onPageChanged: (i) {
+                  setState(() => _page = i);
+                  _saveProgress();
+                },
                 children: [
                   _WelcomePage(),
                   _InterestsPage(
                     interests: _interests,
-                    onToggle: (name) => setState(() {
-                      _interests.contains(name)
-                          ? _interests.remove(name)
-                          : _interests.add(name);
-                    }),
+                    onToggle: _toggleInterest,
                   ),
                   _GoalsPage(
                     selected: _goal,
-                    onSelect: (goal) => setState(() => _goal = goal),
+                    onSelect: _selectGoal,
                   ),
                   _StreakPage(),
                 ],

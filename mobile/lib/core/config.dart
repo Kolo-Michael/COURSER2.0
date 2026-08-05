@@ -10,17 +10,28 @@ class Config {
   // Local development endpoints.
   // - Android emulator: 10.0.2.2 maps to the host's localhost
   // - iOS simulator / host machine: 127.0.0.1
-  // - Physical device: use your machine's LAN IP (e.g. 192.168.1.100)
+  // - Physical device (Android/iOS): your machine's LAN IP so the phone and
+  //   the backend (uvicorn on 0.0.0.0:8000) can talk over Wi-Fi.
+  //   Change this to match your machine's current IP, or override at build
+  //   time with --dart-define=COURSER_API_URL=http://<ip>:8000/api
   static const String _androidEmulatorLocal = 'http://10.0.2.2:8000/api';
   static const String _localhost = 'http://127.0.0.1:8000/api';
+  static const String _lanApiBaseUrl = 'http://192.168.1.192:8000/api';
 
   static String get apiBaseUrl {
     const localOverride = String.fromEnvironment('COURSER_API_URL');
     if (localOverride.isNotEmpty) return localOverride;
 
     if (_isDevelopment) {
-      // Android emulator can't reach 127.0.0.1 on the host
-      return _isAndroid ? _androidEmulatorLocal : _localhost;
+      if (_isAndroid) {
+        // Emulators can't reach 127.0.0.1 on the host; physical devices
+        // must use the host's LAN IP over Wi-Fi.
+        return _isAndroidEmulator ? _androidEmulatorLocal : _lanApiBaseUrl;
+      }
+      if (_isIOS) {
+        return _isIOSSimulator ? _localhost : _lanApiBaseUrl;
+      }
+      return _localhost;
     }
     return _prodApiBaseUrl;
   }
@@ -30,6 +41,27 @@ class Config {
   }
 
   static bool get _isAndroid => Platform.isAndroid;
+
+  static bool get _isIOS => Platform.isIOS;
+
+  /// Android emulator detection. The emulator's hostname is usually the
+  /// AVD name or "localhost"; a physical device reports its real hostname.
+  /// Can be overridden with --dart-define=COURSER_EMULATOR=true/false.
+  static bool get _isAndroidEmulator {
+    const forced = String.fromEnvironment('COURSER_EMULATOR');
+    if (forced.isNotEmpty) return forced == 'true';
+    final host = Platform.localHostname.toLowerCase();
+    return host == 'localhost' ||
+        host.contains('emulator') ||
+        host.contains('qemu') ||
+        host.contains('sdk_gphone');
+  }
+
+  static bool get _isIOSSimulator {
+    const forced = String.fromEnvironment('COURSER_SIMULATOR');
+    if (forced.isNotEmpty) return forced == 'true';
+    return Platform.localHostname.toLowerCase() == 'localhost';
+  }
 
   // Auto-logout after this long without any user interaction. While the
   // app is in the foreground and idle, the session is considered inactive

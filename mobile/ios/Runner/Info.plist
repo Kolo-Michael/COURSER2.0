@@ -45,5 +45,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Allow plain-HTTP requests to the dev machine's LAN IP during local
+	     development (physical device testing). Production is HTTPS-only. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>COURSER connects to your local development server to fetch courses and lessons during development.</string>
 </dict>
 </plist>
