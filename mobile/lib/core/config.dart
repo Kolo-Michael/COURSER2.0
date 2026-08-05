@@ -44,15 +44,17 @@ class Config {
 
   static bool get _isIOS => Platform.isIOS;
 
-  /// Android emulator detection. The emulator's hostname is usually the
-  /// AVD name or "localhost"; a physical device reports its real hostname.
-  /// Can be overridden with --dart-define=COURSER_EMULATOR=true/false.
+  /// Android emulator detection. Most physical devices (including many Pixel
+  /// phones) report a hostname of "localhost", while emulators report their
+  /// AVD name (e.g. "emulator-5554", "sdk_gphone64_x86_64"). Rely on the
+  /// AVD-name markers rather than "localhost" so a physical phone on Wi-Fi
+  /// gets the LAN IP. Can be overridden with
+  /// --dart-define=COURSER_EMULATOR=true/false.
   static bool get _isAndroidEmulator {
     const forced = String.fromEnvironment('COURSER_EMULATOR');
     if (forced.isNotEmpty) return forced == 'true';
     final host = Platform.localHostname.toLowerCase();
-    return host == 'localhost' ||
-        host.contains('emulator') ||
+    return host.contains('emulator') ||
         host.contains('qemu') ||
         host.contains('sdk_gphone');
   }
