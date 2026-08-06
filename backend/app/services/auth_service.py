@@ -101,37 +101,55 @@ async def authenticate_user(
     return user
 
 
-async def issue_tokens(db: AsyncSession, user: User) -> tuple[str, str]:
+async def issue_tokens(
+    db: AsyncSession,
+    user: User,
+    remember_me: bool = False,
+) -> tuple[str, str, datetime]:
     """Issue both tokens and persist the refresh token session row.
 
-    Returns (access_token, refresh_token). The caller is responsible for
-    placing these in Set-Cookie headers — see `api.auth._set_auth_cookies`.
+    Returns (access_token, refresh_token, session_expires_at). The caller
+    is responsible for placing the tokens in Set-Cookie headers — see
+    `api.auth._set_auth_cookies`.
+
+    When `remember_me` is True the refresh token (and its session row)
+    is minted for `REMEMBER_ME_EXPIRE_DAYS` so the mobile client can keep
+    the user signed in for up to 30 days without re-authenticating.
     """
     access_token = create_access_token(user.id, user.role)
-    refresh_token = create_refresh_token(user.id, user.role)
+    expire_days = (
+        settings.REMEMBER_ME_EXPIRE_DAYS if remember_me else settings.REFRESH_TOKEN_EXPIRE_DAYS
+    )
+    refresh_token = create_refresh_token(user.id, user.role, expire_days=expire_days)
 
     now = _utcnow_naive()
+    session_expires_at = now + timedelta(days=expire_days)
     session = UserSession(
         user_id=user.id,
         refresh_token=refresh_token,
-        expires_at=now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_at=session_expires_at,
         is_revoked=False,
         created_at=now,
         last_used=now,
     )
     db.add(session)
     await db.commit()
-    return access_token, refresh_token
+    return access_token, refresh_token, session_expires_at
 
 
 async def rotate_refresh_token(
     db: AsyncSession,
     old_refresh_token: str,
-) -> Optional[tuple[str, str, User]]:
+) -> Optional[tuple[str, str, User, datetime]]:
     """Validate a refresh token, revoke it, and issue a fresh pair.
 
-    Used by `/auth/refresh`. Returns (new_access, new_refresh, user) on
-    success, or None if the token is missing/revoked/expired.
+    Used by `/auth/refresh`. Returns
+    (new_access, new_refresh, user, session_expires_at) on success, or
+    None if the token is missing/revoked/expired.
+
+    The new session keeps the same lifetime as the old one, so a
+    "remember me" session (30 days) stays 30 days across rotations
+    instead of snapping back to the default 7.
     """
     from app.core.security import decode_token
 
@@ -150,7 +168,14 @@ async def rotate_refresh_token(
     if session is None:
         return None
 
-    if session.expires_at <= _utcnow_naive():
+    now = _utcnow_naive()
+    if session.expires_at <= now:
+        return None
+
+    # Inactivity gate: a session that hasn't been touched (rotated / used)
+    # within INACTIVITY_TIMEOUT_MINUTES is treated as expired. This makes
+    # authentication inactivity-based on top of the fixed expiry.
+    if now - session.last_used > timedelta(minutes=settings.INACTIVITY_TIMEOUT_MINUTES):
         return None
 
     user_result = await db.execute(select(User).where(User.id == session.user_id))
@@ -158,25 +183,30 @@ async def rotate_refresh_token(
     if user is None:
         return None
 
+    # Preserve the original lifetime (e.g. 30d for remember-me, 7d default).
+    lifetime = session.expires_at - session.created_at
+    if lifetime <= timedelta(0):
+        lifetime = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    new_expires_at = now + lifetime
+
     # Rotate: revoke the old row, mint a fresh one.
     session.is_revoked = True
-    session.last_used = _utcnow_naive()
+    session.last_used = now
 
     new_access = create_access_token(user.id, user.role)
-    new_refresh = create_refresh_token(user.id, user.role)
-    now = _utcnow_naive()
+    new_refresh = create_refresh_token(user.id, user.role, expire_days=lifetime.days)
     db.add(
         UserSession(
             user_id=user.id,
             refresh_token=new_refresh,
-            expires_at=now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_at=new_expires_at,
             is_revoked=False,
             created_at=now,
             last_used=now,
         )
     )
     await db.commit()
-    return new_access, new_refresh, user
+    return new_access, new_refresh, user, new_expires_at
 
 
 async def revoke_session(db: AsyncSession, refresh_token: str) -> bool:

@@ -19,10 +19,11 @@ dependencies = [
 # Pyrefly/IDE hint: the `app` package lives under backend/, not at the repo
 # root. The scripts in backend/ (init_db.py, create_super_admin.py,
 # seed_courses.py) are run with CWD=backend/, so `import app.*` resolves.
-# Pointing the IDE at backend/ as the source root lets it resolve imports
-# the same way Python does at runtime.
+# `search-path` adds backend/ as an import root so pyrefly resolves
+# `app.*` the same way Python does at runtime.
 [tool.pyrefly]
 project-includes = ["backend/**/*.py"]
+search-path = ["backend"]
 
 [tool.vercel]
 entrypoint = "api.index:app"

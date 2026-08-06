@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UUID as SA_UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -21,8 +20,8 @@ class UserSession(Base):
 
     __tablename__ = "user_sessions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     refresh_token = Column(String(500), nullable=False, unique=True)
     expires_at = Column(DateTime, nullable=False)
     is_revoked = Column(Boolean, default=False, nullable=False)

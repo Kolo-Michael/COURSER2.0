@@ -1,0 +1,9 @@
+# Crontab entry for pinging Render every 15 seconds
+#
+# Install with:  crontab backend/crontab_render
+#
+# Cron's minimum granularity is 1 minute. The script `ping_render.sh` runs
+# 4 HTTP pings spaced 15 seconds apart within each minute, achieving the
+# 15-second interval.
+RENDER_HEALTH_URL=https://courser-api-18uo.onrender.com/api/health
+* * * * * /app/backend/ping_render.sh >> /var/log/render_ping.log 2>&1

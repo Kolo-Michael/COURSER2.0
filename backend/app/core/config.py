@@ -4,18 +4,26 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
-def load_env_file() -> None:
-    env_path = Path(__file__).resolve().parents[2] / ".env"
-    if not env_path.exists():
+def _load_env_file(path: Path, override: bool = False) -> None:
+    if not path.exists():
         return
-
-    for line in env_path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         value = line.strip()
         if not value or value.startswith("#") or "=" not in value:
             continue
-
         key, raw = value.split("=", 1)
-        os.environ.setdefault(key.strip(), raw.strip().strip('"').strip("'"))
+        clean = raw.strip().strip('"').strip("'")
+        if override:
+            os.environ[key.strip()] = clean
+        else:
+            os.environ.setdefault(key.strip(), clean)
+
+
+def load_env_file() -> None:
+    """Load .env first, then .env.local (which takes priority)."""
+    base = Path(__file__).resolve().parents[2]
+    _load_env_file(base / ".env", override=False)
+    _load_env_file(base / ".env.local", override=True)
 
 
 def normalize_database_url(url: str) -> str:
@@ -60,6 +68,10 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     # Refresh token lives longer; rotated on use.
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # "Remember me" refresh-token lifetime (mobile). When the user opts in,
+    # the refresh token (and its DB session) lasts this long, so they don't
+    # have to re-authenticate for up to 30 days.
+    REMEMBER_ME_EXPIRE_DAYS: int = 30
     # Bcrypt cost factor. 12 ≈ 250ms on a modern CPU — slow enough to
     # make brute force expensive, fast enough not to sign-up-spam users.
     BCRYPT_ROUNDS: int = int(os.getenv("BCRYPT_ROUNDS", "12"))
@@ -67,6 +79,13 @@ class Settings:
     MAX_FAILED_LOGINS: int = 5
     # Lockout window before the counter resets.
     LOCKOUT_DURATION_MINUTES: int = 15
+    # Streak system: how many skipped days can be restored per calendar month.
+    MAX_STREAK_RESTORES_PER_MONTH: int = int(os.getenv("MAX_STREAK_RESTORES_PER_MONTH", "4"))
+    # Refresh-token sessions older than this (no refresh / no activity) are
+    # considered dead — the auth becomes inactivity-based on top of the fixed
+    # expiry. Default 3 days; the mobile client additionally enforces a much
+    # shorter idle timeout locally.
+    INACTIVITY_TIMEOUT_MINUTES: int = int(os.getenv("INACTIVITY_TIMEOUT_MINUTES", "4320"))
     DEBUG_SQL: bool = os.getenv("DEBUG_SQL", "false").lower() == "true"
 
     DATABASE_URL: str = normalize_database_url(

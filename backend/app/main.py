@@ -22,7 +22,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api import auth, courses, newsletter
+from app.api import auth, courses, lessons, newsletter, streak
 from app.core.database import engine
 
 
@@ -130,6 +130,8 @@ allowed_origins = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 # Comma-separated list of extra allowed origins — used so Vercel preview
@@ -144,11 +146,12 @@ if extra_origins:
 if frontend_origin:
     allowed_origins.append(frontend_origin)
 
-# Allow common Vercel/hosted roots.
+# Allow common hosted roots.
 allowed_origins.extend(
     [
         "https://courser2.vercel.app",
         "https://courser-frontend.vercel.app",
+        "https://courser-api-18uo.onrender.com",
     ]
 )
 
@@ -166,7 +169,9 @@ api_app.add_middleware(
 
 api_app.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_app.include_router(courses.router, prefix="/courses", tags=["courses"])
+api_app.include_router(lessons.router, prefix="/lessons", tags=["lessons"])
 api_app.include_router(newsletter.router, prefix="/newsletter", tags=["newsletter"])
+api_app.include_router(streak.router, prefix="/streak", tags=["streak"])
 
 
 @api_app.get("/")

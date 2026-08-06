@@ -36,6 +36,7 @@ from app.schemas.auth import (
     AdminCreate,
     ForgotPasswordRequest,
     LoginRequest,
+    RefreshRequest,
     ResetPasswordRequest,
     TokenResponse,
     UserCreate,
@@ -57,12 +58,17 @@ def _cookie_secure() -> bool:
     return os.getenv("APP_ENV", "production") != "development"
 
 
-def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
+def _set_auth_cookies(response: Response, access: str, refresh: str, remember_me: bool = False) -> None:
     """Set the access + refresh tokens as HttpOnly cookies.
 
     `SameSite=None` with `Secure` allows cross-origin requests (needed when
     frontend and API are on different Vercel projects)."""
     secure = _cookie_secure()
+    refresh_max_age = (
+        settings.REMEMBER_ME_EXPIRE_DAYS * 24 * 60 * 60
+        if remember_me
+        else settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    )
     response.set_cookie(
         key="access_token",
         value=access,
@@ -79,7 +85,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
         secure=secure,
         samesite="none",
         path="/",
-        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        max_age=refresh_max_age,
     )
 
 
@@ -238,10 +244,15 @@ async def signup(
             detail="We couldn't create your account with those details.",
         )
     user = await auth_service.create_user(db, user_data)
-    access, refresh = await auth_service.issue_tokens(db, user)
+    access, refresh, session_expires_at = await auth_service.issue_tokens(db, user)
     _set_auth_cookies(response, access, refresh)
     _set_session_cookie(response, user)
-    return TokenResponse(access_token=access, refresh_token=refresh, user=user)
+    return TokenResponse(
+        access_token=access,
+        refresh_token=refresh,
+        user=user,
+        session_expires_at=session_expires_at,
+    )
 
 
 @router.post(
@@ -264,10 +275,17 @@ async def login(
             detail="Invalid email or password.",
         )
 
-    access, refresh = await auth_service.issue_tokens(db, user)
-    _set_auth_cookies(response, access, refresh)
+    access, refresh, session_expires_at = await auth_service.issue_tokens(
+        db, user, remember_me=login_data.remember_me
+    )
+    _set_auth_cookies(response, access, refresh, remember_me=login_data.remember_me)
     _set_session_cookie(response, user)
-    return TokenResponse(access_token=access, refresh_token=refresh, user=user)
+    return TokenResponse(
+        access_token=access,
+        refresh_token=refresh,
+        user=user,
+        session_expires_at=session_expires_at,
+    )
 
 
 @router.post(
@@ -279,18 +297,24 @@ async def refresh_token(
     request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
+    payload: Optional[RefreshRequest] = None,
 ):
-    """Exchange a refresh-token cookie for a new access + refresh pair.
+    """Exchange a refresh token for a new access + refresh pair.
 
-    The cookie-based flow is the primary path; the body is ignored."""
+    Web clients send the refresh token as an HttpOnly cookie; mobile
+    clients can't read cookies, so they pass it in the JSON body
+    (`{"refresh_token": "..."}`). Whichever is present is used.
+    """
     cookie_token = get_refresh_token(request)
-    if not cookie_token:
+    body_token = payload.refresh_token if payload else None
+    refresh = cookie_token or body_token
+    if not refresh:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No refresh token.",
         )
 
-    rotated = await auth_service.rotate_refresh_token(db, cookie_token)
+    rotated = await auth_service.rotate_refresh_token(db, refresh)
     if rotated is None:
         _clear_auth_cookies(response)
         raise HTTPException(
@@ -298,13 +322,21 @@ async def refresh_token(
             detail="Refresh token rejected.",
         )
 
-    new_access, new_refresh, user = rotated
-    _set_auth_cookies(response, new_access, new_refresh)
+    new_access, new_refresh, user, session_expires_at = rotated
+    # Reuse the same lifetime for the cookies: remember-me sessions were
+    # created with 30 days, default sessions with 7. Derive it from the
+    # returned expiry so the cookie max-age matches the stored session.
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    remaining_days = (session_expires_at - now).days
+    remember_me = remaining_days > settings.REFRESH_TOKEN_EXPIRE_DAYS
+    _set_auth_cookies(response, new_access, new_refresh, remember_me=remember_me)
     _set_session_cookie(response, user)
     return TokenResponse(
         access_token=new_access,
         refresh_token=new_refresh,
         user=user,
+        session_expires_at=session_expires_at,
     )
 
 

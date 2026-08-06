@@ -27,6 +27,13 @@ node_modules/
 *.pdf
 generate_chapters.py
 
+# Dissertation (not part of development)
+docs/dissertation/
+
+# Local dev artifacts
+*.db
+server.log
+
 # OS
 .DS_Store
 Thumbs.db

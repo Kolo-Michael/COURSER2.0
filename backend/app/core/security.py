@@ -61,11 +61,18 @@ def _encode(payload: dict[str, Any]) -> str:
 
 
 def create_access_token(user_id: UUID, role: str) -> str:
-    """Short-lived signed access token. Carries `sub` (UUID) and `role`.
+    """Short-lived signed access token. Carries `sub` (UUID), `role` and a
+    unique `jti`.
 
     The access token is the credential the frontend never sees — the
     backend sets it as an HttpOnly cookie at login/signup and reads it
     from there on subsequent requests.
+
+    The `jti` (JWT ID) guarantees uniqueness even when two tokens are
+    minted within the same second — without it, PyJWT truncates `iat`/
+    `exp` to whole-second UNIX timestamps and two tokens for the same
+    user are byte-identical, which breaks refresh-token rotation (the
+    rotated token would violate the `refresh_token` UNIQUE constraint).
     """
     now = _now()
     payload = {
@@ -74,21 +81,28 @@ def create_access_token(user_id: UUID, role: str) -> str:
         "iat": now,
         "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         "type": "access",
+        "jti": str(uuid.uuid4()),
     }
     return _encode(payload)
 
 
-def create_refresh_token(user_id: UUID, role: str) -> str:
+def create_refresh_token(user_id: UUID, role: str, expire_days: int | None = None) -> str:
     """Long-lived refresh token. Persisted by the auth service in
     `user_sessions` so logout can revoke it.
-    """
+
+    `expire_days` defaults to `settings.REFRESH_TOKEN_EXPIRE_DAYS`; pass
+    `settings.REMEMBER_ME_EXPIRE_DAYS` when the user opted into a longer
+    mobile session."""
+    if expire_days is None:
+        expire_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
     now = _now()
     payload = {
         "sub": str(user_id),
         "role": role,
         "iat": now,
-        "exp": now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        "exp": now + timedelta(days=expire_days),
         "type": "refresh",
+        "jti": str(uuid.uuid4()),
     }
     return _encode(payload)
 
@@ -113,7 +127,17 @@ def decode_token(token: str, expected_type: str) -> dict[str, Any]:
 
 
 def get_access_token(request: Request) -> str | None:
-    """Read the access token from the HttpOnly cookie set on login."""
+    """Read the access token from the Authorization header (Bearer) or the
+    HttpOnly cookie set on login.
+
+    The web frontend relies on cookies; the mobile Flutter client sends a
+    Bearer token in the Authorization header. Checking both makes
+    authentication work for web and mobile clients alike."""
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[len("Bearer "):].strip()
+        if token:
+            return token
     return request.cookies.get("access_token")
 
 

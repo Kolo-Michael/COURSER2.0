@@ -1,1 +1,1 @@
-from . import auth, courses, newsletter  # noqa: F401
+from . import auth, courses, lessons, newsletter  # noqa: F401

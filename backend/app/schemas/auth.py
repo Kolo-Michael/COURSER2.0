@@ -48,6 +48,7 @@ class UserResponse(UserBase):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+    remember_me: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -69,6 +70,10 @@ class TokenResponse(BaseModel):
     refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserResponse
+    # UTC timestamp when the refresh token/session expires. The mobile
+    # client uses this to drive the "re-authenticate in N days" countdown
+    # on the dashboard (30 days when `remember_me` was set).
+    session_expires_at: Optional[datetime] = None
 
 
 class ForgotPasswordRequest(BaseModel):
