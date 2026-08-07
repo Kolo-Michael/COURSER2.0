@@ -10,11 +10,22 @@ body {
   @apply m-0 min-h-screen antialiased;
   background-color: #FAFAF9;
   color: #1C1917;
+  /* Subtle gradient wash — soft blue/orange glows + gentle vertical fade.
+     Keeps the stone palette but gives the frosted surfaces something to blur. */
+  background-image:
+    radial-gradient(1100px 520px at 10% -5%, rgba(37, 99, 235, 0.09), transparent 60%),
+    radial-gradient(900px 480px at 92% 10%, rgba(249, 115, 22, 0.07), transparent 55%),
+    linear-gradient(180deg, #FAFAF9 0%, #F4F4F5 100%);
+  background-attachment: fixed;
 }
 
 .dark body {
   background-color: #0C0A09;
   color: #E7E5E4;
+  background-image:
+    radial-gradient(1100px 520px at 10% -5%, rgba(59, 130, 246, 0.13), transparent 60%),
+    radial-gradient(900px 480px at 92% 10%, rgba(251, 146, 60, 0.09), transparent 55%),
+    linear-gradient(180deg, #0C0A09 0%, #131311 100%);
 }
 
 /* Subtle dot-grid texture overlay — inspired by Linear, Stripe, and other
@@ -42,14 +53,23 @@ body {
 
 /* Card hover elevation */
 .courser-card {
-  @apply rounded-2xl border border-stone-200 bg-white shadow-sm transition duration-200;
+  @apply rounded-2xl border border-stone-200/70 bg-white/70 shadow-sm backdrop-blur-md transition duration-200;
 }
 
 .dark .courser-card {
-  @apply border-stone-800 bg-stone-900;
+  @apply border-stone-700/60 bg-stone-900/50 backdrop-blur-xl;
 }
 
 .courser-card:hover {
   @apply -translate-y-0.5 shadow-md;
   border-color: rgba(37, 99, 235, 0.2);
+}
+
+/* Frosted glass utility — for headers, sidebars, and floating panels */
+.courser-glass {
+  @apply border border-stone-200/70 bg-white/70 shadow-sm backdrop-blur-md;
+}
+
+.dark .courser-glass {
+  @apply border-stone-700/60 bg-stone-900/50 backdrop-blur-xl;
 }

@@ -50,10 +50,20 @@ export type RefreshResponse = { user: ApiUser }
  * POST /api/auth/login
  * Returns access + (optional) refresh tokens plus the authenticated user.
  */
-export function login(email: string, password: string) {
+export function login(email: string, password: string, rememberMe = false) {
   return apiRequest<LoginResponse>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, remember_me: rememberMe }),
+  })
+}
+
+/**
+ * POST /api/auth/logout
+ * Revokes the server-side session and clears the auth cookies.
+ */
+export function logout() {
+  return apiRequest<void>('/api/auth/logout', {
+    method: 'POST',
   })
 }
 

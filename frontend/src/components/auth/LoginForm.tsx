@@ -10,6 +10,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -23,7 +24,7 @@ export function LoginForm() {
     try {
       // POST /auth/login — server returns only the user; tokens live in
       // HttpOnly cookies set as part of the same response.
-      const response = await login(email, password)
+      const response = await login(email, password, rememberMe)
 
       // Trigger getSession() to read the freshly set courser_session cookie
       // so the next render sees an authenticated state.
@@ -37,8 +38,8 @@ export function LoginForm() {
       // Role-based redirect: student → /dashboard, admin → /admin,
       // super_admin → /super-admin.
       navigate(dashboardFor(response.user.role), { replace: true })
-    } catch {
-      setError('Login failed. Check your email and password, then try again.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed. Check your email and password, then try again.')
     } finally {
       setSubmitting(false)
     }
@@ -87,6 +88,8 @@ export function LoginForm() {
         <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400 cursor-pointer">
           <input
             type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
             className="rounded border-stone-300 text-accent focus:ring-accent h-4 w-4"
           />
           Remember me
@@ -102,7 +105,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-primary-dark"
+        className="w-full rounded-lg bg-gradient-to-br from-primary to-primary/80 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:from-primary-dark dark:to-primary"
       >
         {submitting ? 'Logging in...' : 'Log in'}
       </button>

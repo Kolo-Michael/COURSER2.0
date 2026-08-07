@@ -21,6 +21,7 @@ import json
 import time
 import uuid
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,8 +63,11 @@ def _set_auth_cookies(response: Response, access: str, refresh: str, remember_me
     """Set the access + refresh tokens as HttpOnly cookies.
 
     `SameSite=None` with `Secure` allows cross-origin requests (needed when
-    frontend and API are on different Vercel projects)."""
+    frontend and API are on different Vercel projects). Over plain HTTP
+    (local dev) Chrome rejects `SameSite=None` cookies that lack `Secure`,
+    so fall back to `SameSite=Lax` for same-site localhost traffic."""
     secure = _cookie_secure()
+    samesite = "none" if secure else "lax"
     refresh_max_age = (
         settings.REMEMBER_ME_EXPIRE_DAYS * 24 * 60 * 60
         if remember_me
@@ -74,7 +78,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str, remember_me
         value=access,
         httponly=True,
         secure=secure,
-        samesite="none",
+        samesite=samesite,
         path="/",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -83,7 +87,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str, remember_me
         value=refresh,
         httponly=True,
         secure=secure,
-        samesite="none",
+        samesite=samesite,
         path="/",
         max_age=refresh_max_age,
     )
@@ -107,13 +111,17 @@ def _set_session_cookie(response: Response, user) -> None:
         "role": user.role,
         "id": str(user.id),
     }
+    # URL-encode the JSON payload. Starlette's cookie writer otherwise
+    # octal-escapes special chars (\054 for ',') which breaks JSON.parse
+    # in the browser's document.cookie and makes getSession() return null.
+    value = quote(json.dumps(payload))
     secure = _cookie_secure()
     response.set_cookie(
         key="courser_session",
-        value=json.dumps(payload),
+        value=value,
         httponly=False,  # JS reads this for routing decisions
         secure=secure,
-        samesite="none",
+        samesite="none" if secure else "lax",
         path="/",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )

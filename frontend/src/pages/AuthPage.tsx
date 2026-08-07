@@ -95,8 +95,7 @@ export function AuthPage() {
           )}
         </section>
 
-        <section className="courser-card relative p-8 shadow-lg ring-1 ring-primary/5 dark:ring-primary-dark/5">
-          {(isLogin || isSignup) && (
+        <section className="courser-card relative p-8 shadow-lg ring-1 ring-primary/5 dark:ring-primary-dark/5">          {(isLogin || isSignup) && (
             <div className="mb-6 flex rounded-lg bg-stone-100 p-1 text-sm font-semibold dark:bg-stone-800">
               <Link
                 to="/auth"

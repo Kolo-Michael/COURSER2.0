@@ -14,7 +14,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-stone-200 bg-white/90 shadow-sm backdrop-blur-sm dark:border-stone-800 dark:bg-stone-950/90">
+    <header className="sticky top-0 z-50 border-b border-stone-200/70 bg-white/75 shadow-sm backdrop-blur-xl dark:border-stone-700/60 dark:bg-stone-950/70">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm text-white dark:bg-primary-dark">
@@ -42,7 +42,7 @@ export function SiteHeader() {
           </Link>
           <Link
             to="/auth?mode=signup"
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark"
+            className="rounded-lg bg-gradient-to-br from-accent to-accent/80 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:from-accent-dark dark:to-accent"
           >
             Sign up
           </Link>
@@ -66,7 +66,7 @@ export function SiteHeader() {
       {open ? (
         <div
           id="mobile-nav"
-          className="border-t border-stone-200 bg-white px-4 py-4 dark:border-stone-800 dark:bg-stone-950 md:hidden"
+          className="border-t border-stone-200/70 bg-white/90 px-4 py-4 backdrop-blur-xl dark:border-stone-700/60 dark:bg-stone-950/90 md:hidden"
         >
           <div className="flex flex-col gap-2">
             <NavLink

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 const adminNav = [
   { to: '/admin', label: 'Course management', iconClass: 'fa-solid fa-chalkboard-user' },
   { to: '/courses', label: 'Preview catalog', iconClass: 'fa-solid fa-eye' },
+  { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
 ]
 
 const environmentStyles = [
@@ -500,7 +501,7 @@ export function AdminPage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex-1 rounded-lg bg-gradient-to-br from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <i className="fa-solid fa-floppy-disk mr-2" aria-hidden />
               {saving ? 'Saving...' : 'Save free course'}

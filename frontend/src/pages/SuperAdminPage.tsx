@@ -6,6 +6,7 @@ const superNav = [
   { to: '/super-admin', label: 'Overview', iconClass: 'fa-solid fa-gauge-high' },
   { to: '/admin', label: 'Admin workspace', iconClass: 'fa-solid fa-user-shield' },
   { to: '/courses', label: 'Catalog', iconClass: 'fa-solid fa-layer-group' },
+  { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
 ]
 
 const platformStats = [
@@ -149,7 +150,7 @@ export function SuperAdminPage() {
                 <button
                   type="submit"
                   disabled={status.kind === 'submitting'}
-                  className="inline-flex items-center rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center rounded-lg bg-gradient-to-br from-accent to-accent/80 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <i className="fa-solid fa-user-plus mr-2" aria-hidden />
                   {status.kind === 'submitting' ? 'Creating…' : 'Create admin'}

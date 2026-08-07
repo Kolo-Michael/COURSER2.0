@@ -42,28 +42,50 @@ function readCookie(name: string): string | null {
   return null
 }
 
+/**
+ * Decode a courser_session cookie value into a plain object.
+ *
+ * The backend stores `encodeURIComponent(JSON.stringify(payload))`, so a
+ * straightforward `decodeURIComponent` + `JSON.parse` works for current
+ * sessions. Older sessions (written before the encoding fix) contain
+ * Starlette's octal escapes (\054 for ',') and escaped quotes; normalize
+ * those so stale cookies don't bounce logged-in users back to /auth.
+ */
+function parseSessionCookie(raw: string): Partial<AuthSession> | null {
+  let json = raw
+  try {
+    json = decodeURIComponent(json)
+  } catch {
+    // value may already be plain text
+  }
+  // Handle legacy octal escapes (Starlette cookie writer): \054 = ',', \42 = '"'
+  json = json.replace(/\\[0-7]{3}/g, (match) => String.fromCharCode(parseInt(match.slice(1), 8)))
+  try {
+    return JSON.parse(json) as Partial<AuthSession>
+  } catch {
+    return null
+  }
+}
+
 export function getSession(): AuthSession | null {
   const raw = readCookie(SESSION_COOKIE)
 
   if (raw) {
-    try {
-      const parsed = JSON.parse(raw) as Partial<AuthSession>
-      if (
-        typeof parsed.identifier === 'string' &&
-        (parsed.role === 'student' || parsed.role === 'admin' || parsed.role === 'super_admin')
-      ) {
-        return {
-          identifier: parsed.identifier,
-          role: parsed.role,
-          email: typeof parsed.email === 'string' ? parsed.email : undefined,
-          fullName:
-            typeof parsed.fullName === 'string' || parsed.fullName === null
-              ? parsed.fullName
-              : undefined,
-        }
+    const parsed = parseSessionCookie(raw)
+    if (
+      parsed &&
+      typeof parsed.identifier === 'string' &&
+      (parsed.role === 'student' || parsed.role === 'admin' || parsed.role === 'super_admin')
+    ) {
+      return {
+        identifier: parsed.identifier,
+        role: parsed.role,
+        email: typeof parsed.email === 'string' ? parsed.email : undefined,
+        fullName:
+          typeof parsed.fullName === 'string' || parsed.fullName === null
+            ? parsed.fullName
+            : undefined,
       }
-    } catch {
-      // Ignore malformed cookie and fall back to legacy storage.
     }
   }
 
@@ -110,6 +132,12 @@ export function saveSession(_session: AuthSession) {
 }
 
 export function clearSession() {
+  // Clears every COURSER-owned cookie + storage key. The real logout
+  // (server-side revocation) is handled by the caller via /auth/logout.
+  const cookies = ['courser_session', 'access_token', 'refresh_token']
+  for (const name of cookies) {
+    document.cookie = `${name}=; Max-Age=0; Path=/`
+  }
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(LEGACY_STORAGE_KEY)
   }

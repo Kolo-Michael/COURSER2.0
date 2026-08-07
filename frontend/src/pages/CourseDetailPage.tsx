@@ -26,6 +26,7 @@ function detailNav(session: AuthSession): DashboardNavItem[] {
     },
     { to: '/admin', label: 'Course builder', iconClass: 'fa-solid fa-pen-ruler' },
     { to: '/courses', label: 'Learning catalog', iconClass: 'fa-solid fa-book-open-reader' },
+    { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
   ]
 }
 
@@ -277,7 +278,7 @@ export function CourseDetailPage() {
                 type="button"
                 onClick={handleEnroll}
                 disabled={enrolling || enrolled}
-                className="mt-4 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-4 w-full rounded-lg bg-gradient-to-br from-primary to-primary/80 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {enrolled ? (
                   <span className="inline-flex items-center justify-center gap-2">
@@ -465,7 +466,7 @@ export function CourseDetailPage() {
                   <p className="text-sm text-stone-600">Available by default in every free course.</p>
                 </div>
               </div>
-              <div className="mt-5 space-y-3 rounded-xl bg-white p-4 shadow-sm">
+              <div className="mt-5 space-y-3 rounded-xl border border-stone-200/70 bg-white/70 p-4 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/70">
                 <div className="max-h-56 space-y-2 overflow-y-auto" aria-live="polite">
                   {chat.map((msg, idx) => (
                     <p

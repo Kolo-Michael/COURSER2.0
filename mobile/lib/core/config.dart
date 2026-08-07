@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class Config {
   static const String appName = 'COURSER';
 
@@ -23,6 +25,9 @@ class Config {
     if (localOverride.isNotEmpty) return localOverride;
 
     if (_isDevelopment) {
+      if (_isWeb) {
+        return _localhost;
+      }
       if (_isAndroid) {
         // Emulators can't reach 127.0.0.1 on the host; physical devices
         // must use the host's LAN IP over Wi-Fi.
@@ -40,9 +45,11 @@ class Config {
     return !const bool.fromEnvironment('dart.vm.product');
   }
 
-  static bool get _isAndroid => Platform.isAndroid;
+  static bool get _isWeb => kIsWeb;
 
-  static bool get _isIOS => Platform.isIOS;
+  static bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+
+  static bool get _isIOS => !kIsWeb && Platform.isIOS;
 
   /// Android emulator detection. Most physical devices (including many Pixel
   /// phones) report a hostname of "localhost", while emulators report their
@@ -51,6 +58,7 @@ class Config {
   /// gets the LAN IP. Can be overridden with
   /// --dart-define=COURSER_EMULATOR=true/false.
   static bool get _isAndroidEmulator {
+    if (_isWeb) return false;
     const forced = String.fromEnvironment('COURSER_EMULATOR');
     if (forced.isNotEmpty) return forced == 'true';
     final host = Platform.localHostname.toLowerCase();
@@ -60,6 +68,7 @@ class Config {
   }
 
   static bool get _isIOSSimulator {
+    if (_isWeb) return false;
     const forced = String.fromEnvironment('COURSER_SIMULATOR');
     if (forced.isNotEmpty) return forced == 'true';
     return Platform.localHostname.toLowerCase() == 'localhost';

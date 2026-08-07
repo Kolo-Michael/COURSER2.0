@@ -51,7 +51,7 @@ function CourseCard({ course }: { course: ApiCourse }) {
         </div>
         <Link
           to={`/courses/${course.slug}`}
-          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-primary-dark"
+          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:from-primary-dark dark:to-primary"
         >
           View details
           <i className="fa-solid fa-arrow-right ml-2 text-xs" aria-hidden />
@@ -73,6 +73,7 @@ function sessionNav(session: AuthSession): DashboardNavItem[] {
     { to: roleDashboards[session.role], label: session.role === 'super_admin' ? 'Owner overview' : 'Admin workspace', iconClass: 'fa-solid fa-gauge-high' },
     { to: '/admin', label: 'Course builder', iconClass: 'fa-solid fa-pen-ruler' },
     { to: '/courses', label: 'Learning catalog', iconClass: 'fa-solid fa-book-open-reader' },
+    { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
   ]
 }
 
@@ -137,15 +138,15 @@ function LoggedInCoursesPage({
     >
       <div className="space-y-6">
         <section className="courser-card overflow-hidden">
-          <div className="courser-bg-dots grid gap-6 border-b border-stone-200 bg-stone-50 p-6 text-stone-900 lg:grid-cols-[minmax(0,1fr)_340px] dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100">
+          <div className="courser-bg-dots grid gap-6 border-b border-stone-200 bg-white/50 p-6 text-stone-900 backdrop-blur-md lg:grid-cols-[minmax(0,1fr)_340px] dark:border-stone-700/60 dark:bg-stone-900/60 dark:text-stone-100">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-blue-100">
+              <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">
                 {admin ? 'Admin view' : `Welcome back, ${learnerName}`}
               </p>
               <h2 className="mt-2 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
                 {featured?.title ?? 'Your course library is ready'}
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-stone-200">
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-300">
                 {featured?.short_description ??
                   'Browse the same COURSER catalog from inside your workspace, with course progress and lesson actions close by.'}
               </p>
@@ -153,7 +154,7 @@ function LoggedInCoursesPage({
                 {featured ? (
                   <Link
                     to={`/courses/${featured.slug}`}
-                    className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90"
+                    className="inline-flex items-center rounded-lg bg-gradient-to-br from-accent to-accent/80 px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
                   >
                     <i className="fa-solid fa-play mr-2 text-xs" aria-hidden />
                     Continue course
@@ -170,7 +171,7 @@ function LoggedInCoursesPage({
                 ) : null}
               </div>
             </div>
-            <div className="rounded-lg bg-white p-4 text-stone-900 shadow-sm">
+            <div className="rounded-lg border border-stone-200/70 bg-white/70 p-4 text-stone-900 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/70">
               <CourseMascot />
               <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-lg bg-stone-50 p-3">
@@ -280,30 +281,30 @@ function LoggedInCoursesPage({
           </section>
 
           <aside className="space-y-6">
-            <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+            <section className="courser-card p-5">
               <p className="text-sm font-bold text-stone-900">Learning interface</p>
-              <div className="mt-4 overflow-hidden rounded-lg border border-stone-200">
-                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-500">
+              <div className="mt-4 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-700">
+                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-500 dark:border-stone-700 dark:bg-stone-800">
                   <span>Lesson view</span>
                   <span>Cora</span>
                 </div>
                 <div className="grid grid-cols-[1fr_72px]">
                   <div className="space-y-3 p-3">
-                    <div className="h-3 w-24 rounded bg-stone-200" />
+                    <div className="h-3 w-24 rounded bg-stone-200 dark:bg-stone-700" />
                     <div className="h-16 rounded bg-primary/10" />
-                    <div className="h-2 rounded bg-stone-200" />
-                    <div className="h-2 w-3/4 rounded bg-stone-200" />
+                    <div className="h-2 rounded bg-stone-200 dark:bg-stone-700" />
+                    <div className="h-2 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
                   </div>
-                  <div className="border-l border-stone-200 bg-blue-50 p-3">
+                  <div className="border-l border-stone-200 bg-blue-50 p-3 dark:border-stone-700 dark:bg-blue-950/40">
                     <div className="h-10 w-10 rounded-full bg-primary" />
-                    <div className="mt-3 h-2 rounded bg-blue-200" />
-                    <div className="mt-2 h-2 rounded bg-blue-200" />
+                    <div className="mt-3 h-2 rounded bg-blue-200 dark:bg-blue-800" />
+                    <div className="mt-2 h-2 rounded bg-blue-200 dark:bg-blue-800" />
                   </div>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+            <section className="courser-card p-5">
               <p className="text-sm font-bold text-stone-900">Categories</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {categories.map((cat) => (
