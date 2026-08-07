@@ -1,13 +1,7 @@
 import { useState } from 'react'
 import { createAdmin, type AdminCreatePayload } from '@/api/auth'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-
-const superNav = [
-  { to: '/super-admin', label: 'Overview', iconClass: 'fa-solid fa-gauge-high' },
-  { to: '/admin', label: 'Admin workspace', iconClass: 'fa-solid fa-user-shield' },
-  { to: '/courses', label: 'Catalog', iconClass: 'fa-solid fa-layer-group' },
-  { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
-]
+import { superAdminNav } from '@/components/layout/navItems'
 
 const platformStats = [
   { label: 'Active admins', value: '4' },
@@ -85,7 +79,7 @@ export function SuperAdminPage() {
     <DashboardLayout
       title="Super Admin"
       subtitle="Platform operations and admin provisioning"
-      navItems={superNav}
+      navItems={superAdminNav()}
     >
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-4">

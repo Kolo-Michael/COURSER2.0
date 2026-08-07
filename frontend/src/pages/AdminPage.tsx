@@ -1,13 +1,8 @@
 import { createCourse, listCategories, type ApiCategory } from '@/api/courses'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { adminNav } from '@/components/layout/navItems'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-const adminNav = [
-  { to: '/admin', label: 'Course management', iconClass: 'fa-solid fa-chalkboard-user' },
-  { to: '/courses', label: 'Preview catalog', iconClass: 'fa-solid fa-eye' },
-  { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
-]
 
 const environmentStyles = [
   { id: 'focus', label: 'Focus', icon: 'fa-solid fa-bullseye', tone: 'bg-blue-50 text-primary' },
@@ -191,7 +186,7 @@ export function AdminPage() {
     <DashboardLayout
       title="Admin workspace"
       subtitle="Create free courses and set the learning environment"
-      navItems={adminNav}
+      navItems={adminNav()}
     >
       <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="courser-card p-6">

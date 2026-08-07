@@ -1,12 +1,8 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { navItemsFor } from '@/components/layout/navItems'
 import { logout } from '@/api/auth'
 import { clearSession, getSession } from '@/auth/session'
 import { Link } from 'react-router-dom'
-
-const studentNav = [
-  { to: '/dashboard', label: 'Overview', iconClass: 'fa-solid fa-gauge' },
-  { to: '/courses', label: 'Browse courses', iconClass: 'fa-solid fa-book-open' },
-]
 
 const learningStats = [
   { label: 'Free courses', value: '12', icon: 'fa-layer-group' },
@@ -21,13 +17,14 @@ const activeCourses = [
 ]
 
 export function DashboardPage() {
-  const displayName = getSession()?.identifier || 'there'
+  const session = getSession()
+  const displayName = session?.identifier || 'there'
 
   return (
     <DashboardLayout
       title="Student dashboard"
       subtitle="Your hub for enrollments and progress"
-      navItems={studentNav}
+      navItems={navItemsFor(session?.role ?? 'student')}
     >
       <div className="space-y-6">
         <section className="courser-card p-6">

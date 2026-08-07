@@ -80,7 +80,7 @@ export function DashboardLayout({
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === '/dashboard' || item.to === '/admin' || item.to === '/super-admin' || item.to === '/'}
+                  end={item.to === '/dashboard' || item.to === '/admin' || item.to === '/super-admin' || item.to === '/' || item.to === '/courses' || item.to === '/streak'}
                   className={navLinkClass}
                 >
                   <i className={`${item.iconClass} w-5 text-center`} aria-hidden />
@@ -97,7 +97,7 @@ export function DashboardLayout({
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === '/'}
+                  end={item.to === '/' || item.to === '/courses'}
                   className={navLinkClass}
                 >
                   <i className={`${item.iconClass} w-5 text-center`} aria-hidden />
@@ -140,6 +140,21 @@ export function DashboardLayout({
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
+              {session?.role === 'student' ? (
+                <NavLink
+                  to="/streak"
+                  className={({ isActive }) =>
+                    [
+                      'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-accent transition hover:bg-accent/10 dark:border-stone-700',
+                      isActive ? 'bg-accent/10' : '',
+                    ].join(' ')
+                  }
+                  aria-label="Learning streak"
+                  title="Learning streak"
+                >
+                  <i className="fa-solid fa-fire text-lg" aria-hidden />
+                </NavLink>
+              ) : null}
               <ThemeToggle />
               <button
                 type="button"

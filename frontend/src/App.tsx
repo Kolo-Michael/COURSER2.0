@@ -7,6 +7,7 @@ import { CourseDetailPage } from './pages/CourseDetailPage'
 import { CoursesPage } from './pages/CoursesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LandingPage } from './pages/LandingPage'
+import { StreakPage } from './pages/StreakPage'
 import { SuperAdminPage } from './pages/SuperAdminPage'
 
 type ProtectedRouteProps = {
@@ -40,6 +41,14 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['student']}>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/streak"
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StreakPage />
           </ProtectedRoute>
         }
       />

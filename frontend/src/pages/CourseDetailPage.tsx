@@ -1,6 +1,7 @@
 import { getCourseBySlug, enrollInCourse, askCora, type ApiCourse } from '@/api/courses'
-import { getSession, roleDashboards, type AuthSession } from '@/auth/session'
+import { getSession, type AuthSession } from '@/auth/session'
 import { DashboardLayout, type DashboardNavItem } from '@/components/layout/DashboardLayout'
+import { navItemsFor } from '@/components/layout/navItems'
 import { PublicShell } from '@/components/layout/PublicShell'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
@@ -10,38 +11,24 @@ function categoryIcon(course: ApiCourse) {
   return course.category?.icon ? `fa-solid ${course.category.icon}` : 'fa-solid fa-book-open'
 }
 
-function detailNav(session: AuthSession): DashboardNavItem[] {
-  if (session.role === 'student') {
-    return [
-      { to: '/dashboard', label: 'My dashboard', iconClass: 'fa-solid fa-gauge' },
-      { to: '/courses', label: 'Learning catalog', iconClass: 'fa-solid fa-book-open-reader' },
-    ]
-  }
-
-  return [
-    {
-      to: roleDashboards[session.role],
-      label: session.role === 'super_admin' ? 'Owner overview' : 'Admin workspace',
-      iconClass: 'fa-solid fa-gauge-high',
-    },
-    { to: '/admin', label: 'Course builder', iconClass: 'fa-solid fa-pen-ruler' },
-    { to: '/courses', label: 'Learning catalog', iconClass: 'fa-solid fa-book-open-reader' },
-    { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
-  ]
+function detailNav(session: AuthSession, activeCourseSlug?: string): DashboardNavItem[] {
+  return navItemsFor(session.role, activeCourseSlug)
 }
 
 function CourseDetailShell({
   session,
+  slug,
   title,
   children,
 }: {
   session: AuthSession | null
+  slug?: string
   title: string
   children: ReactNode
 }) {
   if (session) {
     return (
-      <DashboardLayout title={title} subtitle="Course workspace" navItems={detailNav(session)}>
+      <DashboardLayout title={title} subtitle="Course workspace" navItems={detailNav(session, slug)}>
         {children}
       </DashboardLayout>
     )
@@ -187,10 +174,10 @@ export function CourseDetailPage() {
 
   if (loading) {
     return (
-      <CourseDetailShell session={session} title="Loading course">
+      <CourseDetailShell session={session} slug={slug} title="Loading course">
         <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <i className="fa-solid fa-spinner mb-4 text-4xl text-primary" aria-hidden />
-          <h1 className="text-2xl font-bold text-stone-900">Loading course...</h1>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-50">Loading course...</h1>
         </div>
       </CourseDetailShell>
     )
@@ -198,16 +185,16 @@ export function CourseDetailPage() {
 
   if (error || !course) {
     return (
-      <CourseDetailShell session={session} title="Course not found">
+      <CourseDetailShell session={session} slug={slug} title="Course not found">
         <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <i className="fa-solid fa-circle-exclamation mb-4 text-4xl text-red-500" aria-hidden />
-          <h1 className="text-2xl font-bold text-stone-900">Course not found</h1>
-          <p className="mt-2 text-stone-600">
-            No course matches <span className="font-mono text-stone-800">{slug}</span>.
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-50">Course not found</h1>
+          <p className="mt-2 text-stone-600 dark:text-stone-300">
+            No course matches <span className="font-mono text-stone-800 dark:text-stone-100">{slug}</span>.
           </p>
           <Link
             to="/courses"
-            className="mt-6 inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+            className="mt-6 inline-flex items-center rounded-lg bg-gradient-to-br from-primary to-primary/80 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 dark:from-primary-dark dark:to-primary"
           >
             <i className="fa-solid fa-arrow-left mr-2 text-xs" aria-hidden />
             Back to courses
@@ -232,8 +219,8 @@ export function CourseDetailPage() {
     : 'Enroll for free'
 
   return (
-    <CourseDetailShell session={session} title={course.title}>
-      <div className="courser-bg-dots border-b border-stone-200 bg-white">
+    <CourseDetailShell session={session} slug={slug} title={course.title}>
+      <div className="courser-bg-dots border-b border-stone-200 bg-white/70 backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/40">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <Link
             to="/courses"
@@ -245,31 +232,31 @@ export function CourseDetailPage() {
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl space-y-3">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                <span className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-1 text-stone-700">
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary dark:bg-primary/20 dark:text-primary-dark">
                   <i className={categoryIcon(course)} aria-hidden />
                   {course.category?.name ?? 'General'}
                 </span>
-                <span className="rounded-full bg-stone-100 px-3 py-1 capitalize text-stone-700">
+                <span className="rounded-full bg-stone-100 px-3 py-1 capitalize text-stone-700 dark:bg-stone-800 dark:text-stone-300">
                   {course.level}
                 </span>
-                <span className="rounded-full bg-green-100 px-3 py-1 text-green-700 ring-1 ring-green-200">
+                <span className="rounded-full bg-green-100 px-3 py-1 text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-300 dark:ring-green-900">
                   Free
                 </span>
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
+              <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-50 sm:text-4xl">
                 {course.title}
               </h1>
-              <p className="text-lg text-stone-600">
+              <p className="text-lg text-stone-600 dark:text-stone-300">
                 {course.short_description ?? course.description ?? 'Course details are being prepared.'}
               </p>
-              <p className="text-sm text-stone-500">
+              <p className="text-sm text-stone-500 dark:text-stone-400">
                 <i className="fa-regular fa-clock mr-1" aria-hidden />
                 {course.duration ?? 'Self-paced'}
               </p>
             </div>
             <div className="courser-card w-full max-w-sm p-6">
-              <p className="text-sm font-semibold text-stone-900">{session ? 'Ready to learn' : 'Enroll'}</p>
-              <p className="mt-2 text-sm text-stone-600">
+              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{session ? 'Ready to learn' : 'Enroll'}</p>
+              <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
                 {session
                   ? 'Start this free course from your learning workspace.'
                   : 'Sign in as a student to continue enrollment.'}
@@ -308,30 +295,33 @@ export function CourseDetailPage() {
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <section className="courser-card p-6">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-stone-900">Modules & lessons</h2>
+            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50">Modules & lessons</h2>
           </div>
           {course.modules?.length ? (
             <ol className="mt-6 space-y-4">
               {course.modules.map((module) => (
-                <li key={module.id} className="rounded-xl border border-stone-100 p-4">
-                  <p className="text-sm font-semibold text-stone-900">
+                <li key={module.id} className="rounded-xl border border-stone-100 bg-stone-50/60 p-4 dark:border-stone-700/60 dark:bg-stone-800/40">
+                  <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+                    <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs text-primary dark:bg-primary/25 dark:text-primary-dark">
+                      {module.order}
+                    </span>
                     Module {module.order}: {module.title}
                   </p>
-                  <ul className="mt-2 space-y-2 text-sm text-stone-600">
+                  <ul className="mt-2 space-y-2 text-sm text-stone-600 dark:text-stone-300">
                     {module.lessons.map((lesson) => (
-                      <li key={lesson.id} className="rounded-lg border border-stone-200 bg-white p-3">
-                        <div className="flex items-center gap-2 font-semibold text-stone-800">
-                          <i className="fa-solid fa-circle-play text-primary" aria-hidden />
+                      <li key={lesson.id} className="rounded-lg border border-stone-200 bg-white p-3 dark:border-stone-700 dark:bg-stone-900/50">
+                        <div className="flex items-center gap-2 font-semibold text-stone-800 dark:text-stone-100">
+                          <i className="fa-solid fa-circle-play text-primary dark:text-primary-dark" aria-hidden />
                           Lesson {module.order}.{lesson.order}: {lesson.title}
                         </div>
                         {lesson.content ? (
-                          <p className="mt-2 leading-relaxed text-stone-600">{lesson.content}</p>
+                          <p className="mt-2 leading-relaxed text-stone-600 dark:text-stone-300">{lesson.content}</p>
                         ) : null}
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-stone-500">
-                          <span className="rounded-full bg-stone-100 px-2 py-1">
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-stone-500 dark:text-stone-400">
+                          <span className="rounded-full bg-stone-100 px-2 py-1 dark:bg-stone-800 dark:text-stone-300">
                             {lesson.duration ?? 'Self-paced'}
                           </span>
-                          <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">Ready now</span>
+                          <span className="rounded-full bg-green-100 px-2 py-1 text-green-700 dark:bg-green-950/40 dark:text-green-300">Ready now</span>
                         </div>
                       </li>
                     ))}
@@ -340,7 +330,7 @@ export function CourseDetailPage() {
               ))}
             </ol>
           ) : (
-            <p className="mt-4 text-sm text-stone-600">No modules have been published for this course yet.</p>
+            <p className="mt-4 text-sm text-stone-600 dark:text-stone-300">No modules have been published for this course yet.</p>
           )}
         </section>
 
@@ -349,35 +339,35 @@ export function CourseDetailPage() {
             <div className="p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-primary">Default learning environment</p>
-                  <h2 className="mt-1 text-xl font-bold text-stone-900">Lesson workspace</h2>
+                  <p className="text-sm font-semibold text-primary dark:text-primary-dark">Default learning environment</p>
+                  <h2 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-50">Lesson workspace</h2>
                 </div>
                 {admin ? (
                   <Link
                     to="/admin"
-                    className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+                    className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
                   >
-                    <i className="fa-solid fa-sliders mr-2 text-primary" aria-hidden />
+                    <i className="fa-solid fa-sliders mr-2 text-primary dark:text-primary-dark" aria-hidden />
                     Configure
                   </Link>
                 ) : null}
               </div>
-              <div className="mt-5 overflow-hidden rounded-xl border border-stone-200">
-                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-3">
-                  <span className="text-sm font-semibold text-stone-800">Current lesson</span>
-                  <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-primary dark:bg-stone-800">
+              <div className="mt-5 overflow-hidden rounded-xl border border-stone-200 dark:border-stone-700">
+                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-700 dark:bg-stone-800/60">
+                  <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Current lesson</span>
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/20 dark:text-primary-dark">
                     Focus mode
                   </span>
                 </div>
                 <div className="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
-                  <aside className="border-b border-stone-200 bg-stone-50 p-4 md:border-b-0 md:border-r">
-                    <p className="text-xs font-semibold uppercase text-stone-500">Course path</p>
+                  <aside className="border-b border-stone-200 bg-stone-50 p-4 md:border-b-0 md:border-r dark:border-stone-700 dark:bg-stone-800/40">
+                    <p className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">Course path</p>
                     <div className="mt-3 space-y-2">
                       {['Start here', 'Watch lesson', 'Practice task'].map((item, index) => (
                         <div
                           key={item}
                           className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                            index === 1 ? 'bg-primary text-white' : 'bg-white text-stone-700'
+                            index === 1 ? 'bg-primary text-white shadow-sm dark:bg-primary-dark' : 'bg-white text-stone-700 dark:bg-stone-900/50 dark:text-stone-200'
                           }`}
                         >
                           {index + 1}. {item}
@@ -386,8 +376,8 @@ export function CourseDetailPage() {
                     </div>
                   </aside>
                   <div className="p-4">
-                    <div className="flex aspect-video items-center justify-center rounded-xl bg-stone-900 text-white">
-                      <i className="fa-solid fa-circle-play text-5xl text-accent" aria-hidden />
+                    <div className="flex aspect-video items-center justify-center rounded-xl bg-gradient-to-br from-stone-800 to-stone-950 text-white dark:from-stone-900 dark:to-black">
+                      <i className="fa-solid fa-circle-play text-5xl text-accent dark:text-accent-dark" aria-hidden />
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-3" role="tablist" aria-label="Lesson resources">
                       {(['Transcript', 'Notes', 'Resources'] as Tab[]).map((tab) => (
@@ -400,17 +390,17 @@ export function CourseDetailPage() {
                           className={[
                             'rounded-lg border px-3 py-2 text-sm font-semibold transition',
                             activeTab === tab
-                              ? 'border-primary bg-primary text-white shadow-sm'
-                              : 'border-stone-200 text-stone-700 hover:bg-stone-50',
+                              ? 'border-primary bg-primary text-white shadow-sm dark:bg-primary-dark'
+                              : 'border-stone-200 text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800',
                           ].join(' ')}
                         >
                           {tab}
                         </button>
                       ))}
                     </div>
-                    <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4">
+                    <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/40">
                       {activeTab === 'Transcript' ? (
-                        <p className="text-sm leading-relaxed text-stone-700">{transcriptBody}</p>
+                        <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-200">{transcriptBody}</p>
                       ) : activeTab === 'Notes' ? (
                         <div>
                           <label htmlFor="lesson-notes" className="sr-only">
@@ -422,26 +412,26 @@ export function CourseDetailPage() {
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Type your notes for this lesson — saved locally."
                             rows={6}
-                            className="w-full rounded-lg border border-stone-200 bg-white p-3 text-sm text-stone-800 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                            className="w-full rounded-lg border border-stone-200 bg-white p-3 text-sm text-stone-800 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
                           />
-                          <p className="mt-2 text-xs text-stone-500">Notes are saved in this browser only.</p>
+                          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">Notes are saved in this browser only.</p>
                         </div>
                       ) : (
-                        <div className="text-sm text-stone-700">
-                          <p className="font-semibold text-stone-900">{TAB_CONTENT.Resources.label}</p>
+                        <div className="text-sm text-stone-700 dark:text-stone-200">
+                          <p className="font-semibold text-stone-900 dark:text-stone-50">{TAB_CONTENT.Resources.label}</p>
                           <p className="mt-1">{TAB_CONTENT.Resources.body}</p>
                           {resourceUrl ? (
                             <a
                               href={resourceUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="mt-3 inline-flex items-center text-sm font-semibold text-primary hover:underline"
+                              className="mt-3 inline-flex items-center text-sm font-semibold text-primary hover:underline dark:text-primary-dark"
                             >
                               <i className="fa-solid fa-up-right-from-square mr-2 text-xs" aria-hidden />
                               Open video resource
                             </a>
                           ) : (
-                            <p className="mt-2 text-xs text-stone-500">No resources published yet.</p>
+                            <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">No resources published yet.</p>
                           )}
                         </div>
                       )}
@@ -462,8 +452,8 @@ export function CourseDetailPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="font-bold text-stone-900">Cora answers questions</p>
-                  <p className="text-sm text-stone-600">Available by default in every free course.</p>
+                  <p className="font-bold text-stone-900 dark:text-stone-50">Cora answers questions</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-300">Available by default in every free course.</p>
                 </div>
               </div>
               <div className="mt-5 space-y-3 rounded-xl border border-stone-200/70 bg-white/70 p-4 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/70">
@@ -474,15 +464,15 @@ export function CourseDetailPage() {
                       className={[
                         'rounded-lg p-3 text-sm',
                         msg.role === 'assistant'
-                          ? 'bg-stone-100 text-stone-700'
-                          : 'bg-primary/10 text-primary',
+                          ? 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200'
+                          : 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-dark',
                       ].join(' ')}
                     >
                       {msg.text}
                     </p>
                   ))}
                   {asking ? (
-                    <p className="rounded-lg bg-stone-100 p-3 text-sm text-stone-500">
+                    <p className="rounded-lg bg-stone-100 p-3 text-sm text-stone-500 dark:bg-stone-800 dark:text-stone-400">
                       <i className="fa-solid fa-spinner mr-2 text-xs" aria-hidden />
                       Cora is thinking...
                     </p>
@@ -505,12 +495,12 @@ export function CourseDetailPage() {
                     onChange={(e) => setQuestion(e.target.value)}
                     placeholder="Ask Cora a question..."
                     disabled={asking}
-                    className="min-w-0 flex-1 rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 disabled:opacity-60"
+                    className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 disabled:opacity-60 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
                   />
                   <button
                     type="submit"
                     disabled={asking || !question.trim()}
-                    className="rounded-lg bg-primary px-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-lg bg-gradient-to-br from-primary to-primary/80 px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:from-primary-dark dark:to-primary"
                   >
                     <i className="fa-solid fa-paper-plane" aria-hidden />
                   </button>

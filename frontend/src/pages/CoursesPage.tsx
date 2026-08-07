@@ -1,6 +1,7 @@
 import { listCategories, listCourses, type ApiCategory, type ApiCourse } from '@/api/courses'
-import { getSession, roleDashboards, type AuthSession } from '@/auth/session'
+import { getSession, type AuthSession } from '@/auth/session'
 import { DashboardLayout, type DashboardNavItem } from '@/components/layout/DashboardLayout'
+import { navItemsFor } from '@/components/layout/navItems'
 import { PublicShell } from '@/components/layout/PublicShell'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -62,19 +63,7 @@ function CourseCard({ course }: { course: ApiCourse }) {
 }
 
 function sessionNav(session: AuthSession): DashboardNavItem[] {
-  if (session.role === 'student') {
-    return [
-      { to: '/dashboard', label: 'My dashboard', iconClass: 'fa-solid fa-gauge' },
-      { to: '/courses', label: 'Learning catalog', iconClass: 'fa-solid fa-book-open-reader' },
-    ]
-  }
-
-  return [
-    { to: roleDashboards[session.role], label: session.role === 'super_admin' ? 'Owner overview' : 'Admin workspace', iconClass: 'fa-solid fa-gauge-high' },
-    { to: '/admin', label: 'Course builder', iconClass: 'fa-solid fa-pen-ruler' },
-    { to: '/courses', label: 'Learning catalog', iconClass: 'fa-solid fa-book-open-reader' },
-    { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
-  ]
+  return navItemsFor(session.role)
 }
 
 function CourseMascot() {
