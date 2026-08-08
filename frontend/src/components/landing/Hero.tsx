@@ -10,7 +10,7 @@ export function Hero() {
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10"
       />
-      <div className="relative mx-auto flex max-w-6xl flex-col gap-12 px-4 pb-20 pt-16 sm:px-6 lg:flex-row lg:items-center lg:gap-16 lg:px-8 lg:pb-28 lg:pt-24">
+      <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-2 pb-12 pt-10 sm:px-3 lg:flex-row lg:items-center lg:gap-14 lg:px-4 lg:pb-16 lg:pt-14">
         <div className="flex-1">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-stone-100 px-4 py-1.5 text-sm font-medium text-stone-800 ring-1 ring-stone-200 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700">
             <i className="fa-solid fa-rocket text-accent dark:text-accent-dark" aria-hidden="true" />
@@ -35,7 +35,7 @@ export function Hero() {
             losing the clarity of a world-class LMS.
           </p>
 
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
               to="/auth"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-accent to-accent/80 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:from-accent-dark dark:to-accent"
@@ -51,7 +51,7 @@ export function Hero() {
             </Link>
           </div>
 
-          <dl className="mt-14 grid gap-8 sm:grid-cols-3">
+          <dl className="mt-10 grid gap-8 sm:grid-cols-3">
             <div className="flex gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent ring-1 ring-accent/20 dark:bg-accent-dark/15 dark:text-accent-dark dark:ring-accent-dark/30">
                 <i className="fa-solid fa-graduation-cap text-lg" aria-hidden="true" />

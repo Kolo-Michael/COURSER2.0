@@ -21,7 +21,7 @@ export function LandingPage() {
       <Hero />
 
       <section className="courser-bg-dots border-y border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950/50">
-        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">
+        <div className="mx-auto grid max-w-6xl gap-4 px-2 py-6 sm:grid-cols-2 sm:px-3 lg:grid-cols-3 lg:px-4">
           {stats.map((item) => (
             <div
               key={item.label}
@@ -36,7 +36,7 @@ export function LandingPage() {
       </section>
 
       <section className="courser-bg-dots-dense">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-2 py-8 sm:px-3 lg:px-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Start learning now</p>

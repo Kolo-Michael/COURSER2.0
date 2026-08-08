@@ -15,7 +15,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-stone-200/70 bg-white/75 shadow-sm backdrop-blur-xl dark:border-stone-700/60 dark:bg-stone-950/70">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-2 py-3 sm:px-3 lg:px-4">
         <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm text-white dark:bg-primary-dark">
             <i className="fa-solid fa-graduation-cap" aria-hidden />
