@@ -14,13 +14,13 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
-from app.models import Category, Course, Enrollment, Lesson, Module, User
+from app.models import Category, Course, Enrollment, Lesson, LessonProgress, Module, User
 from app.schemas.course import (
     AskRequest,
     AskResponse,
@@ -29,6 +29,7 @@ from app.schemas.course import (
     CourseListResponse,
     CourseResponse,
     CourseUpdate,
+    EnrollmentDetailResponse,
     EnrollmentResponse,
 )
 from app.services import auth_service
@@ -291,7 +292,11 @@ async def get_course(course_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/slug/{slug}", response_model=CourseResponse)
-async def get_course_by_slug(slug: str, db: AsyncSession = Depends(get_db)):
+async def get_course_by_slug(
+    slug: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     try:
         result = await db.execute(
             select(Course)
@@ -307,7 +312,54 @@ async def get_course_by_slug(slug: str, db: AsyncSession = Depends(get_db)):
 
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    await _attach_lesson_progress(request, db, course)
     return course
+
+
+async def _attach_lesson_progress(
+    request: Request,
+    db: AsyncSession,
+    course,
+) -> None:
+    """Attach per-lesson progress/is_completed for the authenticated user.
+
+    The course detail endpoint is public, so this is optional: when a valid
+    access token is present (web cookie or mobile Bearer) each lesson gets
+    `progress` and `is_completed` for that learner; otherwise the fields are
+    left null. The fallback course dicts skip this (no lesson rows exist).
+    """
+    if isinstance(course, dict) or not course.modules:
+        return
+
+    from app.core.security import decode_token, get_access_token
+
+    token = get_access_token(request)
+    if not token:
+        return
+    try:
+        payload = decode_token(token, expected_type="access")
+        user_id = uuid.UUID(payload["sub"])
+    except Exception:
+        return
+
+    lesson_ids = [lesson.id for module in course.modules for lesson in module.lessons]
+    if not lesson_ids:
+        return
+
+    rows_result = await db.execute(
+        select(LessonProgress).where(
+            LessonProgress.user_id == user_id,
+            LessonProgress.lesson_id.in_(lesson_ids),
+        )
+    )
+    progress_by_lesson = {row.lesson_id: row for row in rows_result.scalars().all()}
+
+    for module in course.modules:
+        for lesson in module.lessons:
+            row = progress_by_lesson.get(lesson.id)
+            lesson.progress = row.progress if row else 0.0
+            lesson.is_completed = bool(row.is_completed) if row else False
 
 
 # --- admin-only write endpoints ------------------------------------------
@@ -389,6 +441,125 @@ async def delete_course(
 
 
 # --- student actions ------------------------------------------------------
+
+
+async def _course_lesson_progress(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    course: Course,
+) -> tuple[int, int]:
+    """Return (total_lessons, completed_lessons) for a user + course."""
+    lessons_result = await db.execute(
+        select(Lesson).join(Module).where(Module.course_id == course.id)
+    )
+    lessons = list(lessons_result.scalars().all())
+    total = len(lessons)
+    if total == 0:
+        return 0, 0
+    rows_result = await db.execute(
+        select(LessonProgress).where(
+            LessonProgress.user_id == user_id,
+            LessonProgress.lesson_id.in_([lesson.id for lesson in lessons]),
+        )
+    )
+    completed = sum(1 for row in rows_result.scalars().all() if row.is_completed)
+    return total, completed
+
+
+@router.get("/enrollments/me", response_model=List[EnrollmentDetailResponse])
+async def list_my_enrollments(
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """Return the authenticated learner's enrollments with real progress.
+
+    Each item includes the course title/slug/category, the stored progress
+    percent, how many lessons are complete, and whether the course is done.
+    """
+    result = await db.execute(
+        select(Enrollment)
+        .where(Enrollment.user_id == user_id)
+        .options(
+            selectinload(Enrollment.course)
+            .selectinload(Course.category),
+            selectinload(Enrollment.course)
+            .selectinload(Course.modules)
+            .selectinload(Module.lessons),
+        )
+        .order_by(Enrollment.enrolled_at.desc())
+    )
+    enrollments = result.scalars().all()
+
+    details: list[EnrollmentDetailResponse] = []
+    for enrollment in enrollments:
+        course = enrollment.course
+        if course is None:
+            continue
+        total, completed = await _course_lesson_progress(db, user_id, course)
+        progress_percent = int(round(enrollment.progress or 0.0))
+        details.append(
+            EnrollmentDetailResponse(
+                id=enrollment.id,
+                course_id=course.id,
+                course_title=course.title,
+                course_slug=course.slug,
+                course_category=course.category.name if course.category else None,
+                level=course.level,
+                enrolled_at=enrollment.enrolled_at,
+                completed_at=enrollment.completed_at,
+                progress=enrollment.progress or 0.0,
+                total_lessons=total,
+                completed_lessons=completed,
+                progress_percent=progress_percent,
+                is_completed=progress_percent >= 100 or (total > 0 and completed == total),
+            )
+        )
+    return details
+
+
+@router.post("/slug/{slug}/restart", response_model=EnrollmentResponse)
+async def restart_course(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """Reset a learner's progress on a course back to zero.
+
+    Deletes all per-lesson progress rows for the user in this course and
+    zeroes the enrollment. The student keeps the enrollment but starts over.
+    """
+    course_result = await db.execute(select(Course).where(Course.slug == slug))
+    course = course_result.scalar_one_or_none()
+    if course is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Course not found")
+
+    enrollment_result = await db.execute(
+        select(Enrollment).where(
+            Enrollment.user_id == user_id,
+            Enrollment.course_id == course.id,
+        )
+    )
+    enrollment = enrollment_result.scalar_one_or_none()
+    if enrollment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "You are not enrolled in this course")
+
+    lessons_result = await db.execute(
+        select(Lesson).join(Module).where(Module.course_id == course.id)
+    )
+    lesson_ids = [lesson.id for lesson in lessons_result.scalars().all()]
+    if lesson_ids:
+        await db.execute(
+            delete(LessonProgress).where(
+                LessonProgress.user_id == user_id,
+                LessonProgress.lesson_id.in_(lesson_ids),
+            )
+        )
+
+    enrollment.progress = 0.0
+    enrollment.completed_at = None
+    await db.commit()
+    await db.refresh(enrollment)
+    return enrollment
 
 
 @router.post("/slug/{slug}/enroll", response_model=EnrollmentResponse, status_code=status.HTTP_201_CREATED)

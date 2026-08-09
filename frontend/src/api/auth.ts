@@ -9,9 +9,21 @@ export type ApiUser = {
   role: UserRole
   is_active: boolean
   is_verified: boolean
+  avatar_url: string | null
+  nav_style: 'sidebar' | 'floating'
+  nav_collapsed: boolean
   created_at: string
   updated_at: string | null
   last_login: string | null
+}
+
+export type NavStyle = 'sidebar' | 'floating'
+
+export type ProfileUpdatePayload = {
+  full_name?: string
+  avatar_url?: string | null
+  nav_style?: NavStyle
+  nav_collapsed?: boolean
 }
 
 // Tokens are stored in HttpOnly cookies by the backend; the JSON body
@@ -45,6 +57,14 @@ export type ResetPasswordPayload = {
 }
 
 export type RefreshResponse = { user: ApiUser }
+
+/**
+ * GET /api/auth/me
+ * Returns the authenticated user (resolved from the access-token cookie).
+ */
+export function getMe() {
+  return apiRequest<ApiUser>('/api/auth/me')
+}
 
 /**
  * POST /api/auth/login
@@ -134,6 +154,28 @@ export function createAdmin(payload: AdminCreatePayload) {
   return apiRequest<ApiUser>('/api/auth/admin', {
     method: 'POST',
     body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * PATCH /api/auth/me
+ * Self-service profile & settings update (display name, avatar, nav prefs).
+ */
+export function updateProfile(payload: ProfileUpdatePayload) {
+  return apiRequest<ApiUser>('/api/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/change-password
+ * Requires the current password plus a new one (min 8 chars).
+ */
+export function changePassword(currentPassword: string, newPassword: string) {
+  return apiRequest<{ message: string }>('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
   })
 }
 

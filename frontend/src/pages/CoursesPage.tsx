@@ -52,7 +52,7 @@ function CourseCard({ course }: { course: ApiCourse }) {
         </div>
         <Link
           to={`/courses/${course.slug}`}
-          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:from-primary-dark dark:to-primary"
+          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-primary-dark"
         >
           View details
           <i className="fa-solid fa-arrow-right ml-2 text-xs" aria-hidden />
@@ -143,7 +143,7 @@ function LoggedInCoursesPage({
                 {featured ? (
                   <Link
                     to={`/courses/${featured.slug}`}
-                    className="inline-flex items-center rounded-lg bg-gradient-to-br from-accent to-accent/80 px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
+                    className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:brightness-110 dark:bg-accent-dark"
                   >
                     <i className="fa-solid fa-play mr-2 text-xs" aria-hidden />
                     Continue course

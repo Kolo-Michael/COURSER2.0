@@ -11,6 +11,7 @@ export function studentNav(activeCourseSlug?: string): DashboardNavItem[] {
     { to: '/dashboard', label: 'Overview', iconClass: 'fa-solid fa-gauge' },
     { to: '/courses', label: 'Browse courses', iconClass: 'fa-solid fa-book-open-reader' },
     { to: '/streak', label: 'Learning streak', iconClass: 'fa-solid fa-fire' },
+    { to: '/settings', label: 'Settings', iconClass: 'fa-solid fa-gear' },
   ]
 
   if (activeCourseSlug) {
@@ -30,6 +31,7 @@ export function adminNav(): DashboardNavItem[] {
     { to: '/admin', label: 'Course management', iconClass: 'fa-solid fa-chalkboard-user' },
     { to: '/courses', label: 'Preview catalog', iconClass: 'fa-solid fa-eye' },
     { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
+    { to: '/settings', label: 'Settings', iconClass: 'fa-solid fa-gear' },
   ]
 }
 
@@ -40,6 +42,7 @@ export function superAdminNav(): DashboardNavItem[] {
     { to: '/admin', label: 'Admin workspace', iconClass: 'fa-solid fa-user-shield' },
     { to: '/courses', label: 'Catalog', iconClass: 'fa-solid fa-layer-group' },
     { to: '/dashboard', label: 'Student view', iconClass: 'fa-solid fa-gauge' },
+    { to: '/settings', label: 'Settings', iconClass: 'fa-solid fa-gear' },
   ]
 }
 

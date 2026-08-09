@@ -31,6 +31,10 @@ class LessonResponse(LessonBase):
     id: UUID
     module_id: UUID
     created_at: datetime
+    # Per-user progress (0-100) and completion, populated only when the
+    # requesting user is authenticated (see courses.get_course_by_slug).
+    progress: Optional[float] = None
+    is_completed: Optional[bool] = None
 
     class Config:
         from_attributes = True
@@ -123,6 +127,31 @@ class EnrollmentResponse(BaseModel):
     enrolled_at: datetime
     completed_at: Optional[datetime]
     progress: float
+
+    class Config:
+        from_attributes = True
+
+
+class EnrollmentDetailResponse(BaseModel):
+    """Enrollment + course summary + real completion stats for a learner.
+
+    `progress_percent` is derived from the enrollment's stored progress
+    (average across the course's lessons, maintained by the lessons API).
+    """
+
+    id: UUID
+    course_id: UUID
+    course_title: str
+    course_slug: str
+    course_category: Optional[str] = None
+    level: str = "beginner"
+    enrolled_at: datetime
+    completed_at: Optional[datetime]
+    progress: float
+    total_lessons: int = 0
+    completed_lessons: int = 0
+    progress_percent: int = 0
+    is_completed: bool = False
 
     class Config:
         from_attributes = True

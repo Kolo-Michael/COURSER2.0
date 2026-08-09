@@ -7,6 +7,7 @@ import { CourseDetailPage } from './pages/CourseDetailPage'
 import { CoursesPage } from './pages/CoursesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LandingPage } from './pages/LandingPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { StreakPage } from './pages/StreakPage'
 import { SuperAdminPage } from './pages/SuperAdminPage'
 
@@ -65,6 +66,14 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['super_admin']}>
             <SuperAdminPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute allowedRoles={['student', 'admin', 'super_admin']}>
+            <SettingsPage />
           </ProtectedRoute>
         }
       />

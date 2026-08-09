@@ -1,10 +1,20 @@
-import { getCourseBySlug, enrollInCourse, askCora, type ApiCourse } from '@/api/courses'
+import {
+  askCora,
+  completeLesson,
+  enrollInCourse,
+  getCourseBySlug,
+  listMyEnrollments,
+  restartCourse,
+  type ApiCourse,
+  type ApiEnrollmentDetail,
+  type ApiLesson,
+} from '@/api/courses'
 import { getSession, type AuthSession } from '@/auth/session'
 import { DashboardLayout, type DashboardNavItem } from '@/components/layout/DashboardLayout'
 import { navItemsFor } from '@/components/layout/navItems'
 import { PublicShell } from '@/components/layout/PublicShell'
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 function categoryIcon(course: ApiCourse) {
@@ -41,22 +51,35 @@ type Tab = 'Transcript' | 'Notes' | 'Resources'
 type ChatRole = 'assistant' | 'user'
 type ChatMessage = { role: ChatRole; text: string }
 
-const TAB_CONTENT: Record<Tab, { label: string; body: string }> = {
-  Transcript: {
-    label: 'Lesson transcript',
-    body: 'Welcome to the lesson. This transcript mirrors the script and updates as you scrub the video. Use the search shortcut to jump anywhere.',
-  },
-  Notes: {
-    label: 'Your notes',
-    body: 'Notes are saved locally to your browser for this lesson. Clear them by removing the site data or opening a new browser profile.',
-  },
-  Resources: {
-    label: 'Lesson resources',
-    body: 'Official readings, slides, and the practice task sandbox are linked here once the instructor publishes them.',
-  },
-}
-
 const NOTES_STORAGE_KEY = (slug: string) => `courser.notes:${slug}`
+
+/** Render the lesson media: a real player when a video exists, otherwise
+ *  the "Video not yet available" placeholder. The lesson text below is
+ *  always readable regardless. */
+function LessonMedia({ lesson }: { lesson: ApiLesson }) {
+  if (lesson.video_url) {
+    return (
+      <video
+        src={lesson.video_url}
+        controls
+        playsInline
+        className="aspect-video w-full rounded-xl bg-stone-900 object-contain"
+        poster=""
+      >
+        Your browser does not support the video tag.
+      </video>
+    )
+  }
+  return (
+    <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-stone-300 bg-stone-100/80 text-stone-400 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-500">
+      <i className="fa-solid fa-video text-5xl" aria-hidden />
+      <p className="text-sm font-bold text-stone-600 dark:text-stone-300">Video not yet available</p>
+      <p className="px-6 text-center text-xs text-stone-500 dark:text-stone-400">
+        The written lesson below is ready to read while this video is being prepared.
+      </p>
+    </div>
+  )
+}
 
 export function CourseDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -70,6 +93,11 @@ export function CourseDetailPage() {
   const [enrolling, setEnrolling] = useState(false)
   const [enrolled, setEnrolled] = useState(false)
   const [enrollError, setEnrollError] = useState<string | null>(null)
+
+  const [enrollment, setEnrollment] = useState<ApiEnrollmentDetail | null>(null)
+  const [selectedLesson, setSelectedLesson] = useState<ApiLesson | null>(null)
+  const [completing, setCompleting] = useState<string | null>(null)
+  const [restarting, setRestarting] = useState(false)
 
   const [question, setQuestion] = useState('')
   const [chat, setChat] = useState<ChatMessage[]>([
@@ -98,6 +126,22 @@ export function CourseDetailPage() {
     }
   }, [slug, notes])
 
+  const firstLesson = useMemo(() => course?.modules?.[0]?.lessons[0] ?? null, [course])
+
+  async function loadEnrollment() {
+    if (!session || !slug) return
+    try {
+      const enrollments = await listMyEnrollments()
+      const match = enrollments.find((enrollment) => enrollment.course_slug === slug)
+      if (match) {
+        setEnrollment(match)
+        setEnrolled(true)
+      }
+    } catch {
+      // Non-fatal — the workspace still renders.
+    }
+  }
+
   useEffect(() => {
     let active = true
 
@@ -112,6 +156,7 @@ export function CourseDetailPage() {
         const data = await getCourseBySlug(slug)
         if (active) {
           setCourse(data)
+          setSelectedLesson(data.modules?.[0]?.lessons[0] ?? null)
         }
       } catch {
         if (active) {
@@ -125,10 +170,12 @@ export function CourseDetailPage() {
     }
 
     loadCourse()
+    if (session) loadEnrollment()
 
     return () => {
       active = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
   async function handleEnroll() {
@@ -143,10 +190,74 @@ export function CourseDetailPage() {
     try {
       await enrollInCourse(course.slug)
       setEnrolled(true)
+      await loadEnrollment()
     } catch (err) {
       setEnrollError(err instanceof Error ? err.message : 'Could not enroll. Try again.')
     } finally {
       setEnrolling(false)
+    }
+  }
+
+  async function handleMarkComplete(lesson: ApiLesson) {
+    if (!session || completing) return
+    setCompleting(lesson.id)
+    try {
+      const result = await completeLesson(lesson.id)
+      // Reflect the updated lesson progress + course totals.
+      setCourse((prev) =>
+        prev
+          ? {
+              ...prev,
+              modules: prev.modules?.map((module) => ({
+                ...module,
+                lessons: module.lessons.map((item) =>
+                  item.id === lesson.id ? { ...item, progress: result.progress, is_completed: result.is_completed } : item,
+                ),
+              })),
+            }
+          : prev,
+      )
+      setEnrollment((prev) =>
+        prev
+          ? {
+              ...prev,
+              progress: result.course_progress_percent ?? prev.progress,
+              progress_percent: result.course_progress_percent ?? prev.progress_percent,
+              completed_lessons: result.completed_lessons ?? prev.completed_lessons,
+              total_lessons: result.total_lessons ?? prev.total_lessons,
+              is_completed: (result.completed_lessons ?? 0) === (result.total_lessons ?? 0) || (result.course_progress_percent ?? 0) >= 100,
+            }
+          : prev,
+      )
+    } catch (err) {
+      setEnrollError(err instanceof Error ? err.message : 'Could not mark this lesson complete.')
+    } finally {
+      setCompleting(null)
+    }
+  }
+
+  async function handleRestart() {
+    if (!slug || !session || restarting) return
+    if (!window.confirm('Restart this course? Your progress will be reset to zero.')) return
+    setRestarting(true)
+    try {
+      await restartCourse(slug)
+      setEnrollment((prev) => (prev ? { ...prev, progress: 0, progress_percent: 0, completed_lessons: 0, is_completed: false, completed_at: null } : prev))
+      setCourse((prev) =>
+        prev
+          ? {
+              ...prev,
+              modules: prev.modules?.map((module) => ({
+                ...module,
+                lessons: module.lessons.map((item) => ({ ...item, progress: 0, is_completed: false })),
+              })),
+            }
+          : prev,
+      )
+    } catch (err) {
+      setEnrollError(err instanceof Error ? err.message : 'Could not restart the course.')
+    } finally {
+      setRestarting(false)
     }
   }
 
@@ -194,7 +305,7 @@ export function CourseDetailPage() {
           </p>
           <Link
             to="/courses"
-            className="mt-6 inline-flex items-center rounded-lg bg-gradient-to-br from-primary to-primary/80 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 dark:from-primary-dark dark:to-primary"
+            className="mt-6 inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
           >
             <i className="fa-solid fa-arrow-left mr-2 text-xs" aria-hidden />
             Back to courses
@@ -205,10 +316,10 @@ export function CourseDetailPage() {
   }
 
   const admin = session?.role === 'admin' || session?.role === 'super_admin'
-  const firstLesson = course.modules?.[0]?.lessons[0] ?? null
-  const resourceUrl = firstLesson?.video_url ?? null
-  const transcriptBody =
-    firstLesson?.content?.trim() || TAB_CONTENT.Transcript.body
+  const lesson = selectedLesson ?? firstLesson
+  const resourceUrl = lesson?.video_url ?? null
+  const lessonComplete = Boolean(lesson?.is_completed)
+  const progressPercent = enrollment?.progress_percent ?? 0
 
   const enrollLabel = session
     ? enrolled
@@ -258,14 +369,26 @@ export function CourseDetailPage() {
               <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{session ? 'Ready to learn' : 'Enroll'}</p>
               <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
                 {session
-                  ? 'Start this free course from your learning workspace.'
+                  ? enrolled
+                    ? `${progressPercent}% complete — pick a lesson below to keep going.`
+                    : 'Start this free course from your learning workspace.'
                   : 'Sign in as a student to continue enrollment.'}
               </p>
+              {enrolled && enrollment ? (
+                <>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${progressPercent}%` }} />
+                  </div>
+                  <p className="mt-1 text-xs font-semibold text-stone-500 dark:text-stone-400">
+                    {enrollment.completed_lessons}/{enrollment.total_lessons} lessons · {progressPercent}%
+                  </p>
+                </>
+              ) : null}
               <button
                 type="button"
                 onClick={handleEnroll}
                 disabled={enrolling || enrolled}
-                className="mt-4 w-full rounded-lg bg-gradient-to-br from-primary to-primary/80 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-4 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-dark"
               >
                 {enrolled ? (
                   <span className="inline-flex items-center justify-center gap-2">
@@ -276,6 +399,17 @@ export function CourseDetailPage() {
                   enrollLabel
                 )}
               </button>
+              {enrolled ? (
+                <button
+                  type="button"
+                  onClick={handleRestart}
+                  disabled={restarting}
+                  className="mt-2 w-full rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+                >
+                  <i className="fa-solid fa-rotate-left mr-2" aria-hidden />
+                  {restarting ? 'Restarting…' : 'Restart course'}
+                </button>
+              ) : null}
               {enrollError ? (
                 <p className="mt-3 text-xs font-semibold text-red-600">{enrollError}</p>
               ) : null}
@@ -296,6 +430,9 @@ export function CourseDetailPage() {
         <section className="courser-card p-6">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50">Modules & lessons</h2>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/20 dark:text-primary-dark">
+              {progressPercent}% complete
+            </span>
           </div>
           {course.modules?.length ? (
             <ol className="mt-6 space-y-4">
@@ -308,21 +445,44 @@ export function CourseDetailPage() {
                     Module {module.order}: {module.title}
                   </p>
                   <ul className="mt-2 space-y-2 text-sm text-stone-600 dark:text-stone-300">
-                    {module.lessons.map((lesson) => (
-                      <li key={lesson.id} className="rounded-lg border border-stone-200 bg-white p-3 dark:border-stone-700 dark:bg-stone-900/50">
-                        <div className="flex items-center gap-2 font-semibold text-stone-800 dark:text-stone-100">
-                          <i className="fa-solid fa-circle-play text-primary dark:text-primary-dark" aria-hidden />
-                          Lesson {module.order}.{lesson.order}: {lesson.title}
-                        </div>
-                        {lesson.content ? (
-                          <p className="mt-2 leading-relaxed text-stone-600 dark:text-stone-300">{lesson.content}</p>
-                        ) : null}
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-stone-500 dark:text-stone-400">
-                          <span className="rounded-full bg-stone-100 px-2 py-1 dark:bg-stone-800 dark:text-stone-300">
-                            {lesson.duration ?? 'Self-paced'}
+                    {module.lessons.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLesson(item)}
+                          className={[
+                            'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition',
+                            lesson?.id === item.id
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary/30 dark:border-primary-dark dark:bg-primary-dark/10'
+                              : 'border-stone-200 bg-white hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900/50 dark:hover:border-stone-600',
+                          ].join(' ')}
+                        >
+                          <span
+                            className={[
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs',
+                              item.is_completed
+                                ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                                : 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-dark',
+                            ].join(' ')}
+                          >
+                            <i className={`fa-solid ${item.is_completed ? 'fa-check' : 'fa-circle-play'}`} aria-hidden />
                           </span>
-                          <span className="rounded-full bg-green-100 px-2 py-1 text-green-700 dark:bg-green-950/40 dark:text-green-300">Ready now</span>
-                        </div>
+                          <span className="flex-1">
+                            <span className="block font-semibold text-stone-800 dark:text-stone-100">
+                              Lesson {module.order}.{item.order}: {item.title}
+                            </span>
+                            {item.content ? (
+                              <span className="mt-1 block line-clamp-1 text-xs text-stone-500 dark:text-stone-400">
+                                {item.content}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2 text-[11px] font-semibold text-stone-400">
+                            <span className="rounded-full bg-stone-100 px-2 py-1 dark:bg-stone-800 dark:text-stone-400">
+                              {item.duration ?? 'Self-paced'}
+                            </span>
+                          </span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -340,7 +500,7 @@ export function CourseDetailPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-primary dark:text-primary-dark">Default learning environment</p>
-                  <h2 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-50">Lesson workspace</h2>
+                  <h2 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-50">{lesson?.title ?? 'Lesson workspace'}</h2>
                 </div>
                 {admin ? (
                   <Link
@@ -352,92 +512,89 @@ export function CourseDetailPage() {
                   </Link>
                 ) : null}
               </div>
-              <div className="mt-5 overflow-hidden rounded-xl border border-stone-200 dark:border-stone-700">
-                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-700 dark:bg-stone-800/60">
-                  <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Current lesson</span>
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/20 dark:text-primary-dark">
-                    Focus mode
-                  </span>
-                </div>
-                <div className="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
-                  <aside className="border-b border-stone-200 bg-stone-50 p-4 md:border-b-0 md:border-r dark:border-stone-700 dark:bg-stone-800/40">
-                    <p className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">Course path</p>
-                    <div className="mt-3 space-y-2">
-                      {['Start here', 'Watch lesson', 'Practice task'].map((item, index) => (
-                        <div
-                          key={item}
-                          className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                            index === 1 ? 'bg-primary text-white shadow-sm dark:bg-primary-dark' : 'bg-white text-stone-700 dark:bg-stone-900/50 dark:text-stone-200'
-                          }`}
-                        >
-                          {index + 1}. {item}
-                        </div>
-                      ))}
-                    </div>
-                  </aside>
-                  <div className="p-4">
-                    <div className="flex aspect-video items-center justify-center rounded-xl bg-gradient-to-br from-stone-800 to-stone-950 text-white dark:from-stone-900 dark:to-black">
-                      <i className="fa-solid fa-circle-play text-5xl text-accent dark:text-accent-dark" aria-hidden />
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3" role="tablist" aria-label="Lesson resources">
-                      {(['Transcript', 'Notes', 'Resources'] as Tab[]).map((tab) => (
-                        <button
-                          key={tab}
-                          type="button"
-                          role="tab"
-                          aria-selected={activeTab === tab}
-                          onClick={() => setActiveTab(tab)}
-                          className={[
-                            'rounded-lg border px-3 py-2 text-sm font-semibold transition',
-                            activeTab === tab
-                              ? 'border-primary bg-primary text-white shadow-sm dark:bg-primary-dark'
-                              : 'border-stone-200 text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800',
-                          ].join(' ')}
-                        >
-                          {tab}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/40">
-                      {activeTab === 'Transcript' ? (
-                        <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-200">{transcriptBody}</p>
-                      ) : activeTab === 'Notes' ? (
-                        <div>
-                          <label htmlFor="lesson-notes" className="sr-only">
-                            Notes
-                          </label>
-                          <textarea
-                            id="lesson-notes"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Type your notes for this lesson — saved locally."
-                            rows={6}
-                            className="w-full rounded-lg border border-stone-200 bg-white p-3 text-sm text-stone-800 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
-                          />
-                          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">Notes are saved in this browser only.</p>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-stone-700 dark:text-stone-200">
-                          <p className="font-semibold text-stone-900 dark:text-stone-50">{TAB_CONTENT.Resources.label}</p>
-                          <p className="mt-1">{TAB_CONTENT.Resources.body}</p>
-                          {resourceUrl ? (
-                            <a
-                              href={resourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-3 inline-flex items-center text-sm font-semibold text-primary hover:underline dark:text-primary-dark"
-                            >
-                              <i className="fa-solid fa-up-right-from-square mr-2 text-xs" aria-hidden />
-                              Open video resource
-                            </a>
-                          ) : (
-                            <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">No resources published yet.</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+
+              <div className="mt-5">
+                {lesson ? <LessonMedia lesson={lesson} /> : null}
+                {session && lesson ? (
+                  <button
+                    type="button"
+                    onClick={() => handleMarkComplete(lesson)}
+                    disabled={completing === lesson.id || lessonComplete}
+                    className={[
+                      'mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed',
+                      lessonComplete
+                        ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                        : 'bg-primary text-white hover:brightness-110 disabled:opacity-60 dark:bg-primary-dark',
+                    ].join(' ')}
+                  >
+                    <i className={`fa-solid ${lessonComplete ? 'fa-check' : completing === lesson.id ? 'fa-spinner fa-spin' : 'fa-circle-check'}`} aria-hidden />
+                    {lessonComplete ? 'Lesson completed' : completing === lesson.id ? 'Marking…' : 'Mark lesson complete'}
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3" role="tablist" aria-label="Lesson resources">
+                {(['Transcript', 'Notes', 'Resources'] as Tab[]).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={[
+                      'rounded-lg border px-3 py-2 text-sm font-semibold transition',
+                      activeTab === tab
+                        ? 'border-primary bg-primary text-white shadow-sm dark:bg-primary-dark'
+                        : 'border-stone-200 text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800',
+                    ].join(' ')}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/40">
+                {activeTab === 'Transcript' ? (
+                  <div>
+                    <p className="text-sm font-bold text-stone-900 dark:text-stone-50">Lesson transcript</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-700 dark:text-stone-200">
+                      {lesson?.content?.trim() || 'This lesson has no written content yet — check back soon.'}
+                    </p>
                   </div>
-                </div>
+                ) : activeTab === 'Notes' ? (
+                  <div>
+                    <label htmlFor="lesson-notes" className="sr-only">
+                      Notes
+                    </label>
+                    <textarea
+                      id="lesson-notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Type your notes for this lesson — saved locally."
+                      rows={6}
+                      className="w-full rounded-lg border border-stone-200 bg-white p-3 text-sm text-stone-800 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
+                    />
+                    <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">Notes are saved in this browser only.</p>
+                  </div>
+                ) : (
+                  <div className="text-sm text-stone-700 dark:text-stone-200">
+                    <p className="font-semibold text-stone-900 dark:text-stone-50">Lesson resources</p>
+                    <p className="mt-1">Official readings, slides, and the practice task sandbox are linked here once the instructor publishes them.</p>
+                    {resourceUrl ? (
+                      <a
+                        href={resourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center text-sm font-semibold text-primary hover:underline dark:text-primary-dark"
+                      >
+                        <i className="fa-solid fa-up-right-from-square mr-2 text-xs" aria-hidden />
+                        Open video resource
+                      </a>
+                    ) : (
+                      <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">No resources published yet.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -500,7 +657,7 @@ export function CourseDetailPage() {
                   <button
                     type="submit"
                     disabled={asking || !question.trim()}
-                    className="rounded-lg bg-gradient-to-br from-primary to-primary/80 px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:from-primary-dark dark:to-primary"
+                    className="rounded-lg bg-primary px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-dark"
                   >
                     <i className="fa-solid fa-paper-plane" aria-hidden />
                   </button>

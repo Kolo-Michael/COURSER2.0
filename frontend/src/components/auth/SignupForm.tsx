@@ -105,7 +105,7 @@ export function SignupForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-gradient-to-br from-accent to-accent/80 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:from-accent-dark dark:to-accent"
+        className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark"
       >
         {submitting ? 'Creating account...' : 'Create account'}
       </button>

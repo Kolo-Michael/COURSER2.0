@@ -32,11 +32,15 @@ from app.core.security import (
     decode_token,
     get_current_user_id,
     get_refresh_token,
+    hash_password,
+    verify_password,
 )
 from app.schemas.auth import (
     AdminCreate,
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    ProfileUpdate,
     RefreshRequest,
     ResetPasswordRequest,
     TokenResponse,
@@ -110,6 +114,9 @@ def _set_session_cookie(response: Response, user) -> None:
         "fullName": user.full_name,
         "role": user.role,
         "id": str(user.id),
+        "avatarUrl": user.avatar_url,
+        "navStyle": user.nav_style or "sidebar",
+        "navCollapsed": bool(user.nav_collapsed),
     }
     # URL-encode the JSON payload. Starlette's cookie writer otherwise
     # octal-escapes special chars (\054 for ',') which breaks JSON.parse
@@ -373,6 +380,53 @@ async def get_current_user(
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     return user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_current_user(
+    response: Response,
+    payload: ProfileUpdate,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Self-service profile & settings update (name, avatar, nav prefs).
+
+    Only the fields present in the body are changed. The `courser_session`
+    cookie is refreshed so the header/sidebar immediately show the new
+    display name.
+    """
+    user = await auth_service.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+
+    await db.commit()
+    await db.refresh(user)
+    _set_session_cookie(response, user)
+    return user
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    payload: ChangePasswordRequest,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change the authenticated user's password (requires current password)."""
+    user = await auth_service.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    if not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect.")
+
+    user.hashed_password = hash_password(payload.new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    await db.commit()
+    return {"message": "Password updated successfully."}
 
 
 @router.post(

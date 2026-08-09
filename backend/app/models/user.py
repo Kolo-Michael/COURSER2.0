@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, UUID as SA_UUID
+from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Integer, UUID as SA_UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -25,6 +25,14 @@ class User(Base):
     # service resets `failed_login_attempts` on a successful login.
     failed_login_attempts = Column(Integer, nullable=False, default=0)
     locked_until = Column(DateTime, nullable=True)
+
+    # Account settings (web Settings page).
+    # `avatar_url` stores a data URL (base64 image) or hosted URL.
+    # `nav_style` picks the workspace navigation: 'sidebar' or 'floating'.
+    # `nav_collapsed` remembers whether the sidebar was collapsed.
+    avatar_url = Column(Text, nullable=True)
+    nav_style = Column(String(20), nullable=False, default="sidebar")
+    nav_collapsed = Column(Boolean, nullable=False, default=False)
 
     creator = relationship("User", remote_side=[id], back_populates="created_users")
     created_users = relationship("User", back_populates="creator")

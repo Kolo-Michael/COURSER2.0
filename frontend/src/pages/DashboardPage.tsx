@@ -1,24 +1,65 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { navItemsFor } from '@/components/layout/navItems'
 import { logout } from '@/api/auth'
+import { listMyEnrollments, restartCourse, type ApiEnrollmentDetail } from '@/api/courses'
 import { clearSession, getSession } from '@/auth/session'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-const learningStats = [
-  { label: 'Free courses', value: '12', icon: 'fa-layer-group' },
-  { label: 'Hours available', value: '64', icon: 'fa-clock' },
-  { label: 'Cora answers', value: '24/7', icon: 'fa-comments' },
-]
-
-const activeCourses = [
-  { title: 'Frontend Foundations with React', progress: 42, next: 'Build a responsive course card' },
-  { title: 'Python Data Analysis Starter', progress: 18, next: 'Clean a student progress dataset' },
-  { title: 'AI Prompting for Course Creators', progress: 8, next: 'Draft a lesson quiz with Cora' },
-]
 
 export function DashboardPage() {
   const session = getSession()
   const displayName = session?.identifier || 'there'
+
+  const [enrollments, setEnrollments] = useState<ApiEnrollmentDetail[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [restarting, setRestarting] = useState<string | null>(null)
+
+  async function load() {
+    setLoading(true)
+    setError(null)
+    try {
+      setEnrollments(await listMyEnrollments())
+    } catch {
+      setError('Could not load your course progress right now.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleRestart(slug: string, title: string) {
+    if (!window.confirm(`Restart "${title}"? Your progress on this course will be reset to zero.`)) return
+    setRestarting(slug)
+    try {
+      await restartCourse(slug)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not restart the course.')
+    } finally {
+      setRestarting(null)
+    }
+  }
+
+  const completedCourses = enrollments.filter((enrollment) => enrollment.is_completed)
+  const totalLessonsCompleted = enrollments.reduce(
+    (total, enrollment) => total + enrollment.completed_lessons,
+    0,
+  )
+  const averageProgress = enrollments.length
+    ? Math.round(enrollments.reduce((total, enrollment) => total + enrollment.progress_percent, 0) / enrollments.length)
+    : 0
+
+  const stats = [
+    { label: 'Courses enrolled', value: String(enrollments.length), icon: 'fa-layer-group' },
+    { label: 'Courses completed', value: String(completedCourses.length), icon: 'fa-circle-check' },
+    { label: 'Lessons completed', value: String(totalLessonsCompleted), icon: 'fa-book-open-reader' },
+    { label: 'Avg. progress', value: `${averageProgress}%`, icon: 'fa-gauge-high' },
+  ]
 
   return (
     <DashboardLayout
@@ -36,7 +77,7 @@ export function DashboardPage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               to="/courses"
-              className="inline-flex items-center rounded-lg bg-gradient-to-br from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110"
+              className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
             >
               <i className="fa-solid fa-compass mr-2" aria-hidden />
               Browse courses
@@ -66,8 +107,8 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
-          {learningStats.map((item) => (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {stats.map((item) => (
             <div key={item.label} className="courser-card p-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-stone-600 dark:text-stone-300">{item.label}</p>
@@ -81,22 +122,82 @@ export function DashboardPage() {
         <section className="courser-card p-6">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">Continue learning</h3>
+            <Link to="/courses" className="text-sm font-semibold text-primary hover:underline dark:text-primary-dark">
+              Browse catalog
+            </Link>
           </div>
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            {activeCourses.map((course) => (
-              <article key={course.title} className="rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/60">
-                <p className="font-bold leading-snug text-stone-900 dark:text-stone-50">{course.title}</p>
-                <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">Next: {course.next}</p>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${course.progress}%` }} />
-                </div>
-                <div className="mt-3 flex items-center justify-between text-xs font-semibold text-stone-500 dark:text-stone-400">
-                  <span>{course.progress}% complete</span>
-                  <Link to="/courses" className="text-primary hover:underline">Open</Link>
-                </div>
-              </article>
-            ))}
-          </div>
+
+          {loading ? (
+            <div className="mt-5 flex items-center justify-center gap-3 rounded-xl border border-stone-200 p-10 text-stone-600 dark:border-stone-700 dark:text-stone-300">
+              <i className="fa-solid fa-spinner text-primary" aria-hidden />
+              Loading your courses...
+            </div>
+          ) : error ? (
+            <div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-6 text-center text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+              <p className="font-semibold">{error}</p>
+              <button type="button" onClick={load} className="mt-3 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold">
+                Try again
+              </button>
+            </div>
+          ) : enrollments.length === 0 ? (
+            <div className="mt-5 rounded-xl border border-dashed border-stone-300 p-10 text-center dark:border-stone-700">
+              <i className="fa-regular fa-face-smile mb-3 text-3xl text-stone-400" aria-hidden />
+              <p className="font-bold text-stone-900 dark:text-stone-50">You haven't enrolled in any courses yet.</p>
+              <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">Pick a free course and start learning today.</p>
+              <Link
+                to="/courses"
+                className="mt-5 inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
+              >
+                <i className="fa-solid fa-magnifying-glass mr-2" aria-hidden />
+                Browse courses
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              {enrollments.map((course) => (
+                <article key={course.id} className="rounded-xl border border-stone-200 bg-white/60 p-4 backdrop-blur-sm dark:border-stone-700 dark:bg-stone-800/40">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-bold leading-snug text-stone-900 dark:text-stone-50">{course.course_title}</p>
+                    {course.is_completed ? (
+                      <span className="rounded-full bg-green-100 px-2 py-1 text-[11px] font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-300">
+                        Done
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                    {course.course_category ?? 'General'} · {course.completed_lessons}/{course.total_lessons} lessons
+                  </p>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
+                    <div
+                      className="h-full rounded-full bg-accent transition-all"
+                      style={{ width: `${Math.max(course.progress_percent, 0)}%` }}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2 text-xs font-semibold">
+                    <span className="text-stone-500 dark:text-stone-400">{course.progress_percent}% complete</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRestart(course.course_slug, course.course_title)}
+                        disabled={restarting === course.course_slug}
+                        className="rounded-lg px-2 py-1 text-stone-500 transition hover:bg-stone-100 hover:text-red-600 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-stone-700"
+                        title="Restart course"
+                        aria-label={`Restart ${course.course_title}`}
+                      >
+                        <i className="fa-solid fa-rotate-left" aria-hidden />
+                      </button>
+                      <Link
+                        to={`/courses/${course.course_slug}`}
+                        className="rounded-lg bg-primary px-3 py-1 text-white transition hover:brightness-110 dark:bg-primary-dark"
+                      >
+                        {course.is_completed ? 'Review' : 'Continue'}
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">

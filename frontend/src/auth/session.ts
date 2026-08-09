@@ -5,6 +5,9 @@ export type AuthSession = {
   role: UserRole
   email?: string
   fullName?: string | null
+  avatarUrl?: string | null
+  navStyle?: 'sidebar' | 'floating'
+  navCollapsed?: boolean
 }
 
 // Authentication tokens live in HttpOnly cookies set by the backend
@@ -85,6 +88,12 @@ export function getSession(): AuthSession | null {
           typeof parsed.fullName === 'string' || parsed.fullName === null
             ? parsed.fullName
             : undefined,
+        avatarUrl:
+          typeof parsed.avatarUrl === 'string' || parsed.avatarUrl === null
+            ? parsed.avatarUrl
+            : undefined,
+        navStyle: parsed.navStyle === 'floating' || parsed.navStyle === 'sidebar' ? parsed.navStyle : undefined,
+        navCollapsed: typeof parsed.navCollapsed === 'boolean' ? parsed.navCollapsed : undefined,
       }
     }
   }
@@ -110,6 +119,12 @@ export function getSession(): AuthSession | null {
               typeof parsed.fullName === 'string' || parsed.fullName === null
                 ? parsed.fullName
                 : undefined,
+            avatarUrl:
+              typeof parsed.avatarUrl === 'string' || parsed.avatarUrl === null
+                ? parsed.avatarUrl
+                : undefined,
+            navStyle: parsed.navStyle === 'floating' || parsed.navStyle === 'sidebar' ? parsed.navStyle : undefined,
+            navCollapsed: typeof parsed.navCollapsed === 'boolean' ? parsed.navCollapsed : undefined,
           }
         }
       } catch {

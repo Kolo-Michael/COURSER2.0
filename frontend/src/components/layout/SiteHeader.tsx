@@ -42,7 +42,7 @@ export function SiteHeader() {
           </Link>
           <Link
             to="/auth?mode=signup"
-            className="rounded-lg bg-gradient-to-br from-accent to-accent/80 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:from-accent-dark dark:to-accent"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark"
           >
             Sign up
           </Link>

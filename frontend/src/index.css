@@ -8,24 +8,17 @@ html {
 
 body {
   @apply m-0 min-h-screen antialiased;
-  background-color: #FAFAF9;
+  /* Professional flat surface: warm neutral stone. No color gradients —
+     the frosted glass panels carry the depth, and the dot-grid section
+     textures (see .courser-bg-dots) give the backdrop-blur something to
+     soften while keeping content crisp. */
+  background-color: #F7F6F4;
   color: #1C1917;
-  /* Subtle gradient wash — soft blue/orange glows + gentle vertical fade.
-     Keeps the stone palette but gives the frosted surfaces something to blur. */
-  background-image:
-    radial-gradient(1100px 520px at 10% -5%, rgba(37, 99, 235, 0.09), transparent 60%),
-    radial-gradient(900px 480px at 92% 10%, rgba(249, 115, 22, 0.07), transparent 55%),
-    linear-gradient(180deg, #FAFAF9 0%, #F4F4F5 100%);
-  background-attachment: fixed;
 }
 
 .dark body {
   background-color: #0C0A09;
   color: #E7E5E4;
-  background-image:
-    radial-gradient(1100px 520px at 10% -5%, rgba(59, 130, 246, 0.13), transparent 60%),
-    radial-gradient(900px 480px at 92% 10%, rgba(251, 146, 60, 0.09), transparent 55%),
-    linear-gradient(180deg, #0C0A09 0%, #131311 100%);
 }
 
 /* Subtle dot-grid texture overlay — inspired by Linear, Stripe, and other

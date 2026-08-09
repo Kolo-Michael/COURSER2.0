@@ -1,5 +1,9 @@
 # Activity Log
 
+> **Codebase reference:** read `CODEBASE.md` for an up-to-date map of the three
+> subprojects (web frontend / backend API / mobile app) and how they fit
+> together. Update `CODEBASE.md` whenever a feature is added.
+
 ## Frontend Auth / Session Cleanup
 
 ### Dev cookie scoping fix (login "does nothing")
@@ -188,4 +192,57 @@
 ### Added startup scripts
 - `backend/run_local.sh` (Linux/macOS) and `backend/run_local.bat` (Windows)
   — one-command: install deps → init SQLite DB → seed courses → start uvicorn.
+
+## Student Dashboard / Progress / Settings Feature Wave
+
+> First full codebase map documented in `CODEBASE.md` (frontend/backend/mobile).
+
+### DB-driven course progress + restartable courses
+- `backend/app/models/course.py` — new `LessonProgress` model (user_id,
+  lesson_id, progress 0–100, is_completed, quiz_score, completed_at, updated_at;
+  unique `uq_user_lesson_progress`).
+- `backend/app/api/lessons.py` — per-(user,lesson) progress persisted via
+  `_upsert_lesson_progress`; enrollment progress recomputed as lesson average
+  (`_recompute_course_progress`); `POST /{lesson_id}/complete` and
+  `PATCH /{lesson_id}/progress` both record learning days.
+- `backend/app/api/courses.py` — `GET /courses/enrollments/me` returns real
+  counts (completed/total lessons, percent); `POST /courses/slug/{slug}/restart`
+  deletes LessonProgress + zeroes enrollment; `GET /courses/slug/{slug}` attaches
+  per-lesson progress when authenticated.
+- `frontend/src/pages/DashboardPage.tsx` — dashboard now shows real stats
+  (enrolled/completed/lessons done/avg progress), continue-learning cards with
+  progress bars + restart (with confirm) + Continue/Review.
+- `frontend/src/pages/CourseDetailPage.tsx` — clickable lesson list; video player
+  when `video_url` exists else "Video not yet available" placeholder (text is
+  ready); transcript tab; "Mark lesson complete" → updates course/enrollment
+  state; restart button for enrolled users; per-course notes in localStorage.
+
+### Collapsible sidebar + floating nav (student settings)
+- `frontend/src/components/layout/DashboardLayout.tsx` — rewritten. Sidebar mode:
+  desktop collapse toggle (icon-only `w-20`, labels/tooltips hidden, profile +
+  Cora box hidden) + mobile hamburger overlay; collapse is desktop-only via a
+  matchMedia `isDesktop` gate so mobile always shows full labels. Floating mode:
+  FAB bottom-left expands a glass panel (nav, switch-back-to-sidebar, outside
+  click / Escape to close).
+- `frontend/src/pages/SettingsPage.tsx` — new `/settings` route (all roles),
+  categorized: Profile (avatar upload → data URL), Navigation (sidebar vs
+  floating + start-collapsed), Security (change password), Account.
+- `backend/app/models/user.py` — `avatar_url`, `nav_style` (sidebar|floating),
+  `nav_collapsed` columns; migrated via `init_db.py` `_USER_MIGRATION_COLUMNS`.
+- `backend/app/api/auth.py` — `PATCH /auth/me` (profile/settings, refreshes
+  session cookie) + `POST /auth/change-password` (bcrypt verify + rehash).
+- `frontend/src/auth/preferences.ts` — nav style/collapsed prefs (localStorage +
+  fire-and-forget profile sync).
+- `frontend/src/pages/StreakPage.tsx` — rewritten on real `getStreak()` /
+  `restoreStreakDay()`.
+
+### No-color-gradient flat surfaces (both themes)
+- All `bg-gradient-to-br` CTAs (Hero, SiteHeader, Login/Signup forms,
+  Landing/Courses/Admin/SuperAdmin pages) replaced with solid `bg-primary` /
+  `bg-accent` (+ dark variants).
+- `frontend/src/index.css` — body is flat warm stone (light `#F7F6F4` / dark
+  `#0C0A09`); the only radial-gradients left are the intentional dot-grid
+  textures (`.courser-bg-dots` / `-dense`) that the frosted-glass panels blur.
+- Hero overlay is now a flat `bg-primary/5` tint instead of the blue→orange
+  diagonal fade.
 

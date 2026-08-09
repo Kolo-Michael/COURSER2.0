@@ -8,7 +8,7 @@ export function Hero() {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10"
+        className="pointer-events-none absolute inset-0 bg-primary/5 dark:bg-primary-dark/5"
       />
       <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-2 pb-12 pt-10 sm:px-3 lg:flex-row lg:items-center lg:gap-14 lg:px-4 lg:pb-16 lg:pt-14">
         <div className="flex-1">
@@ -38,7 +38,7 @@ export function Hero() {
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
               to="/auth"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-accent to-accent/80 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:from-accent-dark dark:to-accent"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark"
             >
               Get started free
               <i className="fa-solid fa-arrow-right text-sm opacity-90" aria-hidden="true" />

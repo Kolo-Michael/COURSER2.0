@@ -10,7 +10,6 @@ class UserBase(BaseModel):
     full_name: Optional[str] = Field(default=None, max_length=100)
     role: Literal["student", "admin", "super_admin"] = "student"
 
-
 class UserCreate(UserBase):
     # Password strength is enforced by auth_service via validation, plus
     # the frontend form. Server-side length floor of 8 chars here.
@@ -33,10 +32,27 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class ProfileUpdate(BaseModel):
+    """Body for PATCH /auth/me (self-service profile & settings update)."""
+    full_name: Optional[str] = Field(default=None, max_length=100)
+    avatar_url: Optional[str] = Field(default=None, max_length=20000)
+    nav_style: Optional[Literal["sidebar", "floating"]] = None
+    nav_collapsed: Optional[bool] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    """Body for POST /auth/change-password."""
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
     is_verified: bool
+    avatar_url: Optional[str] = None
+    nav_style: str = "sidebar"
+    nav_collapsed: bool = False
     created_at: datetime
     updated_at: Optional[datetime]
     last_login: Optional[datetime]

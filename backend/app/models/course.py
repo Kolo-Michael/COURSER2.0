@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Float, Boolean, DateTime, ForeignKey, Integer, UUID as SA_UUID
+from sqlalchemy import Column, String, Text, Float, Boolean, DateTime, ForeignKey, Integer, UUID as SA_UUID, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -85,3 +85,28 @@ class Enrollment(Base):
 
     user = relationship("User", back_populates="enrollments")
     course = relationship("Course", back_populates="enrollments")
+
+
+class LessonProgress(Base):
+    """Per-user progress on a single lesson.
+
+    One row per (user, lesson). `progress` is 0..100 and `is_completed`
+    flips to True when a lesson is marked complete. The enrollment row on
+    the parent course is recomputed (average across all lessons) whenever
+    a row here changes, so dashboards can show real completion stats.
+    """
+
+    __tablename__ = "lesson_progress"
+    __table_args__ = (UniqueConstraint("user_id", "lesson_id", name="uq_user_lesson_progress"),)
+
+    id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    lesson_id = Column(SA_UUID(as_uuid=True), ForeignKey("lessons.id"), nullable=False)
+    progress = Column(Float, default=0.0, nullable=False)
+    is_completed = Column(Boolean, default=False, nullable=False)
+    quiz_score = Column(Float, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User")
+    lesson = relationship("Lesson")

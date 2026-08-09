@@ -496,7 +496,7 @@ export function AdminPage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 rounded-lg bg-gradient-to-br from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-primary-dark"
             >
               <i className="fa-solid fa-floppy-disk mr-2" aria-hidden />
               {saving ? 'Saving...' : 'Save free course'}
