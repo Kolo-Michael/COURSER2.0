@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import os
-import random
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import os  # APP_ENV + SMTP creds are read straight from env
+import random  # generate_reset_code
+import smtplib  # production SMTP transport
+from email.mime.text import MIMEText  # HTML email body
+from email.mime.multipart import MIMEMultipart  # multipart/alternative message
 from typing import Optional
 
 from app.core.config import settings
@@ -55,11 +55,14 @@ async def send_password_reset_email(email: str, code: str) -> bool:
     smtp_password = os.getenv("SMTP_PASSWORD")
     from_email = os.getenv("FROM_EMAIL", "noreply@courser.app")
 
+    # Missing any SMTP credential ⇒ cannot send; fail soft so the reset
+    # flow still returns success to the client (no user enumeration).
     if not all([smtp_host, smtp_user, smtp_password]):
         print("WARNING: SMTP settings not configured, email not sent")
         return False
 
     try:
+        # Build a multipart HTML message and send over STARTTLS.
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = from_email
@@ -67,7 +70,7 @@ async def send_password_reset_email(email: str, code: str) -> bool:
         msg.attach(MIMEText(body, "html"))
 
         with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
+            server.starttls()  # upgrade to TLS before authenticating
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
         return True
@@ -77,7 +80,7 @@ async def send_password_reset_email(email: str, code: str) -> bool:
 
 
 async def send_verification_email(email: str, code: str) -> bool:
-    """Send an email verification code."""
+    """Send an email verification code (same dev/prod split as above)."""
     subject = "COURSER Email Verification"
     body = f"""
     <html>

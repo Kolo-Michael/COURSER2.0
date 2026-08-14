@@ -6,6 +6,15 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Hide scrollbars app-wide while keeping scrolling functional. */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   @apply m-0 min-h-screen antialiased;
   /* Professional flat surface: warm neutral stone. No color gradients —

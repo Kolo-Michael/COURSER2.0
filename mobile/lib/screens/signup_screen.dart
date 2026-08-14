@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../state/auth_state.dart';
 import '../theme/app_theme.dart';
 
+/// ─── Sign up ───
+/// Account-creation form (first/last name, email, password). Calls
+/// `AuthState.signup` — which auto-signs the user in on success — then routes
+/// to `/home`. Errors are shown in a SnackBar.
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -28,6 +32,8 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
+  /// Creates the account via the auth provider, then navigates home; on error
+  /// the payload stays intact so the user can retry immediately.
   Future<void> _signup() async {
     setState(() => _isLoading = true);
     try {
@@ -59,6 +65,7 @@ class _SignupScreenState extends State<SignupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Brand icon tile.
               Container(
                 width: 64,
                 height: 64,

@@ -1,8 +1,13 @@
+// ─── ResetPasswordForm.tsx : final step of the password-reset flow ──────
+// Takes the new password after the code was verified. Requires the email
+// and code carried over in sessionStorage from the prior steps, validates
+// confirmation + minimum length, then resets and returns to login.
 import type { FormEvent } from 'react'
 import { useState, useEffect } from 'react'
 import { resetPassword } from '@/api/auth'
 import { useNavigate } from 'react-router-dom'
 
+/** Step 3: choose + confirm a new password, then redirect to login. */
 export function ResetPasswordForm() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)

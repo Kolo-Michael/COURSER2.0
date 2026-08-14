@@ -15,6 +15,11 @@ import 'screens/home_screen.dart';
 import 'screens/course_detail_screen.dart';
 import 'screens/lesson_screen.dart';
 
+/// ─── Application root ───
+/// Owns the shared dependencies (API client, state controllers, router) in a
+/// light service-locator style: a single `ApiClient` is created here, injected
+/// into each ChangeNotifier provider, and those providers are exposed through
+/// `MultiProvider` so every screen can read them via `context.watch/read`.
 class CourserApp extends StatefulWidget {
   const CourserApp({super.key});
 
@@ -23,6 +28,7 @@ class CourserApp extends StatefulWidget {
 }
 
 class _CourserAppState extends State<CourserApp> {
+  // Shared singleton dependencies, created once on startup.
   late final ApiClient _api;
   late final AuthState _authState;
   late final CoursesState _coursesState;
@@ -33,17 +39,24 @@ class _CourserAppState extends State<CourserApp> {
   @override
   void initState() {
     super.initState();
+    // Service-locator wiring: build the API client, then inject it into the
+    // state providers. Each provider kicks off its own initial load.
     _api = ApiClient(baseUrl: Config.apiBaseUrl);
     _authState = AuthState(apiClient: _api, storage: SecureStore())..init();
     _coursesState = CoursesState(apiClient: _api)..fetchCourses();
     _streakState = StreakState(apiClient: _api);
     _router = GoRouter(
       initialLocation: '/onboarding',
+      // Re-evaluate the redirect whenever auth state changes (login/logout).
       refreshListenable: _authState,
       redirect: (context, state) {
+        // Auth gating: unauthenticated users can only visit public paths and
+        // are otherwise bounced to onboarding; authenticated users are kept
+        // out of the onboarding/login/signup pages and sent to /home.
         final auth = context.read<AuthState>();
         final location = state.uri.toString();
         final publicPaths = {'/onboarding', '/login', '/signup'};
+        // Wait for session restore to finish before deciding anything.
         if (auth.isLoading) return null;
         if (auth.token == null) {
           // No login yet: onboarding always shows when the app is opened.
@@ -51,6 +64,7 @@ class _CourserAppState extends State<CourserApp> {
           if (publicPaths.contains(location)) return null;
           return '/onboarding';
         }
+        // Logged in — keep auth screens out of reach.
         if (publicPaths.contains(location)) return '/home';
         return null;
       },
@@ -73,6 +87,8 @@ class _CourserAppState extends State<CourserApp> {
         ),
       ],
     );
+    // Track background/pause transitions so the inactivity timeout keeps
+    // counting while the app is hidden, then signs out on return.
     _lifecycleListener = AppLifecycleListener(
       onHide: () => _authState.setAppBackground(true),
       onPause: () => _authState.setAppBackground(true),
@@ -89,6 +105,7 @@ class _CourserAppState extends State<CourserApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Expose the shared state controllers to the whole subtree.
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _authState),
@@ -96,6 +113,8 @@ class _CourserAppState extends State<CourserApp> {
         ChangeNotifierProvider.value(value: _streakState),
       ],
       child: Listener(
+        // A translucent full-screen listener: every pointer-down anywhere in
+        // the app counts as user activity and resets the idle sign-out timer.
         behavior: HitTestBehavior.translucent,
         onPointerDown: (_) => _authState.recordActivity(),
         child: MaterialApp.router(

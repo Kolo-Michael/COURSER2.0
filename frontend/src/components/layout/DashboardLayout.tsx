@@ -1,3 +1,12 @@
+// ─── DashboardLayout: the role-based logged-in shell ─────────────────────────
+// Wraps every authenticated page in a frosted glass frame with either:
+//   * a collapsible SIDEBAR (desktop icon-only collapse + mobile hamburger
+//     overlay), or
+//   * a FLOATING nav (a bottom-left FAB expanding a glass panel).
+// Nav style + collapsed preference are persisted (settings); the top bar
+// holds the page title, streak fire (students), settings gear, theme toggle,
+// and a server-side logout.
+
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
@@ -6,6 +15,7 @@ import { getSession, clearSession } from '@/auth/session'
 import { getNavCollapsed, getNavStyle, setNavCollapsed, setNavStyle } from '@/auth/preferences'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
+// One sidebar / floating-nav entry.
 export type DashboardNavItem = {
   to: string
   label: string
@@ -19,6 +29,8 @@ type DashboardLayoutProps = {
   children: ReactNode
 }
 
+// Renders the user's avatar: the uploaded image when one exists, else a
+// generic user icon on a primary-coloured circle.
 function Avatar({
   name,
   src,
@@ -40,18 +52,24 @@ function Avatar({
   )
 }
 
+// The logged-in layout shell: sidebar or floating nav service, per the
+// user's persisted preference.
 export function DashboardLayout({
   title,
   subtitle,
   navItems,
   children,
 }: DashboardLayoutProps) {
+  // Mobile hamburger overlay open state.
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Navigation presentation mode + sidebar collapse, read from preferences.
   const [navStyle, setNavStyleState] = useState<'sidebar' | 'floating'>(() => getNavStyle())
   const [collapsed, setCollapsedState] = useState<boolean>(() => getNavCollapsed())
+  // Tracks whether the viewport is desktop-sized (collapse only applies there).
   const [isDesktop, setIsDesktop] = useState<boolean>(() =>
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true,
   )
+  // Floating FAB panel visibility + a ref to detect outside clicks.
   const [floatingOpen, setFloatingOpen] = useState(false)
   const session = getSession()
   const displayName = session?.identifier || 'User'
@@ -62,7 +80,8 @@ export function DashboardLayout({
   // always shows full labels.
   const effectiveCollapsed = collapsed && isDesktop
 
-  // Track viewport so the collapse behaviour doesn't leak into mobile.
+  // Keep `isDesktop` in sync with the viewport so the collapse behaviour
+  // doesn't leak into mobile.
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)')
     const onChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches)
@@ -90,6 +109,7 @@ export function DashboardLayout({
     }
   }, [floatingOpen])
 
+  // Flip the sidebar collapsed flag and persist it for next time.
   const toggleCollapsed = () => {
     setCollapsedState((prev) => {
       const next = !prev
@@ -98,6 +118,7 @@ export function DashboardLayout({
     })
   }
 
+  // Switch between sidebar and floating nav, persisting the choice.
   const switchNavStyle = (style: 'sidebar' | 'floating') => {
     setNavStyleState(style)
     setNavStyle(style)
@@ -105,6 +126,7 @@ export function DashboardLayout({
     setFloatingOpen(false)
   }
 
+  // Server-side logout (revokes session), then clear local cookies.
   const handleLogout = async () => {
     try {
       await logout()
@@ -114,6 +136,8 @@ export function DashboardLayout({
     }
   }
 
+  // NavLink styling class, shared by sidebar + floating lists. Collapsed
+  // (or compact) items become icon-only with a tooltip/aria label.
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     [
       'flex items-center rounded-lg text-sm font-semibold transition',
@@ -123,6 +147,8 @@ export function DashboardLayout({
         : 'text-stone-700 hover:bg-primary/10 hover:text-primary dark:text-stone-200 dark:hover:bg-stone-800/80 dark:hover:text-white',
     ].join(' ')
 
+  // Renders a list of NavLinks. `compact` forces icon-only rows (used for
+  // the floating panel / collapsed browsing row).
   const renderNavLinks = (items: DashboardNavItem[], compact = false) => (
     <div className="flex flex-col gap-1">
       {items.map((item) => (

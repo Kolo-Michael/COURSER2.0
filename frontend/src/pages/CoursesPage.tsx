@@ -1,3 +1,9 @@
+// ─── CoursesPage: course catalog / library ──────────────────────────────────
+// Browseable by anyone. Logged-out visitors get the public catalog page
+// (PublicShell); signed-in users get the learner/Admin library inside
+// DashboardLayout with the same data. Both views share the search box and
+// category filter, filtering `courses` in memory.
+
 import { listCategories, listCourses, type ApiCategory, type ApiCourse } from '@/api/courses'
 import { getSession, type AuthSession } from '@/auth/session'
 import { DashboardLayout, type DashboardNavItem } from '@/components/layout/DashboardLayout'
@@ -6,12 +12,16 @@ import { PublicShell } from '@/components/layout/PublicShell'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+// Pseudo-category added to the top of every category list = "show everything".
 const allCategories = [{ id: 'all', label: 'All topics', icon: 'fa-solid fa-layer-group' }]
 
+// Font Awesome class for a course's category icon (fallback: book).
 function categoryIcon(category: ApiCategory | null) {
   return category?.icon ? `fa-solid ${category.icon}` : 'fa-solid fa-book-open'
 }
 
+// One catalog card used on the public page: category icon, title, description,
+// level/duration/free badges, and a "View details" link to the course page.
 function CourseCard({ course }: { course: ApiCourse }) {
   return (
     <article className="courser-card overflow-hidden">
@@ -62,10 +72,12 @@ function CourseCard({ course }: { course: ApiCourse }) {
   )
 }
 
+// Sidebar nav for the signed-in layout, driven by the user's role.
 function sessionNav(session: AuthSession): DashboardNavItem[] {
   return navItemsFor(session.role)
 }
 
+// Small "Cora is ready" promo for the learner library hero.
 function CourseMascot() {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
@@ -78,8 +90,8 @@ function CourseMascot() {
         </span>
       </div>
       <div>
-        <p className="text-sm font-bold text-stone-900">Cora is ready</p>
-        <p className="text-xs leading-relaxed text-stone-600">
+        <p className="text-sm font-bold text-stone-900 dark:text-stone-100">Cora is ready</p>
+        <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-400">
           Your course guide keeps lessons, progress, and next actions in one place.
         </p>
       </div>
@@ -87,6 +99,9 @@ function CourseMascot() {
   )
 }
 
+// Signed-in rendering of the library: hero with featured course + quick stats,
+// search/filter controls, the filtered course grid, and a learning-interface /
+// categories sidebar. All data comes down as props from CoursesPage.
 function LoggedInCoursesPage({
   session,
   courses,
@@ -160,16 +175,16 @@ function LoggedInCoursesPage({
                 ) : null}
               </div>
             </div>
-            <div className="rounded-lg border border-stone-200/70 bg-white/70 p-4 text-stone-900 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/70">
+            <div className="rounded-lg border border-stone-200/70 bg-white/70 p-4 text-stone-900 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/70 dark:text-stone-100">
               <CourseMascot />
               <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-stone-50 p-3">
-                  <dt className="text-xs font-semibold uppercase text-stone-500">Courses</dt>
-                  <dd className="mt-1 font-bold text-primary">{courses.length}</dd>
+                <div className="rounded-lg bg-stone-50 p-3 dark:bg-stone-800/60">
+                  <dt className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">Courses</dt>
+                  <dd className="mt-1 font-bold text-primary dark:text-primary-dark">{courses.length}</dd>
                 </div>
-                <div className="rounded-lg bg-stone-50 p-3">
-                  <dt className="text-xs font-semibold uppercase text-stone-500">Lessons</dt>
-                  <dd className="mt-1 font-bold text-stone-900">{lessonCount || 'Ready'}</dd>
+                <div className="rounded-lg bg-stone-50 p-3 dark:bg-stone-800/60">
+                  <dt className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">Lessons</dt>
+                  <dd className="mt-1 font-bold text-stone-900 dark:text-stone-100">{lessonCount || 'Ready'}</dd>
                 </div>
               </dl>
             </div>
@@ -180,12 +195,12 @@ function LoggedInCoursesPage({
           <section className="courser-card p-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-stone-900">Available courses</p>
-                <p className="mt-1 text-sm text-stone-600">
+                <p className="text-sm font-bold text-stone-900 dark:text-stone-100">Available courses</p>
+                <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
                   Search by topic, open a course, and start directly from your workspace.
                 </p>
               </div>
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">
+              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-300 dark:ring-green-800">
                 Free access
               </span>
             </div>
@@ -201,13 +216,13 @@ function LoggedInCoursesPage({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search courses..."
                   aria-label="Search courses"
-                  className="w-full rounded-lg border border-stone-200 py-3 pl-10 pr-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                  className="w-full rounded-lg border border-stone-200 bg-white py-3 pl-10 pr-3 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
                 />
               </div>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="rounded-lg border border-stone-200 px-3 py-3 text-sm font-semibold text-stone-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                className="rounded-lg border border-stone-200 bg-white px-3 py-3 text-sm font-semibold text-stone-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
                 aria-label="Filter by category"
               >
                 {categoryOptions.map((cat) => (
@@ -316,7 +331,10 @@ function LoggedInCoursesPage({
   )
 }
 
+// Shared catalog controller: fetches courses + categories once, derives
+// search/filter state, then picks the public or logged-in view shell.
 export function CoursesPage() {
+  // Session snapshot captured once on mount; decides which shell renders.
   const [session] = useState(() => getSession())
   const [category, setCategory] = useState<string>('all')
   const [query, setQuery] = useState('')
@@ -325,6 +343,7 @@ export function CoursesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Fetch the catalog once in parallel; `active` prevents setState on unmount.
   useEffect(() => {
     let active = true
 
@@ -353,6 +372,8 @@ export function CoursesPage() {
     }
   }, [])
 
+  // Dropdown options = "All topics" pseudo-category + real categories,
+  // keyed by slug so filtering aligns with course.category.slug.
   const categoryOptions = useMemo(
     () => [
       ...allCategories,
@@ -365,6 +386,8 @@ export function CoursesPage() {
     [categories],
   )
 
+  // In-memory filtering: category must match (or be "all") AND the query must
+  // hit the title, short description, or full description (case-insensitive).
   const filtered = useMemo(() => {
     return courses.filter((c) => {
       const catOk = category === 'all' || c.category?.slug === category

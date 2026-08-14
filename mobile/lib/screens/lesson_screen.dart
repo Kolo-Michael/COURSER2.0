@@ -4,6 +4,10 @@ import '../services/lessons_service.dart';
 import '../core/api_client.dart';
 import '../core/config.dart';
 
+/// ─── Lesson player ───
+/// Displays a single lesson's study notes, runs a small 3-question reading
+/// comprehension quiz whose score becomes the lesson's completion progress,
+/// and offers "Ask Cora" to ask the AI tutor questions about the lesson.
 class LessonScreen extends StatefulWidget {
   final String courseId;
   final String lessonId;
@@ -20,22 +24,27 @@ class _LessonScreenState extends State<LessonScreen> {
   bool _isLoading = true;
   Lesson? _lesson;
   bool _quizCompleted = false;
+  // question index -> the student's typed answer.
   final Map<int, String> _answers = {};
 
   @override
   void initState() {
     super.initState();
+    // The lesson screen builds its own ApiClient/service (it can be entered
+    // directly from the detail screen, outside the provider tree's dashboard).
     _lessonsService = LessonsService(
       ApiClient(baseUrl: Config.apiBaseUrl),
     );
     _loadLesson();
   }
 
+  /// Fetches the lesson payload and parses it into a (module-style) `Lesson`.
   Future<void> _loadLesson() async {
     setState(() => _isLoading = true);
     try {
       final data = await _lessonsService.fetchLesson(widget.lessonId);
       setState(() {
+        // Build a Lesson from the raw map; content notes drive the quiz.
         _lesson = Lesson(
           id: data['id']?.toString() ?? widget.lessonId,
           title: data['title']?.toString() ?? 'Lesson',
@@ -52,6 +61,8 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
+  /// Grades the three answers, marks the lesson complete at 100%, and syncs
+  /// the progress plus quiz score with the backend.
   void _submitQuiz() {
     final score = _calculateQuizScore();
     setState(() {
@@ -64,6 +75,7 @@ class _LessonScreenState extends State<LessonScreen> {
     );
   }
 
+  /// Percentage of correct answers across the three questions.
   double _calculateQuizScore() {
     final correct = _answers.entries.where((e) {
       final expected = _expectedAnswer(e.key);
@@ -72,6 +84,9 @@ class _LessonScreenState extends State<LessonScreen> {
     return (correct / 3 * 100).clamp(0, 100);
   }
 
+  /// Infers the expected answer for a question by scanning the lesson content
+  /// for the topic keywords that the seeded notes use, with a sensible
+  /// default per question slot.
   String _expectedAnswer(int index) {
     final content = _lesson?.content ?? '';
     final lower = content.toLowerCase();
@@ -124,10 +139,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (_lesson!.content != null)
-                        Text(
-                          _lesson!.content!,
-                          style: const TextStyle(fontSize: 16, height: 1.5),
-                        ),
+                        _LessonNotes(content: _lesson!.content!),
                       const SizedBox(height: 24),
                       LinearProgressIndicator(
                         value: _quizCompleted ? 1.0 : 0.0,
@@ -197,6 +209,9 @@ class _LessonScreenState extends State<LessonScreen> {
     );
   }
 
+  /// Renders one of the quiz's free-text questions; the answer is recorded
+  /// (or removed when emptied) and the submit button enabled once all three
+  /// questions have answers.
   Widget _buildQuizQuestion(int index, String question) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -226,6 +241,8 @@ class _LessonScreenState extends State<LessonScreen> {
     );
   }
 
+  /// Opens the "Ask Cora" bottom sheet: sends the question to the backend AI
+  /// tutor and shows the plain-text answer (or an error) in a SnackBar.
   void _showQuestionDialog(BuildContext ctx) {
     final controller = TextEditingController();
     showModalBottomSheet(
@@ -293,5 +310,116 @@ class _LessonScreenState extends State<LessonScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Renders a lesson's organized study notes.
+///
+/// The backend stores structured notes using `## Heading` sections, `- `
+/// bullets, `1. ` numbered lists, plain paragraphs, and **bold** emphasis.
+/// This keeps video-less lessons readable and completable on mobile.
+class _LessonNotes extends StatelessWidget {
+  final String content;
+
+  const _LessonNotes({required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    final widgets = _parse(context);
+    if (widgets.isEmpty) {
+      return Text(
+        'This lesson has no written notes yet — check back soon.',
+        style: TextStyle(fontSize: 16, height: 1.5, color: Colors.grey[600]),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: widgets,
+    );
+  }
+
+  /// Converts the structured note text into a list of widgets. Each line is
+  /// classified as a heading, a `- ` bullet, or a plain paragraph; bold
+  /// segments (`**...**`) are handled later by `_spans`.
+  List<Widget> _parse(BuildContext context) {
+    final theme = Theme.of(context);
+    final headingRe = RegExp(r'^#{1,3}\s+(.+)$');
+    final bulletRe = RegExp(r'^[-*]\s+(.+)$');
+    final widgets = <Widget>[];
+
+    for (final rawLine in content.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+
+      final heading = headingRe.firstMatch(line);
+      if (heading != null) {
+        // `## Heading` → styled header, tinted with the theme's primary color.
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(top: 18, bottom: 8),
+          child: Text.rich(
+            TextSpan(
+              children: _spans(heading.group(1)!),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.3,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ));
+        continue;
+      }
+
+      final bullet = bulletRe.firstMatch(line);
+      if (bullet != null) {
+        // `- item` → a row with a small dot bullet and indented text.
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 9, right: 10),
+                child: Icon(Icons.circle, size: 6, color: theme.colorScheme.primary),
+              ),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: _spans(bullet.group(1)!),
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ));
+        continue;
+      }
+
+      // Anything else becomes a plain paragraph line.
+      widgets.add(Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text.rich(
+          TextSpan(
+            children: _spans(line),
+            style: const TextStyle(fontSize: 16, height: 1.5),
+          ),
+        ),
+      ));
+    }
+    return widgets;
+  }
+
+  /// Splits a line on **bold** markers into alternating plain/bold spans.
+  List<InlineSpan> _spans(String text) {
+    final parts = text.split('**');
+    return [
+      for (var i = 0; i < parts.length; i++)
+        TextSpan(
+          text: parts[i],
+          style: i.isOdd ? const TextStyle(fontWeight: FontWeight.bold) : null,
+        ),
+    ];
   }
 }

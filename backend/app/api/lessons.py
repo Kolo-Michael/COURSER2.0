@@ -21,24 +21,27 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel  # inline request body for PATCH progress
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user_id
+from app.core.security import get_current_user_id  # auth guard on all mutations
 from app.models import Enrollment, Lesson, LessonProgress, Module
-from app.services import streak_service
+from app.services import streak_service  # completing lessons feeds the streak
 
 router = APIRouter()
 
 
 class ProgressUpdate(BaseModel):
+    """PATCH body: `progress` (0–100) and an optional quiz score."""
     progress: float
     quiz_score: Optional[float] = None
 
 
 def _lesson_dict(lesson: Lesson, extra: Optional[dict] = None) -> dict:
+    """Serialize a lesson to the JSON shape clients expect, optionally
+    merged with extra fields (e.g. per-user progress)."""
     payload = {
         "id": str(lesson.id),
         "title": lesson.title,
@@ -55,6 +58,7 @@ def _lesson_dict(lesson: Lesson, extra: Optional[dict] = None) -> dict:
 
 
 async def _course_id_for_lesson(db: AsyncSession, lesson: Lesson) -> UUID | None:
+    """Resolve the parent course of a lesson by hopping through its module."""
     module = await db.get(Module, lesson.module_id)
     return module.course_id if module else None
 
@@ -66,6 +70,12 @@ async def _upsert_lesson_progress(
     progress: float,
     quiz_score: Optional[float] = None,
 ) -> LessonProgress:
+    """Insert-or-update a single (user, lesson) progress row.
+
+    A row is created when none exists yet; an existing row has its progress,
+    completion flag, quiz score, and completed_at updated instead. The row
+    is flushed (not committed) so the caller can commit once at the end.
+    """
     result = await db.execute(
         select(LessonProgress).where(
             LessonProgress.user_id == user_id,
@@ -76,6 +86,7 @@ async def _upsert_lesson_progress(
     if row is None:
         row = LessonProgress(user_id=user_id, lesson_id=lesson_id, progress=0.0)
         db.add(row)
+    # 100% progress flips the completion flag (and the timestamp).
     row.progress = progress
     row.is_completed = progress >= 100.0
     row.quiz_score = quiz_score
@@ -91,6 +102,7 @@ async def _recompute_course_progress(
 ) -> dict:
     """Average the user's lesson progress across a course and persist it on
     the enrollment row. Returns {percent, completed, total}."""
+    # Every lesson that belongs to this course.
     lessons_result = await db.execute(
         select(Lesson).join(Module).where(Module.course_id == course_id)
     )
@@ -99,6 +111,7 @@ async def _recompute_course_progress(
     if total == 0:
         return {"percent": 0.0, "completed": 0, "total": 0}
 
+    # The user's progress rows for those lessons, keyed by lesson id.
     rows_result = await db.execute(
         select(LessonProgress).where(
             LessonProgress.user_id == user_id,
@@ -111,6 +124,7 @@ async def _recompute_course_progress(
         for lesson in lessons
         if progress_rows.get(lesson.id) and progress_rows[lesson.id].is_completed
     )
+    # Course progress = mean of the per-lesson percentages.
     average = (
         sum(
             progress_rows.get(lesson.id).progress if progress_rows.get(lesson.id) else 0.0
@@ -127,6 +141,7 @@ async def _recompute_course_progress(
     )
     enrollment = enrollment_result.scalar_one_or_none()
     if enrollment is not None:
+        # Persist the recomputed average; stamp completion at 100%.
         enrollment.progress = round(average, 2)
         enrollment.completed_at = datetime.utcnow() if average >= 100.0 else None
 
@@ -136,7 +151,8 @@ async def _recompute_course_progress(
 
 @router.get("/{lesson_id}", response_model=dict)
 async def get_lesson(lesson_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    """Return a single lesson with its content, duration, and order."""
+    """Return a single lesson with its content, duration, and order.
+    Public read — no auth token required."""
     result = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
     lesson = result.scalar_one_or_none()
     if lesson is None:
@@ -167,6 +183,7 @@ async def complete_lesson(
         )
 
     course_id = await _course_id_for_lesson(db, lesson)
+    # Always 100% here — that's what "complete" means.
     await _upsert_lesson_progress(db, user_id, lesson_id, 100.0)
     course_progress = (
         await _recompute_course_progress(db, user_id, course_id) if course_id else None

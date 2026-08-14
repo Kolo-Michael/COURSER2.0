@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Fixed-position bottom navigation bar (Courses / Progress / Profile).
+/// Kept as a shared reusable component; `HomeScreen` uses Flutter's newer
+/// `NavigationBar`/`NavigationDestination` instead, so this widget is not
+/// currently referenced.
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;

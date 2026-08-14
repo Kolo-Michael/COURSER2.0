@@ -1,3 +1,8 @@
+// ─── LoginForm.tsx : email + password sign-in ───────────────────────────
+// Submits credentials to the backend (tokens land in HttpOnly cookies),
+// refreshes the local session state, then redirects to the role-specific
+// dashboard. Includes show/hide password, "remember me" (longer-lived
+// refresh cookie), and the forgot-password entry point.
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { login } from '@/api/auth'
@@ -5,6 +10,7 @@ import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 
+/** Sign-in form: authenticates, restores session state, routes by role. */
 export function LoginForm() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)

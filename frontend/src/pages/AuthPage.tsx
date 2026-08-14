@@ -1,3 +1,8 @@
+// ─── AuthPage: login / signup / password reset shell ───────────────────────
+// A single page driven by the ?mode= query param ("login" default, "signup",
+// "forgot-password", "verify-code", "reset-password"). Reads the param to
+// pick which auth form to render and to vary the hero copy to its left.
+
 import { LoginForm } from '@/components/auth/LoginForm'
 import { SignupForm } from '@/components/auth/SignupForm'
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm'
@@ -6,15 +11,19 @@ import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Link, useSearchParams } from 'react-router-dom'
 
+// AuthPage: reads ?mode= from the URL and renders the matching auth flow.
 export function AuthPage() {
   const [params] = useSearchParams()
   const mode = params.get('mode')
 
+  // Mode flags: no param means login. "reset-password" is the fallback,
+  // reached via the logged-out flow after verify-code confirms an email.
   const isLogin = mode === 'login' || !mode
   const isSignup = mode === 'signup'
   const isForgot = mode === 'forgot-password'
   const isVerify = mode === 'verify-code'
 
+  // Static copy per auth flow, shown in the left hero column.
   const pageConfig = {
     login: {
       title: 'Welcome back',
@@ -43,6 +52,7 @@ export function AuthPage() {
     },
   }
 
+  // Resolve the flags above to the matching hero-copy entry.
   const config = pageConfig[isLogin ? 'login' : isSignup ? 'signup' : isForgot ? 'forgot-password' : isVerify ? 'verify-code' : 'reset-password']
 
   return (
@@ -95,7 +105,8 @@ export function AuthPage() {
           )}
         </section>
 
-        <section className="courser-card relative p-8 shadow-lg ring-1 ring-primary/5 dark:ring-primary-dark/5">          {(isLogin || isSignup) && (
+        <section className="courser-card relative p-8 shadow-lg ring-1 ring-primary/5 dark:ring-primary-dark/5">          {/* Tab switcher only for login/signup modes; other flows are single-step. */}
+          {(isLogin || isSignup) && (
             <div className="mb-6 flex rounded-lg bg-stone-100 p-1 text-sm font-semibold dark:bg-stone-800">
               <Link
                 to="/auth"
@@ -119,6 +130,7 @@ export function AuthPage() {
               </Link>
             </div>
           )}
+          {/* Render the form matching the current mode. */}
           {isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : <ResetPasswordForm />}
         </section>
       </div>

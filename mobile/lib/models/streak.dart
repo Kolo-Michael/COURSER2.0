@@ -1,4 +1,6 @@
 /// Learning-streak snapshot returned by `GET /streak`.
+/// Groups the raw counters (current/longest streak, days per month), the
+/// "did I learn today" flag, and the monthly restore budget with eligibility.
 class Streak {
   final int currentStreak;
   final int longestStreak;
@@ -24,6 +26,8 @@ class Streak {
     required this.restoreEligible,
   });
 
+  /// Parses the streak payload; numbers fall back to safe defaults and dates
+  /// are parsed leniently (null when absent or malformed).
   factory Streak.fromJson(Map<String, dynamic> json) {
     return Streak(
       currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,

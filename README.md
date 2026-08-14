@@ -55,23 +55,19 @@ yourself after schema changes; there is no per-deploy hook on Vercel.
 
 ## Keeping the API warm
 
-Vercel Hobby Functions go idle and pay a cold-start cost on the next
-request. Pinging `/api/health` every 5 minutes keeps the Python runtime
-warm. This repo ships a **GitHub Actions workflow** that does exactly
-that, free (unlimited minutes on public repos):
+Render free instances go idle after ~15 minutes and pay a cold-start
+cost on the next request (sometimes a 30-60s wait). Pinging
+`/api/ping` regularly keeps the Python runtime warm. Three options:
 
-1. Push this repo to GitHub — `.github/workflows/keep-alive.yml` pings
-   `https://courser2.vercel.app/api/health` every 5 min automatically.
-2. If the app ever moves hosts, set a repo **Variable** named `HEALTH_URL`
-   (Settings → Secrets and variables → Actions → Variables).
-3. If you see cold starts anyway (GitHub can delay a scheduled run, and
-   disables schedules after ~60 days of repo inactivity), add a free
-   external monitor as a backup:
-
-   - [UptimeRobot](https://uptimerobot.com) (or
-     [cron-job.org](https://cron-job.org)) — free tier
-   - **Type:** HTTP(S), **URL:** `https://courser2.vercel.app/api/health`,
-     **Interval:** 5 minutes
+1. **cron-job.org (recommended — no local machine needed):** the
+   service runs in the cloud, so your laptop can be off. The repo also
+   ships `backend/ping_render_loop.bat` (Windows) and `backend/keepalive.py`
+   for local schedules, but cron-job.org is the simplest external option.
+2. **GitHub Actions:** `.github/workflows/keep-alive.yml` pings the
+   health URL every 5 min automatically (free on public repos). Note
+   GitHub may delay scheduled runs and disables schedules after ~60 days
+   of repo inactivity.
+3. **UptimeRobot** as an additional external monitor.
 
 For schedulers that run commands instead of HTTP checks, use
 `backend/keepalive.py` (stdlib only):

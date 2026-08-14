@@ -1,9 +1,18 @@
+// ─── preferences.ts : dashboard nav layout preferences ──────────────────
+// Read/write the user's navigation preference (sidebar vs floating nav,
+// and whether the sidebar starts collapsed). Values live both in
+// localStorage (immediate, offline-safe) and on the account via
+// updateProfile() so the choice follows the user across devices.
+//
+// Priority: the account value carried in the courser_session cookie wins,
+// then the local fallback.
 import { updateProfile, type NavStyle } from '@/api/auth'
 import { getSession } from '@/auth/session'
 
 export const NAV_STYLE_KEY = 'courser.nav.style'
 export const NAV_COLLAPSED_KEY = 'courser.nav.collapsed'
 
+/** Read a localStorage value, falling back when missing or unparsable. */
 function read<T>(key: string, fallback: T, parse: (raw: string) => T): T {
   try {
     const raw = window.localStorage.getItem(key)

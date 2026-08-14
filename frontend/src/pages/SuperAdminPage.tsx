@@ -1,8 +1,15 @@
+// ─── SuperAdminPage: platform admin provisioning (super_admin only) ────────
+// Super-admins can create admin / super-admin accounts. Submitting the form
+// derives a username from the display name (or email), generates a random
+// temporary hex password client-side, and calls createAdmin(). The visible
+// platform metrics are static demo numbers until a reporting API exists.
+
 import { useState } from 'react'
 import { createAdmin, type AdminCreatePayload } from '@/api/auth'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { superAdminNav } from '@/components/layout/navItems'
 
+// Static platform KPI cards — placeholder values, not live data.
 const platformStats = [
   { label: 'Active admins', value: '4' },
   { label: 'Students', value: '1,248' },
@@ -10,12 +17,15 @@ const platformStats = [
   { label: 'Avg. completion', value: '68%' },
 ]
 
+// Discriminated union tracking the create-admin form lifecycle.
 type FormStatus =
   | { kind: 'idle' }
   | { kind: 'submitting' }
   | { kind: 'success'; message: string }
   | { kind: 'error'; message: string }
 
+// Derive a username from the display name (lowercased, non-alphanumerics to
+// dots, repeated dots collapsed); fall back to the email prefix, else "admin".
 function generateUsername(email: string, fullName: string) {
   const fromName = fullName
     .toLowerCase()
@@ -27,6 +37,7 @@ function generateUsername(email: string, fullName: string) {
   return handle || 'admin'
 }
 
+// Random 24-char hex temporary password from window.crypto (not user-typed).
 function generatePassword() {
   const array = new Uint8Array(12)
   window.crypto.getRandomValues(array)
@@ -41,6 +52,8 @@ export function SuperAdminPage() {
   const [role, setRole] = useState<'admin' | 'super_admin'>('admin')
   const [status, setStatus] = useState<FormStatus>({ kind: 'idle' })
 
+  // Submit handler: guard against double-submit + missing email, build the
+  // payload (with generated username/password), then reset the form on success.
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (status.kind === 'submitting') return

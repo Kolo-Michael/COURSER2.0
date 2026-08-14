@@ -7,6 +7,10 @@ import '../state/streak_state.dart';
 import '../theme/app_theme.dart';
 import 'components/course_card.dart';
 
+/// ─── Main app shell (post-login) ───
+/// Bottom-tabbed home: Dashboard, Courses catalog, Profile. Tabs live in an
+/// `IndexedStack` so their state (scroll position, loaded providers) survives
+/// switching. Each tab is a private widget below.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -50,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
 // Tab 1 — Dashboard (greeting + re-auth countdown + continue learning)
 // ---------------------------------------------------------------------------
 
+/// Tab 1 — personalized dashboard: greeting, session-security card,
+/// streak card, and a "Continue learning" grid.
 class _DashboardTab extends StatefulWidget {
   const _DashboardTab();
 
@@ -61,6 +67,7 @@ class _DashboardTabState extends State<_DashboardTab> {
   @override
   void initState() {
     super.initState();
+    // Fetch the streak once the first frame is rendered so the card has data.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<StreakState>().fetch();
     });
@@ -72,6 +79,7 @@ class _DashboardTabState extends State<_DashboardTab> {
     final state = context.watch<CoursesState>();
     final user = auth.user;
 
+    // "Continue learning" = enrolled courses first, else any catalog courses.
     final featured = state.courses.where((c) => c.isEnrolled).toList();
     final browse = (state.courses.isEmpty ? state.courses : state.courses)
         .where((c) => !c.isEnrolled)
@@ -209,6 +217,8 @@ class _DashboardTabState extends State<_DashboardTab> {
   }
 }
 
+/// Session-security card: tells the user when re-authentication is due. The
+/// look depends on whether "remember me" extended the session.
 class _ReauthCard extends StatelessWidget {
   const _ReauthCard();
 
@@ -318,6 +328,9 @@ class _ReauthCard extends StatelessWidget {
 // Streak card — daily learning streak + monthly restore budget
 // ---------------------------------------------------------------------------
 
+/// Streak card: shows the current and longest streak, days this month, and the
+/// restore budget. When the user missed a restorable day, offers a Restore
+/// button that spends one of the month's restores.
 class _StreakCard extends StatelessWidget {
   const _StreakCard();
 
@@ -433,6 +446,7 @@ class _StreakCard extends StatelessWidget {
     );
   }
 
+  /// Restores the missed day via StreakState and reports the outcome.
   Future<void> _restore(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final error = await context.read<StreakState>().restore();
@@ -447,6 +461,7 @@ class _StreakCard extends StatelessWidget {
     );
   }
 
+  /// Formats a date like "Aug 12" without pulling in intl.
   String _formatDay(DateTime day) {
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -457,6 +472,7 @@ class _StreakCard extends StatelessWidget {
   }
 }
 
+/// A label/value pair shown inside the streak card's metric row.
 class _Metric extends StatelessWidget {
   final String label;
   final String value;
@@ -491,6 +507,7 @@ class _Metric extends StatelessWidget {
 // Tab 2 — Courses catalog
 // ---------------------------------------------------------------------------
 
+/// Tab 2 — full course catalog as a scrollable card grid with pull-to-refresh.
 class _CoursesTab extends StatelessWidget {
   const _CoursesTab();
 
@@ -539,6 +556,8 @@ class _CoursesTab extends StatelessWidget {
 // Tab 3 — Profile
 // ---------------------------------------------------------------------------
 
+/// Tab 3 — the user's profile: avatar, contact info, role chip, and a card of
+/// actions (session details, help, logout).
 class _ProfileTab extends StatelessWidget {
   const _ProfileTab();
 
@@ -641,6 +660,8 @@ class _ProfileTab extends StatelessWidget {
     );
   }
 
+  /// Bottom sheet with details about the current session: remember-me state,
+  /// how many days until re-authentication, and the exact expiry timestamp.
   void _showSessionSheet(BuildContext context, AuthState auth) {
     final days = auth.daysUntilReauth;
     showModalBottomSheet(

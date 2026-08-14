@@ -11,26 +11,30 @@ Pieces:
 
 from __future__ import annotations
 
-import os
-from contextlib import asynccontextmanager
+import os  # env vars for origins / secrets
+from contextlib import asynccontextmanager  # app lifespan
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+# slowapi exceptions/handlers — wired below so 429s render properly.
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware  # custom security-header middleware base class
 from starlette.responses import Response
 
 from app.api import auth, courses, lessons, newsletter, streak
-from app.core.database import engine
+from app.core.database import engine  # disposed at shutdown
 
 
 # --- rate limiter (must be wired before the app starts) ------------------
 
+# slowapi needs the limit-counting class plus an IP-extractor as the key.
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+# Global default: 200 req/minute per client IP; tighter per-route limits
+# (auth endpoints are implemented separately in app.api.auth) override it.
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 
@@ -182,6 +186,16 @@ async def root():
 @api_app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+@api_app.get("/ping")
+async def ping():
+    """Keepalive-only endpoint for external schedulers (cron-job.org,
+    UptimeRobot). Returns an empty 200 body so the response is 0 bytes —
+    cron-job.org aborts a job with "Failed (output too large)" when a
+    URL returns more than ~4KB, which Render's load-balancer HTML 502
+    cold-start page does. A zero-byte 200 keeps every ping green."""
+    return Response(status_code=200)
 
 
 # --- Vercel gateway ------------------------------------------------------

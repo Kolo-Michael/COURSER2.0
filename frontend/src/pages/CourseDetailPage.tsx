@@ -1,30 +1,45 @@
+// ─── CourseDetailPage: lesson-by-lesson course workspace ────────────────────
+// The heart of the learning experience. Loads one course by slug, lets the
+// user select a lesson, and renders a reading-first workspace: organized
+// study notes (parsed from the seeded `##`/`-`/`**` note format), a
+// browser-local personal-notes box, previous/next lesson navigation, an
+// enroll + mark-complete + restart flow, a course-progress bar, and the Cora
+// Q&A sidebar. Video watching is disabled for now — reading is the primary
+// path through every lesson. The page is public (logged-out visitors get a
+// PublicShell) but enrollment/progress act differently when a session exists.
+
 import {
-  askCora,
-  completeLesson,
   enrollInCourse,
   getCourseBySlug,
   listMyEnrollments,
   restartCourse,
   type ApiCourse,
   type ApiEnrollmentDetail,
-  type ApiLesson,
 } from '@/api/courses'
 import { getSession, type AuthSession } from '@/auth/session'
-import { DashboardLayout, type DashboardNavItem } from '@/components/layout/DashboardLayout'
+import { rememberCourseSlug } from '@/auth/course'
+import { CourseWorkspacePanel } from '@/components/course/CourseWorkspacePanel'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { navItemsFor } from '@/components/layout/navItems'
 import { PublicShell } from '@/components/layout/PublicShell'
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+// Resolve a Font Awesome class for a course's category icon (fallback: book).
 function categoryIcon(course: ApiCourse) {
   return course.category?.icon ? `fa-solid ${course.category.icon}` : 'fa-solid fa-book-open'
 }
 
-function detailNav(session: AuthSession, activeCourseSlug?: string): DashboardNavItem[] {
+// Role-based sidebar nav; passes the active course slug so the workspace item
+// can stay highlighted on this specific course.
+function detailNav(session: AuthSession, activeCourseSlug?: string) {
   return navItemsFor(session.role, activeCourseSlug)
 }
 
+// Chooses the layout shell for this page: signed-in users see the dashboard
+// workspace; anonymous visitors see the public site shell (the catalog is
+// browseable without an account).
 function CourseDetailShell({
   session,
   slug,
@@ -47,87 +62,32 @@ function CourseDetailShell({
   return <PublicShell>{children}</PublicShell>
 }
 
-type Tab = 'Transcript' | 'Notes' | 'Resources'
-type ChatRole = 'assistant' | 'user'
-type ChatMessage = { role: ChatRole; text: string }
-
-const NOTES_STORAGE_KEY = (slug: string) => `courser.notes:${slug}`
-
-/** Render the lesson media: a real player when a video exists, otherwise
- *  the "Video not yet available" placeholder. The lesson text below is
- *  always readable regardless. */
-function LessonMedia({ lesson }: { lesson: ApiLesson }) {
-  if (lesson.video_url) {
-    return (
-      <video
-        src={lesson.video_url}
-        controls
-        playsInline
-        className="aspect-video w-full rounded-xl bg-stone-900 object-contain"
-        poster=""
-      >
-        Your browser does not support the video tag.
-      </video>
-    )
-  }
-  return (
-    <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-stone-300 bg-stone-100/80 text-stone-400 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-500">
-      <i className="fa-solid fa-video text-5xl" aria-hidden />
-      <p className="text-sm font-bold text-stone-600 dark:text-stone-300">Video not yet available</p>
-      <p className="px-6 text-center text-xs text-stone-500 dark:text-stone-400">
-        The written lesson below is ready to read while this video is being prepared.
-      </p>
-    </div>
-  )
-}
-
+// Course workspace page. Fetches the course once by URL slug and drives the
+// whole reading + learning flow via the shared CourseWorkspacePanel.
 export function CourseDetailPage() {
   const { slug } = useParams<{ slug: string }>()
+  // Core course-fetch state.
   const [course, setCourse] = useState<ApiCourse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  // Session snapshot read once at mount (the page is short-lived).
   const [session] = useState(() => getSession())
 
-  const [activeTab, setActiveTab] = useState<Tab>('Transcript')
-  const [notes, setNotes] = useState<string>('')
+  // Enrollment-flow state.
   const [enrolling, setEnrolling] = useState(false)
   const [enrolled, setEnrolled] = useState(false)
   const [enrollError, setEnrollError] = useState<string | null>(null)
-
   const [enrollment, setEnrollment] = useState<ApiEnrollmentDetail | null>(null)
-  const [selectedLesson, setSelectedLesson] = useState<ApiLesson | null>(null)
-  const [completing, setCompleting] = useState<string | null>(null)
   const [restarting, setRestarting] = useState(false)
 
-  const [question, setQuestion] = useState('')
-  const [chat, setChat] = useState<ChatMessage[]>([
-    { role: 'assistant', text: 'Ask me about this lesson, confusing terms, or what to do next.' },
-  ])
-  const [asking, setAsking] = useState(false)
-
-  // Load notes for this course from localStorage on mount.
+  // Remember the last-opened course so the dashboard sidebar keeps a
+  // persistent "Course workspace" entry that points back here.
   useEffect(() => {
-    if (!slug) return
-    try {
-      const saved = window.localStorage.getItem(NOTES_STORAGE_KEY(slug))
-      if (saved) setNotes(saved)
-    } catch {
-      // localStorage may be unavailable in private mode — ignore.
-    }
+    if (slug) rememberCourseSlug(slug)
   }, [slug])
 
-  // Persist notes as the user types.
-  useEffect(() => {
-    if (!slug) return
-    try {
-      window.localStorage.setItem(NOTES_STORAGE_KEY(slug), notes)
-    } catch {
-      // ignore
-    }
-  }, [slug, notes])
-
-  const firstLesson = useMemo(() => course?.modules?.[0]?.lessons[0] ?? null, [course])
-
+  // Fetch the user's enrollment for this course (if signed in) to restore
+  // the enrolled state + progress bar. Failures are non-fatal.
   async function loadEnrollment() {
     if (!session || !slug) return
     try {
@@ -142,6 +102,8 @@ export function CourseDetailPage() {
     }
   }
 
+  // On mount (per slug): fetch the course and load enrollment when
+  // authenticated. `active` guards state updates after unmount / slug change.
   useEffect(() => {
     let active = true
 
@@ -156,7 +118,6 @@ export function CourseDetailPage() {
         const data = await getCourseBySlug(slug)
         if (active) {
           setCourse(data)
-          setSelectedLesson(data.modules?.[0]?.lessons[0] ?? null)
         }
       } catch {
         if (active) {
@@ -178,6 +139,9 @@ export function CourseDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
+  // Enroll the current user (redirects to signup when logged out, carrying a
+  // `next` param so we can bounce back here after auth), then refresh the
+  // enrollment record.
   async function handleEnroll() {
     if (!session) {
       if (slug) window.location.href = `/auth?mode=signup&next=/courses/${slug}`
@@ -198,44 +162,8 @@ export function CourseDetailPage() {
     }
   }
 
-  async function handleMarkComplete(lesson: ApiLesson) {
-    if (!session || completing) return
-    setCompleting(lesson.id)
-    try {
-      const result = await completeLesson(lesson.id)
-      // Reflect the updated lesson progress + course totals.
-      setCourse((prev) =>
-        prev
-          ? {
-              ...prev,
-              modules: prev.modules?.map((module) => ({
-                ...module,
-                lessons: module.lessons.map((item) =>
-                  item.id === lesson.id ? { ...item, progress: result.progress, is_completed: result.is_completed } : item,
-                ),
-              })),
-            }
-          : prev,
-      )
-      setEnrollment((prev) =>
-        prev
-          ? {
-              ...prev,
-              progress: result.course_progress_percent ?? prev.progress,
-              progress_percent: result.course_progress_percent ?? prev.progress_percent,
-              completed_lessons: result.completed_lessons ?? prev.completed_lessons,
-              total_lessons: result.total_lessons ?? prev.total_lessons,
-              is_completed: (result.completed_lessons ?? 0) === (result.total_lessons ?? 0) || (result.course_progress_percent ?? 0) >= 100,
-            }
-          : prev,
-      )
-    } catch (err) {
-      setEnrollError(err instanceof Error ? err.message : 'Could not mark this lesson complete.')
-    } finally {
-      setCompleting(null)
-    }
-  }
-
+  // Reset a course to zero. Guarded by a confirm dialog; on success zeroes the
+  // enrollment record and every lesson's progress in the workspace copy.
   async function handleRestart() {
     if (!slug || !session || restarting) return
     if (!window.confirm('Restart this course? Your progress will be reset to zero.')) return
@@ -261,27 +189,7 @@ export function CourseDetailPage() {
     }
   }
 
-  async function handleAskCora() {
-    const trimmed = question.trim()
-    if (!trimmed || !course || asking) return
-    setChat((prev) => [...prev, { role: 'user', text: trimmed }])
-    setQuestion('')
-    setAsking(true)
-    try {
-      const reply = await askCora(course.slug, trimmed)
-      setChat((prev) => [...prev, { role: 'assistant', text: reply.answer }])
-    } catch (err) {
-      setChat((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          text: err instanceof Error ? err.message : "Cora couldn't reach the tutor service. Try again.",
-        },
-      ])
-    } finally {
-      setAsking(false)
-    }
-  }
+  // Loading and error early-returns keep a stable shell while data resolves.
 
   if (loading) {
     return (
@@ -315,12 +223,11 @@ export function CourseDetailPage() {
     )
   }
 
+  // Derived page state from course/session/enrollment.
   const admin = session?.role === 'admin' || session?.role === 'super_admin'
-  const lesson = selectedLesson ?? firstLesson
-  const resourceUrl = lesson?.video_url ?? null
-  const lessonComplete = Boolean(lesson?.is_completed)
   const progressPercent = enrollment?.progress_percent ?? 0
 
+  // Enroll button label depends on auth + enrollment + in-flight state.
   const enrollLabel = session
     ? enrolled
       ? 'Enrolled'
@@ -370,7 +277,7 @@ export function CourseDetailPage() {
               <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
                 {session
                   ? enrolled
-                    ? `${progressPercent}% complete — pick a lesson below to keep going.`
+                    ? `${progressPercent}% complete — pick a lesson below to keep reading.`
                     : 'Start this free course from your learning workspace.'
                   : 'Sign in as a student to continue enrollment.'}
               </p>
@@ -427,245 +334,23 @@ export function CourseDetailPage() {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <section className="courser-card p-6">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50">Modules & lessons</h2>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/20 dark:text-primary-dark">
-              {progressPercent}% complete
-            </span>
-          </div>
-          {course.modules?.length ? (
-            <ol className="mt-6 space-y-4">
-              {course.modules.map((module) => (
-                <li key={module.id} className="rounded-xl border border-stone-100 bg-stone-50/60 p-4 dark:border-stone-700/60 dark:bg-stone-800/40">
-                  <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-                    <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs text-primary dark:bg-primary/25 dark:text-primary-dark">
-                      {module.order}
-                    </span>
-                    Module {module.order}: {module.title}
-                  </p>
-                  <ul className="mt-2 space-y-2 text-sm text-stone-600 dark:text-stone-300">
-                    {module.lessons.map((item) => (
-                      <li key={item.id}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedLesson(item)}
-                          className={[
-                            'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition',
-                            lesson?.id === item.id
-                              ? 'border-primary bg-primary/5 ring-1 ring-primary/30 dark:border-primary-dark dark:bg-primary-dark/10'
-                              : 'border-stone-200 bg-white hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900/50 dark:hover:border-stone-600',
-                          ].join(' ')}
-                        >
-                          <span
-                            className={[
-                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs',
-                              item.is_completed
-                                ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                                : 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-dark',
-                            ].join(' ')}
-                          >
-                            <i className={`fa-solid ${item.is_completed ? 'fa-check' : 'fa-circle-play'}`} aria-hidden />
-                          </span>
-                          <span className="flex-1">
-                            <span className="block font-semibold text-stone-800 dark:text-stone-100">
-                              Lesson {module.order}.{item.order}: {item.title}
-                            </span>
-                            {item.content ? (
-                              <span className="mt-1 block line-clamp-1 text-xs text-stone-500 dark:text-stone-400">
-                                {item.content}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-2 text-[11px] font-semibold text-stone-400">
-                            <span className="rounded-full bg-stone-100 px-2 py-1 dark:bg-stone-800 dark:text-stone-400">
-                              {item.duration ?? 'Self-paced'}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="mt-4 text-sm text-stone-600 dark:text-stone-300">No modules have been published for this course yet.</p>
-          )}
-        </section>
-
-        <section className="mt-8 courser-card overflow-hidden">
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-primary dark:text-primary-dark">Default learning environment</p>
-                  <h2 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-50">{lesson?.title ?? 'Lesson workspace'}</h2>
-                </div>
-                {admin ? (
-                  <Link
-                    to="/admin"
-                    className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
-                  >
-                    <i className="fa-solid fa-sliders mr-2 text-primary dark:text-primary-dark" aria-hidden />
-                    Configure
-                  </Link>
-                ) : null}
-              </div>
-
-              <div className="mt-5">
-                {lesson ? <LessonMedia lesson={lesson} /> : null}
-                {session && lesson ? (
-                  <button
-                    type="button"
-                    onClick={() => handleMarkComplete(lesson)}
-                    disabled={completing === lesson.id || lessonComplete}
-                    className={[
-                      'mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed',
-                      lessonComplete
-                        ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                        : 'bg-primary text-white hover:brightness-110 disabled:opacity-60 dark:bg-primary-dark',
-                    ].join(' ')}
-                  >
-                    <i className={`fa-solid ${lessonComplete ? 'fa-check' : completing === lesson.id ? 'fa-spinner fa-spin' : 'fa-circle-check'}`} aria-hidden />
-                    {lessonComplete ? 'Lesson completed' : completing === lesson.id ? 'Marking…' : 'Mark lesson complete'}
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3" role="tablist" aria-label="Lesson resources">
-                {(['Transcript', 'Notes', 'Resources'] as Tab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={[
-                      'rounded-lg border px-3 py-2 text-sm font-semibold transition',
-                      activeTab === tab
-                        ? 'border-primary bg-primary text-white shadow-sm dark:bg-primary-dark'
-                        : 'border-stone-200 text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800',
-                    ].join(' ')}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/40">
-                {activeTab === 'Transcript' ? (
-                  <div>
-                    <p className="text-sm font-bold text-stone-900 dark:text-stone-50">Lesson transcript</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-700 dark:text-stone-200">
-                      {lesson?.content?.trim() || 'This lesson has no written content yet — check back soon.'}
-                    </p>
-                  </div>
-                ) : activeTab === 'Notes' ? (
-                  <div>
-                    <label htmlFor="lesson-notes" className="sr-only">
-                      Notes
-                    </label>
-                    <textarea
-                      id="lesson-notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Type your notes for this lesson — saved locally."
-                      rows={6}
-                      className="w-full rounded-lg border border-stone-200 bg-white p-3 text-sm text-stone-800 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
-                    />
-                    <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">Notes are saved in this browser only.</p>
-                  </div>
-                ) : (
-                  <div className="text-sm text-stone-700 dark:text-stone-200">
-                    <p className="font-semibold text-stone-900 dark:text-stone-50">Lesson resources</p>
-                    <p className="mt-1">Official readings, slides, and the practice task sandbox are linked here once the instructor publishes them.</p>
-                    {resourceUrl ? (
-                      <a
-                        href={resourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center text-sm font-semibold text-primary hover:underline dark:text-primary-dark"
-                      >
-                        <i className="fa-solid fa-up-right-from-square mr-2 text-xs" aria-hidden />
-                        Open video resource
-                      </a>
-                    ) : (
-                      <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">No resources published yet.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <aside className="courser-bg-dots-dense border-t border-stone-200 bg-stone-50 p-6 dark:border-stone-700 dark:bg-stone-900 lg:border-l lg:border-t-0">
-              <div className="flex items-center gap-3">
-                <div className="relative h-16 w-16 rounded-full bg-primary">
-                  <span className="absolute left-4 top-5 h-2 w-2 rounded-full bg-white" />
-                  <span className="absolute right-4 top-5 h-2 w-2 rounded-full bg-white" />
-                  <span className="absolute bottom-5 left-1/2 h-1.5 w-6 -translate-x-1/2 rounded-full bg-accent" />
-                  <span className="absolute -right-1 -top-1 rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
-                    AI
-                  </span>
-                </div>
-                <div>
-                  <p className="font-bold text-stone-900 dark:text-stone-50">Cora answers questions</p>
-                  <p className="text-sm text-stone-600 dark:text-stone-300">Available by default in every free course.</p>
-                </div>
-              </div>
-              <div className="mt-5 space-y-3 rounded-xl border border-stone-200/70 bg-white/70 p-4 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/70">
-                <div className="max-h-56 space-y-2 overflow-y-auto" aria-live="polite">
-                  {chat.map((msg, idx) => (
-                    <p
-                      key={idx}
-                      className={[
-                        'rounded-lg p-3 text-sm',
-                        msg.role === 'assistant'
-                          ? 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200'
-                          : 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-dark',
-                      ].join(' ')}
-                    >
-                      {msg.text}
-                    </p>
-                  ))}
-                  {asking ? (
-                    <p className="rounded-lg bg-stone-100 p-3 text-sm text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-                      <i className="fa-solid fa-spinner mr-2 text-xs" aria-hidden />
-                      Cora is thinking...
-                    </p>
-                  ) : null}
-                </div>
-                <form
-                  className="flex gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    handleAskCora()
-                  }}
-                >
-                  <label htmlFor="ask-cora" className="sr-only">
-                    Ask Cora a question
-                  </label>
-                  <input
-                    id="ask-cora"
-                    type="text"
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="Ask Cora a question..."
-                    disabled={asking}
-                    className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 disabled:opacity-60 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
-                  />
-                  <button
-                    type="submit"
-                    disabled={asking || !question.trim()}
-                    className="rounded-lg bg-primary px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-dark"
-                  >
-                    <i className="fa-solid fa-paper-plane" aria-hidden />
-                  </button>
-                </form>
-              </div>
-            </aside>
-          </div>
-        </section>
+        <CourseWorkspacePanel
+          course={course}
+          session={session}
+          enrollment={enrollment}
+          headerAction={
+            admin ? (
+              <Link
+                to="/admin"
+                className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
+              >
+                <i className="fa-solid fa-sliders mr-2 text-primary dark:text-primary-dark" aria-hidden />
+                Configure
+              </Link>
+            ) : null
+          }
+          onEnrollmentChange={setEnrollment}
+        />
       </div>
     </CourseDetailShell>
   )

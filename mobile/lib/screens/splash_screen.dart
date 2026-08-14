@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../state/auth_state.dart';
 import '../theme/app_theme.dart';
 
+/// A brief brand splash shown while the app decides whether a session exists.
+/// NOTE: this stand-alone screen is not part of the go_router config in
+/// `app.dart` (the app starts directly at `/onboarding`); it dates back to the
+/// pre-router build and routes to `/home` or `/login` after a short pause.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -19,17 +23,20 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    // Looping fade in/out for the pulsing logo.
     _controller = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     )..repeat(reverse: true, period: const Duration(milliseconds: 800));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
 
+    // Kick off the auth check once the first frame is on screen.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuth();
     });
   }
 
+  /// Waits briefly, then routes to `/home` if a session exists, else `/login`.
   void _checkAuth() async {
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
@@ -54,6 +61,7 @@ class _SplashScreenState extends State<SplashScreen>
       body: Center(
         child: FadeTransition(
           opacity: _fade,
+          // Animated COURSER logo composited over the primary color.
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

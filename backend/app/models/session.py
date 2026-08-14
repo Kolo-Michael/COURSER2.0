@@ -1,3 +1,9 @@
+"""Refresh-token session persistence.
+
+Each login/refresh creates one `UserSession` row keyed by the unique refresh
+token, so a token can be revoked at logout and validated at refresh time.
+"""
+
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UUID as SA_UUID
@@ -22,10 +28,12 @@ class UserSession(Base):
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(SA_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # Unique so a stolen-then-replayed token can't create a second active row.
     refresh_token = Column(String(500), nullable=False, unique=True)
     expires_at = Column(DateTime, nullable=False)
     is_revoked = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    # `last_used` drives the inactivity timeout check on refresh.
     last_used = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="sessions")

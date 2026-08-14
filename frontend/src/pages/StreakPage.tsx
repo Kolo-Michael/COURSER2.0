@@ -1,3 +1,9 @@
+// ─── StreakPage: daily learning streak (students) ──────────────────────────
+// Fetches the user's streak stats and renders the current count, a static
+// week grid, milestone unlock cards, and streak details (longest streak,
+// learned-today flag, restores left) including the one-tap "restore a missed
+// day" action. Protected at the router level to /streak>.
+
 import { getSession } from '@/auth/session'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { studentNav } from '@/components/layout/navItems'
@@ -5,6 +11,7 @@ import { getStreak, restoreStreakDay, type ApiStreak } from '@/api/streak'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+// Static Mon-Sun labels for the week grid (today isn't highlighted yet).
 const WEEK = [
   { day: 'Mon' },
   { day: 'Tue' },
@@ -15,6 +22,7 @@ const WEEK = [
   { day: 'Sun' },
 ]
 
+// Milestone thresholds + their rewards; "reached" is derived from the streak.
 const MILESTONES = [
   { days: 3, reward: 'Badge: First Spark' },
   { days: 7, reward: '1 free Cora session' },
@@ -30,6 +38,7 @@ export function StreakPage() {
   const [error, setError] = useState<string | null>(null)
   const [restoring, setRestoring] = useState(false)
 
+  // Fetch streak data; reused by the error-retry button.
   async function load() {
     setLoading(true)
     setError(null)
@@ -46,6 +55,8 @@ export function StreakPage() {
     load()
   }, [])
 
+  // Restore the last missed day. Only offered when the API says
+  // restore_eligible (monthly restore budget) and not already running.
   async function handleRestore() {
     if (!streak?.restore_eligible || restoring) return
     setRestoring(true)

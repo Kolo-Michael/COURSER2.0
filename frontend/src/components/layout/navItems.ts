@@ -1,10 +1,19 @@
+// ─── navItems.ts : role-based dashboard navigation definitions ──────────
+// Builds the navigation arrays for each role (student / admin / super_admin)
+// and resolves the right one at runtime. Nav items are kept here so pages
+// don't re-declare their own rails. A student's workspace link is injected
+// while a course is open, and otherwise points at the most recently visited
+// course so the workspace stays reachable from every dashboard page.
 import type { UserRole } from '@/auth/session'
+import { getLastCourseSlug } from '@/auth/course'
 import type { DashboardNavItem } from './DashboardLayout'
 
 /**
  * Student sidebar — every student-accessible page appears here so the
- * workspace nav never changes between pages. The course workspace entry
- * is only rendered once a course is actually open (a slug is available).
+ * workspace nav never changes between pages. A "Course workspace" entry
+ * is injected for the currently open course; when none is explicitly given
+ * it falls back to the most recently visited course so the workspace stays
+ * visible from any dashboard page (Overview, Streak, Settings, ...).
  */
 export function studentNav(activeCourseSlug?: string): DashboardNavItem[] {
   const items: DashboardNavItem[] = [
@@ -14,9 +23,12 @@ export function studentNav(activeCourseSlug?: string): DashboardNavItem[] {
     { to: '/settings', label: 'Settings', iconClass: 'fa-solid fa-gear' },
   ]
 
-  if (activeCourseSlug) {
+  // Prefer the explicit open-course slug; otherwise reuse the last visited
+  // course so every dashboard page keeps the workspace entry in the nav.
+  const workspaceSlug = activeCourseSlug || getLastCourseSlug()
+  if (workspaceSlug) {
     items.splice(2, 0, {
-      to: `/courses/${activeCourseSlug}`,
+      to: `/courses/${workspaceSlug}`,
       label: 'Course workspace',
       iconClass: 'fa-solid fa-laptop-code',
     })

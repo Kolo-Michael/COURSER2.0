@@ -1,3 +1,5 @@
+/// A user's enrollment in a course: identity linkage plus the user's overall
+/// progress (0–100) in that course and when they enrolled.
 class Enrollment {
   const Enrollment({
     required this.id,
@@ -7,6 +9,7 @@ class Enrollment {
     this.enrolledAt,
   });
 
+  /// Parses an enrollment JSON object; `progress` defaults to 0 when missing.
   factory Enrollment.fromJson(Map<String, dynamic> json) => Enrollment(
         id: json['id'].toString(),
         userId: json['user_id'].toString(),

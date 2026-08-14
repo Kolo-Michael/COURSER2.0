@@ -1,3 +1,5 @@
+/// A lesson in the flat lessons list (`/lessons/...`). Uses string durations
+/// like "15 min" as returned by the bare lesson endpoint.
 class Lesson {
   const Lesson({
     required this.id,

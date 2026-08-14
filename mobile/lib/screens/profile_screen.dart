@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../state/auth_state.dart';
 import '../theme/app_theme.dart';
 
+/// Stand-alone profile screen (not wired into the current router — the
+/// profile lives in `HomeScreen`'s profile tab). Shows the account summary and
+/// action tiles, including logout which clears the session and returns to
+/// `/login`.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 

@@ -1,20 +1,51 @@
+// ─── DashboardPage: the student's learning hub ───────────────────────────────
+// Landing page for the "student" dashboard role. Loads the user's real
+// enrollments (via GET /courses/enrollments/me) and renders: a welcome hero
+// with browse/home/logout actions, summary stat cards (enrolled / completed /
+// lessons done / average progress), a continue-learning grid with progress
+// bars + restart, and a static weekly-plan/Cora-help side panel.
+
+import { logout } from '@/api/auth'
+import { getCourseBySlug, listMyEnrollments, restartCourse, type ApiCourse, type ApiEnrollmentDetail } from '@/api/courses'
+import { clearSession, getSession } from '@/auth/session'
+import { getLastCourseSlug } from '@/auth/course'
+import { CourseWorkspacePanel } from '@/components/course/CourseWorkspacePanel'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { navItemsFor } from '@/components/layout/navItems'
-import { logout } from '@/api/auth'
-import { listMyEnrollments, restartCourse, type ApiEnrollmentDetail } from '@/api/courses'
-import { clearSession, getSession } from '@/auth/session'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+// The student dashboard — wraps everything in the role-based DashboardLayout.
 export function DashboardPage() {
+  // Session snapshot read once; the greeting falls back to "there" when the
+  // session cookie can't be parsed.
   const session = getSession()
   const displayName = session?.identifier || 'there'
 
+  // Enrollment + progress state loaded from the API.
   const [enrollments, setEnrollments] = useState<ApiEnrollmentDetail[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [restarting, setRestarting] = useState<string | null>(null)
 
+  // The in-progress course surfaced in the on-dashboard workspace: the learner's
+  // most advanced uncompleted enrollment, falling back to any enrollment.
+  const [continueCourse, setContinueCourse] = useState<ApiCourse | null>(null)
+  const continueEnrollment = useMemo(() => {
+    if (!enrollments.length) return null
+    const active = enrollments.filter((enrollment) => !enrollment.is_completed)
+    const pool = active.length ? active : enrollments
+    return pool.reduce(
+      (best, enrollment) => (enrollment.progress_percent > (best?.progress_percent ?? -1) ? enrollment : best),
+      null as ApiEnrollmentDetail | null,
+    )
+  }, [enrollments])
+
+  // Resolve the active course slug for the sidebar "Course workspace" entry,
+  // preferring the current enrollment, then the last-open course from storage.
+  const activeCourseSlug = continueEnrollment?.course_slug ?? getLastCourseSlug() ?? undefined
+
+  // Fetch the learner's enrollments from the backend.
   async function load() {
     setLoading(true)
     setError(null)
@@ -27,11 +58,36 @@ export function DashboardPage() {
     }
   }
 
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // Load once on mount.
+    useEffect(() => {
+      load()
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
+    // Fetch the full course detail for the on-dashboard workspace once the
+    // continue-enrollment is known. Non-fatal on failure.
+    useEffect(() => {
+      const enrollment = continueEnrollment
+      if (!enrollment) {
+        setContinueCourse(null)
+        return
+      }
+      let active = true
+      setContinueCourse(null)
+      getCourseBySlug(enrollment.course_slug)
+        .then((data) => {
+          if (active) setContinueCourse(data)
+        })
+        .catch(() => {
+          if (active) setContinueCourse(null)
+        })
+      return () => {
+        active = false
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [continueEnrollment])
+
+  // Restart a course (with confirm): zeroes progress, then refreshes the list.
   async function handleRestart(slug: string, title: string) {
     if (!window.confirm(`Restart "${title}"? Your progress on this course will be reset to zero.`)) return
     setRestarting(slug)
@@ -45,6 +101,7 @@ export function DashboardPage() {
     }
   }
 
+  // Derived stats shown in the four summary cards.
   const completedCourses = enrollments.filter((enrollment) => enrollment.is_completed)
   const totalLessonsCompleted = enrollments.reduce(
     (total, enrollment) => total + enrollment.completed_lessons,
@@ -54,6 +111,7 @@ export function DashboardPage() {
     ? Math.round(enrollments.reduce((total, enrollment) => total + enrollment.progress_percent, 0) / enrollments.length)
     : 0
 
+  // Summary cards — labels/values/icons reused in the stats grid below.
   const stats = [
     { label: 'Courses enrolled', value: String(enrollments.length), icon: 'fa-layer-group' },
     { label: 'Courses completed', value: String(completedCourses.length), icon: 'fa-circle-check' },
@@ -63,11 +121,12 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout
-      title="Student dashboard"
-      subtitle="Your hub for enrollments and progress"
-      navItems={navItemsFor(session?.role ?? 'student')}
+       title="Student dashboard"
+       subtitle="Your hub for enrollments and progress"
+       navItems={navItemsFor(session?.role ?? 'student', activeCourseSlug)}
     >
       <div className="space-y-6">
+        {/* Welcome hero with primary actions + server-side logout. */}
         <section className="courser-card p-6">
           <p className="text-sm font-semibold text-primary">Welcome</p>
           <h2 className="mt-2 text-2xl font-bold text-stone-900 dark:text-stone-50">Hi, {displayName}</h2>
@@ -107,6 +166,7 @@ export function DashboardPage() {
           </div>
         </section>
 
+        {/* Stat cards grid. */}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((item) => (
             <div key={item.label} className="courser-card p-5">
@@ -119,6 +179,7 @@ export function DashboardPage() {
           ))}
         </section>
 
+        {/* Continue learning: loading / error / empty states, then the card grid. */}
         <section className="courser-card p-6">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">Continue learning</h3>
@@ -220,6 +281,35 @@ export function DashboardPage() {
             </p>
           </aside>
         </section>
+
+        {/* On-dashboard course workspace: keeps the lesson + Cora reachable here
+           so learners don't have to leave the dashboard to keep studying. */}
+        {continueCourse ? (
+          <section className="mt-6 courser-card p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">Continue your course</h3>
+              <Link
+                to={`/courses/${continueCourse.slug}`}
+                className="text-sm font-semibold text-primary hover:underline dark:text-primary-dark"
+              >
+                Open full workspace
+              </Link>
+            </div>
+            <CourseWorkspacePanel
+              course={continueCourse}
+              session={session}
+              enrollment={continueEnrollment}
+              onEnrollmentChange={(updated) => {
+                if (!updated) return
+                setEnrollments((prev) =>
+                  prev.map((enrollment) =>
+                    enrollment.course_slug === updated.course_slug ? { ...enrollment, ...updated } : enrollment,
+                  ),
+                )
+              }}
+            />
+          </section>
+        ) : null}
       </div>
     </DashboardLayout>
   )

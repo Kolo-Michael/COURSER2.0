@@ -23,9 +23,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-import jwt
+import jwt  # PyJWT — signs and verifies the HS256 tokens
 from fastapi import Depends, HTTPException, Request, status
-from passlib.context import CryptContext
+from passlib.context import CryptContext  # bcrypt hashing + verification
 
 from app.core.config import settings
 
@@ -142,6 +142,7 @@ def get_access_token(request: Request) -> str | None:
 
 
 def get_refresh_token(request: Request) -> str | None:
+    """Read the refresh token from the refresh_token HttpOnly cookie."""
     return request.cookies.get("refresh_token")
 
 

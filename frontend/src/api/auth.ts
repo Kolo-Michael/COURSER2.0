@@ -1,6 +1,11 @@
+// ─── auth.ts : authentication & account API ─────────────────────────────
+// Thin typed wrappers over the backend auth endpoints: token-based login
+// /signup that hands off to HttpOnly cookies, password-reset flow, and
+// profile/settings updates. Types here mirror the FastAPI response shape.
 import { apiRequest } from './client'
 import type { UserRole } from '@/auth/session'
 
+/** Full user record returned by the auth endpoints. */
 export type ApiUser = {
   id: string
   username: string
@@ -17,8 +22,10 @@ export type ApiUser = {
   last_login: string | null
 }
 
+/** Navigation display preferences synced between device and account. */
 export type NavStyle = 'sidebar' | 'floating'
 
+/** Fields the user can edit about themselves via PATCH /auth/me. */
 export type ProfileUpdatePayload = {
   full_name?: string
   avatar_url?: string | null
@@ -150,6 +157,7 @@ export type AdminCreatePayload = {
   role: 'admin' | 'super_admin'
 }
 
+/** POST /api/auth/admin — create a new admin / super-admin (privileged). */
 export function createAdmin(payload: AdminCreatePayload) {
   return apiRequest<ApiUser>('/api/auth/admin', {
     method: 'POST',

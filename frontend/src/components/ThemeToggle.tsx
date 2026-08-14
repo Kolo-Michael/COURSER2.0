@@ -1,5 +1,13 @@
+// ─── ThemeToggle.tsx : light/dark theme switch button ───────────────────
+// Small round button that flips the global theme via useTheme() and shows
+// a moon (dark) or sun (light) icon depending on the current mode. The
+// theme itself is applied/persisted by the ThemeProvider in theme.tsx.
 import { useTheme } from '@/theme'
 
+/**
+ * Toggle button for light/dark mode.
+ * @param className extra classes merged onto the button (size placement)
+ */
 export function ThemeToggle({ className = '' }: { className?: string }) {
   const { theme, toggle } = useTheme()
   const isDark = theme === 'dark'

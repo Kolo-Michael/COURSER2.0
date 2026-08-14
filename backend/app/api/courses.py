@@ -14,25 +14,27 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select, delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
-from app.models import Category, Course, Enrollment, Lesson, LessonProgress, Module, User
+from app.models import Category, Conversation, Course, Enrollment, Lesson, LessonProgress, Message, Module, User
 from app.schemas.course import (
     AskRequest,
     AskResponse,
     CategoryResponse,
+    ConversationMessageResponse,
     CourseCreate,
     CourseListResponse,
     CourseResponse,
     CourseUpdate,
+    ConversationSummaryResponse,
     EnrollmentDetailResponse,
     EnrollmentResponse,
 )
-from app.services import auth_service
+from app.services import ai_service, auth_service
 
 router = APIRouter()
 
@@ -598,28 +600,136 @@ async def enroll_in_course(
     return enrollment
 
 
+@router.get("/slug/{slug}/conversations", response_model=List[ConversationSummaryResponse])
+async def list_course_conversations(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """List the current user's chats for this course, newest first.
+
+    Each summary carries a message count so the UI can label chats without
+    fetching every thread body. Empty list when no chat has been started.
+    """
+    course_result = await db.execute(select(Course).where(Course.slug == slug))
+    course = course_result.scalar_one_or_none()
+    if course is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Course not found")
+
+    conversations_result = await db.execute(
+        select(Conversation)
+        .where(Conversation.user_id == user_id, Conversation.course_id == course.id)
+        .order_by(Conversation.updated_at.desc())
+    )
+    conversations = conversations_result.scalars().all()
+    if not conversations:
+        return []
+
+    # Count messages per conversation in one query.
+    counts_result = await db.execute(
+        select(Message.conversation_id, func.count(Message.id))
+        .where(Message.conversation_id.in_([conv.id for conv in conversations]))
+        .group_by(Message.conversation_id)
+    )
+    counts = dict(counts_result.all())
+
+    return [
+        ConversationSummaryResponse(
+            id=conv.id,
+            title=conv.title or "Untitled chat",
+            created_at=conv.created_at,
+            updated_at=conv.updated_at,
+            message_count=counts.get(conv.id, 0),
+        )
+        for conv in conversations
+    ]
+
+
+@router.get("/slug/{slug}/conversation/{conversation_id}", response_model=List[ConversationMessageResponse])
+async def get_course_conversation(
+    slug: str,
+    conversation_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """Return the messages of one chat (oldest first), ownership-checked.
+
+    The conversation must belong to the current user; otherwise a 404 is
+    raised so another user's thread id is never acknowledged.
+    """
+    course_result = await db.execute(select(Course).where(Course.slug == slug))
+    course = course_result.scalar_one_or_none()
+    if course is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Course not found")
+
+    conversation = await ai_service.find_owned_conversation(db, user_id, conversation_id)
+    if conversation is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Conversation not found")
+
+    messages_result = await db.execute(
+        select(Message)
+        .where(Message.conversation_id == conversation.id)
+        .order_by(Message.created_at.asc())
+    )
+    return messages_result.scalars().all()
+
+
+@router.delete("/slug/{slug}/conversation/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_course_conversation(
+    slug: str,
+    conversation_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """Delete one of the current user's chats for this course.
+
+    The conversation's messages are removed by the ORM cascade. 204 with an
+    empty body on success so the client can drop the chat from its list.
+    """
+    course_result = await db.execute(select(Course).where(Course.slug == slug))
+    course = course_result.scalar_one_or_none()
+    if course is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Course not found")
+
+    conversation = await ai_service.find_owned_conversation(db, user_id, conversation_id)
+    if conversation is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Conversation not found")
+
+    await db.delete(conversation)
+    await db.commit()
+
+
 @router.post("/slug/{slug}/ask", response_model=AskResponse)
 async def ask_cora(
     slug: str,
     payload: AskRequest,
     db: AsyncSession = Depends(get_db),
-    _user_id: uuid.UUID = Depends(get_current_user_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
 ):
-    """Stub tutor endpoint. Logs the question; returns a canned reply.
+    """Ask Cora a question about this course (real AI tutor).
 
-    Replace with a real LLM call when the tutor service is wired up.
-    Validates the course slug exists so a typo'd path doesn't 404
-    silently."""
-    result = await db.execute(select(Course).where(Course.slug == slug))
-    course = result.scalar_one_or_none()
+    Retrieval-augmented flow: the user's message is persisted, the course's
+    lesson notes are scored against it, the best chunks are injected into an
+    LLM prompt, and the model's answer is persisted alongside the question.
+    If the LLM is unreachable or unconfigured, a canned reply is returned so
+    the chat never breaks.
+
+    When `payload.conversation_id` is set the message continues that chat;
+    otherwise a new chat is created for this course. The response echoes the
+    conversation id so the UI can keep routing follow-ups to the same chat.
+    """
+    course_result = await db.execute(select(Course).where(Course.slug == slug))
+    course = course_result.scalar_one_or_none()
     if course is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Course not found")
 
-    print(f"[cora] ask on course={course.slug!r}: {payload.question!r}")
-    return AskResponse(
-        answer=(
-            "Cora is in placeholder mode right now — this stub just confirms "
-            "your message was received. A real tutor backend will replace "
-            "this reply once the AI service is wired up."
-        )
+    answer, _used_ai, conversation = await ai_service.answer_course_question(
+        db,
+        user_id=user_id,
+        course_id=course.id,
+        course_title=course.title,
+        question=payload.question,
+        conversation_id=payload.conversation_id,
     )
+    await db.commit()
+    return AskResponse(answer=answer, conversation_id=conversation.id)

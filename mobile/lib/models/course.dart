@@ -1,5 +1,7 @@
 import '../models/module.dart';
 
+/// A course's topic category (e.g. "Web development"). Lightweight — the
+/// catalog only needs id/name plus a few optional display fields.
 class Category {
   final String id;
   final String name;
@@ -15,6 +17,7 @@ class Category {
     this.icon,
   });
 
+  /// Parses a category object, tolerating missing/nullable fields.
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
       id: json['id']?.toString() ?? '',
@@ -26,6 +29,8 @@ class Category {
   }
 }
 
+/// A course in the catalog: metadata for display, plus its nested curriculum
+/// (`modules`), and whether the current user has enrolled.
 class Course {
   final String id;
   final String title;
@@ -55,11 +60,15 @@ class Course {
     this.modules = const [],
   });
 
+  /// Parses a course object. Accepts both `id` (UUID from catalog) and falls
+  /// back to defaults when optional display fields are absent. The API returns
+  /// modules nested under `modules` (module.dart's richer `Lesson`).
   factory Course.fromJson(Map<String, dynamic> json) {
     final modulesData = json['modules'] as List<dynamic>? ?? [];
     return Course(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
+      // Some endpoints use `short_description` instead of `description`.
       description: json['description']?.toString() ??
           json['short_description']?.toString(),
       slug: json['slug'] as String?,
@@ -67,6 +76,7 @@ class Course {
       category: json['category'] != null
           ? Category.fromJson(json['category'] as Map<String, dynamic>)
           : null,
+      // `level` is an older backend alias for `difficulty`.
       difficulty: json['difficulty']?.toString() ??
           json['level']?.toString(),
       rating: (json['rating'] as num?)?.toDouble(),
@@ -79,6 +89,8 @@ class Course {
     );
   }
 
+  /// Returns a copy with a new enrollment status while keeping every other
+  /// field identical — used after enrolling to update the catalog in place.
   Course copyWith({bool? isEnrolled}) {
     return Course(
       id: id,

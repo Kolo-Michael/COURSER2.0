@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 
+/// ─── Design tokens & theme ───
+/// Central palette constants (primary blue, accent orange, stone neutrals,
+/// gradient helpers) plus the app-wide light `ThemeData` builder used by
+/// `MaterialApp.router`. Keeping colors here lets every screen share one look.
 class AppTheme {
+  // Brand color.
   static const primary = Color(0xFF2563EB);
   static const primaryDark = Color(0xFF1D4ED8);
+  // Accent / call-to-action color.
   static const accent = Color(0xFFF97316);
   static const accentDark = Color(0xFFEA580C);
+  // Warm stone neutrals used for text, borders, and subtle surfaces.
   static const stone900 = Color(0xFF1C1917);
   static const stone800 = Color(0xFF292524);
   static const stone100 = Color(0xFFF5F5F4);
@@ -12,18 +19,24 @@ class AppTheme {
   static const stone700 = Color(0xFF44403C);
   static const stone600 = Color(0xFF57534E);
 
+  // Blue → darker blue diagonal; used on logos, avatar tiles and spotlight
+  // cards.
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [primary, primaryDark],
   );
 
+  // Orange gradient; used on streak/marketing surfaces.
   static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [accent, Color(0xFFFB923C)],
   );
 
+  /// Builds the app's light theme: Material 3, Inter font family, and all the
+  /// component themes (buttons, inputs, chips, cards, snackbars) tuned to the
+  /// COURSER palette.
   static ThemeData get light {
     final scheme = ColorScheme.fromSeed(
       seedColor: primary,
@@ -77,6 +90,8 @@ class AppTheme {
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
+      // Text fields: stone-tinted fill, rounded borderless corners, a
+      // primary-colored focus border, and stone labels.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: stone100,

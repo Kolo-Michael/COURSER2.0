@@ -6,6 +6,11 @@ import '../models/module.dart';
 import '../state/courses_state.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+/// ─── Course detail ───
+/// Full-page view of a course: parallax thumbnail, metadata, curriculum
+/// modules (ExpansionTiles of lessons), and a "Start Learning" button that
+/// jumps to the first lesson. The course body (including nested modules) is
+/// fetched fresh through `CoursesState.fetchCourseDetail`.
 class CourseDetailScreen extends StatefulWidget {
   final String courseId;
 
@@ -21,6 +26,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Kick off the course fetch immediately; the FutureBuilder consumes it.
     _courseFuture =
         context.read<CoursesState>().fetchCourseDetail(widget.courseId);
   }
@@ -142,6 +148,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     );
   }
 
+  /// Small inline label for a course stat (duration, rating, students...).
   Widget _buildMeta(IconData icon, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -154,6 +161,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   }
 }
 
+/// An expandable module row listing its lessons; tapping a lesson opens it.
 class _ModuleTile extends StatelessWidget {
   final Module module;
   final String courseId;

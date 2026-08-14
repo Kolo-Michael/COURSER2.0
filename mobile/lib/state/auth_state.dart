@@ -6,6 +6,12 @@ import '../core/storage.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart';
 
+/// ─── Auth state ───
+/// ChangeNotifier that owns the current session: token, user profile, session
+/// expiry, and "remember me". Also handles auto-login on startup and enforces
+/// an inactivity timeout — user interactions (fed in from `app.dart`'s
+/// full-screen Listener) reset a countdown, and the session is dropped if the
+/// user stays idle or backgrounds the app past the limit.
 class AuthState extends ChangeNotifier {
   final ApiClient apiClient;
   final SecureStore storage;
@@ -16,6 +22,7 @@ class AuthState extends ChangeNotifier {
   DateTime? _sessionExpiresAt;
   bool _rememberMe = false;
 
+  // Inactivity tracking: idle timer + time spent backgrounded.
   Timer? _inactivityTimer;
   DateTime? _backgroundedAt;
   bool _appInactive = false;
@@ -42,6 +49,7 @@ class AuthState extends ChangeNotifier {
 
   AuthState({required this.apiClient, required this.storage});
 
+  /// Startup: restore "remember me", then attempt a silent login from storage.
   Future<void> init() async {
     _rememberMe = await storage.readRememberMe();
     final service = AuthService(apiClient: apiClient, storage: storage);
@@ -75,6 +83,7 @@ class AuthState extends ChangeNotifier {
     } else {
       final bgAt = _backgroundedAt;
       _backgroundedAt = null;
+      // If the app was gone long enough, sign out on return.
       if (bgAt != null &&
           _token != null &&
           DateTime.now().difference(bgAt) >= Config.inactivityTimeout) {
@@ -96,6 +105,7 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  /// Authenticates, stores the tokens, and notifies the router.
   Future<void> login(String email, String password, {bool rememberMe = false}) async {
     final service = AuthService(apiClient: apiClient, storage: storage);
     final tokens = await service.login(email, password, rememberMe: rememberMe);
@@ -109,6 +119,7 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Signs the user up, stores the auto-issued tokens, and notifies the router.
   Future<void> signup(
     String email,
     String firstName,
@@ -120,6 +131,7 @@ class AuthState extends ChangeNotifier {
     _token = tokens.accessToken;
     _user = tokens.user;
     _sessionExpiresAt = tokens.sessionExpiresAt;
+    // Signups are never "remember me" sessions by default.
     _rememberMe = false;
     await storage.writeRememberMe(false);
     apiClient.setToken(_token);
@@ -127,6 +139,7 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears the session everywhere (in-memory + secure storage + API header).
   Future<void> logout() async {
     _inactivityTimer?.cancel();
     _token = null;
@@ -138,6 +151,7 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Re-fetches the user profile from the backend and updates the cached copy.
   Future<void> refreshUser() async {
     final data = await apiClient.fetchCurrentUser();
     _user = User.fromJson(data);

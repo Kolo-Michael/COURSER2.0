@@ -1,3 +1,9 @@
+// ─── SettingsPage: profile / navigation / security / account ───────────────
+// Signed-in settings for every role. Loads the full user profile on mount,
+// then lets the user edit their display name + avatar (uploaded as a data URL),
+// pick the sidebar-vs-floating navigation style + collapsed default, change
+// their password (verified client-side), and sign out.
+
 import { getMe, updateProfile, changePassword, logout, type ApiUser, type NavStyle } from '@/api/auth'
 import { getSession, clearSession } from '@/auth/session'
 import { DashboardLayout, type DashboardNavItem } from '@/components/layout/DashboardLayout'
@@ -5,8 +11,10 @@ import { navItemsFor } from '@/components/layout/navItems'
 import { getNavCollapsed, getNavStyle, setNavCollapsed, setNavStyle } from '@/auth/preferences'
 import { useEffect, useRef, useState } from 'react'
 
+// Fine-grained submit status per section: idle -> saving -> saved / error.
 type ProfileStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+// Shared card shell for each settings section (icon, heading, body).
 function SectionCard({
   icon,
   title,
@@ -46,7 +54,7 @@ export function SettingsPage() {
   const [profileError, setProfileError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Nav preference
+  // Nav preference — initialized from localStorage synchronously.
   const [navStyle, setNavStyleState] = useState<NavStyle>(() => getNavStyle())
   const [navCollapsed, setNavCollapsedState] = useState<boolean>(() => getNavCollapsed())
 
@@ -57,6 +65,8 @@ export function SettingsPage() {
   const [pwStatus, setPwStatus] = useState<ProfileStatus>('idle')
   const [pwError, setPwError] = useState<string | null>(null)
 
+  // On mount, hydrate every form from the server profile; server nav prefs
+  // win over the localStorage defaults when present.
   useEffect(() => {
     getMe()
       .then((user) => {
@@ -72,6 +82,8 @@ export function SettingsPage() {
       })
   }, [])
 
+  // File picker handler: reject images over 2 MB, otherwise read as a data
+  // URL and show it in the avatar preview.
   function onAvatarSelected(file: File) {
     if (file.size > 2 * 1024 * 1024) {
       setProfileStatus('error')
@@ -85,6 +97,8 @@ export function SettingsPage() {
     reader.readAsDataURL(file)
   }
 
+  // Persist display name + avatar via updateProfile(), then keep the returned
+  // user as the source of truth.
   async function handleSaveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setProfileStatus('saving')
@@ -102,6 +116,8 @@ export function SettingsPage() {
     }
   }
 
+  // Nav preference handlers: update React state AND mirror into localStorage
+  // (via setNavStyle / setNavCollapsed) so the layout reads it immediately.
   function handleNavStyleChange(style: NavStyle) {
     setNavStyleState(style)
     setNavStyle(style)
@@ -112,6 +128,8 @@ export function SettingsPage() {
     setNavCollapsed(collapsed)
   }
 
+  // Change-password flow: simple client-side validation (min length, match),
+  // then calls the API and clears the pw fields on success.
   async function handleChangePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (newPassword.length < 8) {
@@ -138,6 +156,7 @@ export function SettingsPage() {
     }
   }
 
+  // Sign out: revoke the server session, clear local auth state, hard-redirect.
   async function handleSignOut() {
     try {
       await logout()

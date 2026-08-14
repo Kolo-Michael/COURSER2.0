@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import '../../models/course.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+/// Reusable course summary card: cached thumbnail on top, then the title,
+/// short description, rating and duration. Tapping opens the course detail
+/// screen (`/course/:id`).
 class CourseCard extends StatelessWidget {
   final Course course;
 
@@ -20,6 +23,7 @@ class CourseCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Thumbnail, or a grey placeholder when the course has none.
             Expanded(
               child: course.thumbnailUrl != null
                   ? CachedNetworkImage(

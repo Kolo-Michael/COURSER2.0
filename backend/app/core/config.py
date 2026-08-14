@@ -1,17 +1,32 @@
+"""Application configuration: loads .env / .env.local files and exposes
+runtime settings (secrets, token lifetimes, DB URL, security constants).
+
+`Settings` reads values from the process environment at import time and is
+cached by `get_settings` so all modules share one settings object.
+"""
+
 import os
-from functools import lru_cache
+from functools import lru_cache  # memoizes get_settings()
 from pathlib import Path
+# URL utilities used to normalize the DATABASE_URL (async driver + query params).
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
 def _load_env_file(path: Path, override: bool = False) -> None:
+    """Read a dotenv-style file into os.environ.
+
+    `override=False` uses setdefault (file can't clobber already-set vars,
+    e.g. real env vars). `override=True` force-writes so .env.local wins.
+    """
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
         value = line.strip()
+        # Skip blank lines, comments, and malformed lines without '='.
         if not value or value.startswith("#") or "=" not in value:
             continue
         key, raw = value.split("=", 1)
+        # Strip surrounding whitespace and one layer of quotes.
         clean = raw.strip().strip('"').strip("'")
         if override:
             os.environ[key.strip()] = clean
@@ -27,6 +42,13 @@ def load_env_file() -> None:
 
 
 def normalize_database_url(url: str) -> str:
+    """Make a DATABASE_URL usable by async SQLAlchemy.
+
+    For Postgres: swap the sync driver prefix for asyncpg. SQLite URLs pass
+    through untouched because urlsplit would mangle their single-slash path.
+    Also strips `sslmode`/`channel_binding` query params that asyncpg can
+    reject (SSL is instead handled via connect_args).
+    """
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
@@ -47,19 +69,25 @@ def normalize_database_url(url: str) -> str:
 
 
 def database_requires_ssl(url: str) -> bool:
+    """True when the DATABASE_URL explicitly wants SSL (Neon does)."""
     raw_url = os.getenv("DATABASE_URL", url)
     return "sslmode=require" in raw_url or "neon.tech" in raw_url
 
 
+# Load env files at import time so Settings below sees the final values.
 load_env_file()
 
 
 @lru_cache()
 def get_settings():
+    """Lazily build and cache the Settings object (single-load pattern)."""
     return Settings()
 
 
 class Settings:
+    """Runtime configuration container — every field is read from env with
+    a sensible development default."""
+
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
     # Short-lived access token. Frontend reads nothing from it; the backend

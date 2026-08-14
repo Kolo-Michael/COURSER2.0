@@ -1,8 +1,14 @@
+// ─── VerifyCodeForm.tsx : step 2 of the password-reset flow ─────────────
+// Six individual digit inputs that auto-advance/rewind, accept pasted
+// codes, verify against the backend, and stage the verified email + code
+// in sessionStorage for the reset-password step. Also offers a 60s
+// cooldown resend of the code.
 import type { FormEvent } from 'react'
 import { useState, useEffect } from 'react'
 import { verifyCode, forgotPassword } from '@/api/auth'
 import { useNavigate } from 'react-router-dom'
 
+/** Step 2: enter the emailed 6-digit code, then move on to resetting. */
 export function VerifyCodeForm() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)

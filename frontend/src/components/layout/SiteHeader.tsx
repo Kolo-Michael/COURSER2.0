@@ -1,7 +1,12 @@
+// ─── SiteHeader.tsx : sticky marketing header ───────────────────────────
+// Brand link, primary nav (Home / Courses), theme toggle, and Login /
+// Sign-up actions. Desktop shows nav inline; a hamburger toggles the
+// mobile-only dropdown panel.
 import { Link, NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
+/** Shared nav-link styling: active route is filled, others are subtle. */
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
     'rounded-md px-3 py-2 text-sm font-semibold transition',
@@ -10,7 +15,9 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
       : 'text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800',
   ].join(' ')
 
+/** Frosted sticky header for the public site, with a mobile menu. */
 export function SiteHeader() {
+  // open: controls the mobile dropdown menu (hidden on md+ screens).
   const [open, setOpen] = useState(false)
 
   return (

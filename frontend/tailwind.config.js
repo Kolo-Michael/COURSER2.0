@@ -1,3 +1,7 @@
+// ─── tailwind.config.js : design tokens ─────────────────────────────────
+// Brand colors (primary blue / accent orange) with adjusted dark-mode
+// variants, the `class`-based dark mode, and content globs so Tailwind
+// scans the whole app. No custom animations are defined.
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',

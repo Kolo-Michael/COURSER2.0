@@ -2,6 +2,9 @@
 
 > **Keep this file in sync.** Whenever a feature is added or a subsystem changes,
 > update the relevant section below and add a dated note to `AGENTS.md`.
+>
+> For a feature-by-feature walkthrough sorted by complexity (easy → deep),
+> see `FEATURES.md`.
 
 COURSER is a learning platform with three codebases sharing one FastAPI backend:
 
@@ -41,7 +44,8 @@ COURSER is a learning platform with three codebases sharing one FastAPI backend:
   returns `undefined` on 204).
 - `src/api/auth.ts` — login/logout/me/profile/change-password.
 - `src/api/courses.ts` — catalog, course detail (with per-lesson progress),
-  enrollments, enroll, restart, complete/update lesson progress.
+  enrollments, enroll, restart, complete/update lesson progress, `askCora`
+  (AI tutor), `getCourseConversation` (chat history).
 - `src/api/streak.ts` — streak + restore-day.
 
 ### Pages & layout
@@ -49,11 +53,33 @@ COURSER is a learning platform with three codebases sharing one FastAPI backend:
   **sidebar** (desktop-collapsible to icon-only; mobile hamburger overlay) and
   **floating** nav (FAB bottom-left with glass panel). Streak + Settings gear in
   the top bar.
+ - `src/pages/DashboardPage.tsx` — real stats from enrollments: enrolled,
+   completed, lessons done, avg progress; continue-learning cards with restart.
+   Also surfaces the `CourseWorkspacePanel` for the learner's most-advanced
+   in-progress enrollment (full course detail fetched on demand), so the
+   lesson reader + Cora stay usable directly from the dashboard; injects a
+   "Course workspace" sidebar entry pointing at the last-open course.
+  - `src/components/course/CourseWorkspacePanel.tsx` (+ `lessonNotes.tsx`) —
+    the shared lesson workspace (rendered by `CourseDetailPage` and embedded on
+    the dashboard). Reading-first layout: a one-module **focus view** stacked
+    above the lesson — only the module containing the active lesson is shown
+    (heading "Module N of M" + title + its lessons), with **Previous module /
+    Next module** controls; lesson prev/next are scoped within the module and
+    the reading pane offers "Next module" when the lesson list is exhausted.
+    The module banner is `sticky top-0`; `LessonNotes` (`parseNotes` →
+    `NoteBody`/`LessonNotes` turns `##`/`-`/`*` text into sections with Key
+    takeaways / Check your understanding callouts), lesson-completion chip +
+    "Lesson X of Y" + mark-complete (updates local + enrollment totals),
+    personal notes in localStorage, and the Cora Q&A sidebar — `lg:sticky`
+    pinned to the right of the lesson, fixed-height with a scrollable
+    transcript + always-visible input so it stays put while the learner
+    scrolls. Restores the user's persisted Cora conversation history on mount.
+ - `src/auth/course.ts` — last-course slug tracker (localStorage) so the
+   dashboard can surface a "Continue where you left off" workspace entry.
+ - `src/pages/CourseDetailPage.tsx` — course header card (enroll/restart/progress),
+   then delegates the lesson workspace to `CourseWorkspacePanel`.
 - `src/pages/DashboardPage.tsx` — real stats from enrollments: enrolled,
   completed, lessons done, avg progress; continue-learning cards with restart.
-- `src/pages/CourseDetailPage.tsx` — lesson list + reader (transcript), video
-  player or "Video not yet available" placeholder, mark-complete, restart,
-  per-course notes in localStorage.
 - `src/pages/SettingsPage.tsx` — categorized settings: Profile (avatar upload),
   Navigation (sidebar vs floating + collapsed default), Security (change
   password), Account (read-only + sign out).
@@ -75,9 +101,14 @@ COURSER is a learning platform with three codebases sharing one FastAPI backend:
 - `app/models/` — `user.py` (User incl. avatar_url, nav_style, nav_collapsed),
   `course.py` (Course, Module, Lesson, Enrollment, **LessonProgress**).
 - `app/api/` — `auth.py` (signup/login/logout/me/change-password),
-  `courses.py` (catalog, enrollments, enroll, restart),
+  `courses.py` (catalog, enrollments, enroll, restart, **Cora Q&A**),
   `lessons.py` (per-user progress persistence + course progress recompute),
   `users.py`, `admin.py`, `super_admin.py`.
+- `app/services/` — `ai_service.py` (retrieval-augmented course Q&A):
+  lesson notes are scored lexically against the question, top chunks are
+  injected into an OpenAI-compatible `/chat/completions` prompt, and every
+  turn is persisted on a per-(user, course) `Conversation`. Degrades to a
+  canned reply when `OPENAI_API_KEY` is unset.
 - `app/schemas/` — Pydantic request/response models.
 
 ### Data layer
@@ -104,6 +135,17 @@ COURSER is a learning platform with three codebases sharing one FastAPI backend:
 - `POST /auth/change-password` — verifies current bcrypt hash, rehashes, resets
   lockout counters.
 
+### Cora AI tutor
+- `GET  /courses/slug/{slug}/conversation` — the current user's chat history
+  for a course (oldest first; `[]` when no thread exists yet).
+- `POST /courses/slug/{slug}/ask` — real RAG flow (see `ai_service.py`);
+  persists the user question + assistant answer, returns just `{answer}`.
+- Models: `Conversation` (one per user+course) and `Message` (role+content
+  turns) already existed; they are created/read by `ai_service` and exposed
+  through `courses.py`.
+- Config: `OPENAI_API_KEY`, `OPENAI_BASE_URL` (default `https://api.openai.com/v1`),
+  `OPENAI_MODEL` (default `gpt-4o-mini`). `httpx` added to `requirements.txt`.
+
 ---
 
 ## Mobile app (`mobile/`)
@@ -116,3 +158,14 @@ COURSER is a learning platform with three codebases sharing one FastAPI backend:
 - `lib/app.dart` — provider wiring (`AuthState`, `CoursesState`).
 - `lib/screens/onboarding_screen.dart` — resumed onboarding, then `/login`.
 - Sends `Authorization: Bearer` tokens to the API.
+
+---
+
+## Student Problem Questionnaire (DOCX)
+
+A new research instrument for the dissertation, focused on **student problems and experiences** on the learning platform:
+
+- **File:** `Student_Problem_Questionnaire.docx`
+- **Design:** 54 questions across 10 sections (demographics, platform usage, course experience, academic support, peer interaction, assessment, motivation, accessibility, improvement suggestions, and additional comments)
+- **Research frameworks:** Self-Determination Theory, Constructive Alignment, Learner Centric Design, Accessibility in Higher Education, Student Engagement, Learning Analytics, Technology-Enhanced Learning, Social Cognitive Theory
+- **Use:** Data collection for dissertation analysis; identify patterns in student problems to inform platform improvements

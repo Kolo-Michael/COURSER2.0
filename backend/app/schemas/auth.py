@@ -1,3 +1,11 @@
+"""Pydantic request/response models for the /auth endpoints.
+
+Validation happens here at the edge (email shape, password length, role
+enum); the actual hashing/token logic lives in core.security + auth_service.
+"""
+
+# BaseModel = Pydantic validation; EmailStr = email-format check;
+# Field = per-field constraints; Literal = role enum restricted to 3 values.
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Literal
 from uuid import UUID
@@ -5,12 +13,14 @@ from datetime import datetime
 
 
 class UserBase(BaseModel):
+    """Shared user fields used by both request and response models."""
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr
     full_name: Optional[str] = Field(default=None, max_length=100)
     role: Literal["student", "admin", "super_admin"] = "student"
 
 class UserCreate(UserBase):
+    """Request body for POST /auth/signup and /auth/register."""
     # Password strength is enforced by auth_service via validation, plus
     # the frontend form. Server-side length floor of 8 chars here.
     password: str = Field(min_length=8, max_length=128)
@@ -26,6 +36,7 @@ class AdminCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    """Optional-field body for admin edits of a user (currently unused)."""
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
@@ -35,6 +46,7 @@ class UserUpdate(BaseModel):
 class ProfileUpdate(BaseModel):
     """Body for PATCH /auth/me (self-service profile & settings update)."""
     full_name: Optional[str] = Field(default=None, max_length=100)
+    # avatar_url may hold a base64 data URL, hence the generous size limit.
     avatar_url: Optional[str] = Field(default=None, max_length=20000)
     nav_style: Optional[Literal["sidebar", "floating"]] = None
     nav_collapsed: Optional[bool] = None
@@ -47,6 +59,7 @@ class ChangePasswordRequest(BaseModel):
 
 
 class UserResponse(UserBase):
+    """User JSON returned to clients (never includes the password hash)."""
     id: UUID
     is_active: bool
     is_verified: bool
@@ -58,10 +71,11 @@ class UserResponse(UserBase):
     last_login: Optional[datetime]
 
     class Config:
-        from_attributes = True
+        from_attributes = True  # build directly from SQLAlchemy model attrs
 
 
 class LoginRequest(BaseModel):
+    """Body for POST /auth/login. `remember_me` extends the session lifetime."""
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
     remember_me: bool = False
@@ -93,15 +107,18 @@ class TokenResponse(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
+    """Body for POST /auth/forgot-password (requests a reset code)."""
     email: EmailStr
 
 
 class VerifyCodeRequest(BaseModel):
+    """Body for POST /auth/verify-code (confirms a reset code)."""
     email: EmailStr
     code: str = Field(min_length=6, max_length=6)
 
 
 class ResetPasswordRequest(BaseModel):
+    """Body for POST /auth/reset-password (verified code + new password)."""
     email: EmailStr
     code: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=8, max_length=128)

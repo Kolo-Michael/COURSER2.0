@@ -1,11 +1,22 @@
+"""Course-domain SQLAlchemy models.
+
+Hierarchy: Category → Course → Module → Lesson. Side tables track
+`Enrollment` (who is taking a course, with aggregate progress) and
+`LessonProgress` (per-user progress on a single lesson).
+"""
+
 import uuid
 from datetime import datetime
+# SA_UUID is the generic SQLAlchemy UUID type — works on both Postgres and
+# SQLite so local dev and production share one model set.
 from sqlalchemy import Column, String, Text, Float, Boolean, DateTime, ForeignKey, Integer, UUID as SA_UUID, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
 class Category(Base):
+    """Top-level grouping for courses (e.g. "Web Development")."""
+
     __tablename__ = "categories"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -19,6 +30,8 @@ class Category(Base):
 
 
 class Course(Base):
+    """A learning course. Published/featured flags control catalog visibility."""
+
     __tablename__ = "courses"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -39,11 +52,14 @@ class Course(Base):
 
     category = relationship("Category", back_populates="courses")
     instructor = relationship("User", back_populates="courses")
+    # Deterministic ordering by position so lesson navigation is predictable.
     modules = relationship("Module", back_populates="course", order_by="Module.order")
     enrollments = relationship("Enrollment", back_populates="course")
 
 
 class Module(Base):
+    """A section of a course that groups several lessons."""
+
     __tablename__ = "modules"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -58,6 +74,8 @@ class Module(Base):
 
 
 class Lesson(Base):
+    """A single lesson with content and an optional video URL."""
+
     __tablename__ = "lessons"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -74,6 +92,9 @@ class Lesson(Base):
 
 
 class Enrollment(Base):
+    """A user taking a course. `progress` is the aggregate (0–100) kept in
+    sync by the lessons API."""
+
     __tablename__ = "enrollments"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

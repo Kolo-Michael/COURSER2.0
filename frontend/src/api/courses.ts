@@ -1,5 +1,9 @@
+// ─── courses.ts : catalog, enrollment & lesson progress API ─────────────
+// Typed helpers for the course catalog, categories, user enrollments,
+// per-lesson progress, the Cora tutor ask endpoint, and newsletter signup.
 import { apiRequest } from './client'
 
+/** Category a course belongs to (optional on courses). */
 export type ApiCategory = {
   id: string
   name: string
@@ -9,6 +13,8 @@ export type ApiCategory = {
   created_at: string
 }
 
+/** A single lesson; `progress` / `is_completed` are attached when a
+ *  logged-in user's per-lesson state exists. */
 export type ApiLesson = {
   id: string
   module_id: string
@@ -80,18 +86,22 @@ export type CreateCourseModule = {
   lessons: CreateCourseLesson[]
 }
 
+/** GET /api/courses — only published courses for the public catalog. */
 export function listCourses() {
   return apiRequest<ApiCourse[]>('/api/courses?published=true')
 }
 
+/** GET /api/courses/categories — filter chips on the catalog page. */
 export function listCategories() {
   return apiRequest<ApiCategory[]>('/api/courses/categories')
 }
 
+/** GET /api/courses/slug/:slug — detail incl. modules/lessons + progress. */
 export function getCourseBySlug(slug: string) {
   return apiRequest<ApiCourse>(`/api/courses/slug/${slug}`)
 }
 
+/** POST /api/courses — admin: create a course (optionally with modules). */
 export function createCourse(payload: CreateCoursePayload) {
   return apiRequest<ApiCourse>('/api/courses', {
     method: 'POST',
@@ -134,44 +144,90 @@ export type ApiLessonProgress = {
 
 export type AskResponse = {
   answer: string
+  conversation_id: string
 }
 
+/** POST /api/courses/slug/:slug/enroll — enroll in a course by slug. */
 export function enrollInCourse(slug: string) {
   return apiRequest<ApiEnrollment>(`/api/courses/slug/${slug}/enroll`, {
     method: 'POST',
   })
 }
 
+/** GET /api/courses/enrollments/me — current user's courses + progress. */
 export function listMyEnrollments() {
   return apiRequest<ApiEnrollmentDetail[]>('/api/courses/enrollments/me')
 }
 
+/** POST /api/courses/slug/:slug/restart — wipe progress, start fresh. */
 export function restartCourse(slug: string) {
   return apiRequest<ApiEnrollment>(`/api/courses/slug/${slug}/restart`, {
     method: 'POST',
   })
 }
 
+/** POST /api/lessons/:id/complete — mark a lesson finished (100%). */
 export function completeLesson(lessonId: string) {
   return apiRequest<ApiLesson & ApiLessonProgress>(`/api/lessons/${lessonId}/complete`, {
     method: 'POST',
   })
 }
 
+/** PATCH /api/lessons/:id/progress — persist 0-100 progress + quiz score. */
 export function updateLessonProgress(lessonId: string, progress: number, quizScore?: number) {
   return apiRequest<ApiLesson & ApiLessonProgress>(`/api/lessons/${lessonId}/progress`, {
     method: 'PATCH',
+    // quiz_score is only sent when the caller provides it.
     body: JSON.stringify({ progress, ...(quizScore !== undefined ? { quiz_score: quizScore } : {}) }),
   })
 }
 
-export function askCora(slug: string, question: string) {
+/** POST /api/courses/slug/:slug/ask — ask Cora about this course.
+ * `conversationId` is optional: omit it to start a new chat, or pass one
+ * to continue that conversation. */
+export function askCora(slug: string, question: string, conversationId?: string | null) {
   return apiRequest<AskResponse>(`/api/courses/slug/${slug}/ask`, {
     method: 'POST',
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, ...(conversationId ? { conversation_id: conversationId } : {}) }),
   })
 }
 
+/** One persisted chat turn (user or assistant) on a course conversation. */
+export type ApiChatMessage = {
+  id: string
+  conversation_id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
+/** A chat-thread row shown in the Cora sidebar chat list. */
+export type ApiConversationSummary = {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  message_count: number
+}
+
+/** GET /api/courses/slug/:slug/conversations — this user's chat list. */
+export function listCourseConversations(slug: string) {
+  return apiRequest<ApiConversationSummary[]>(`/api/courses/slug/${slug}/conversations`)
+}
+
+/** GET /api/courses/slug/:slug/conversation/:id — one chat's full history. */
+export function getCourseConversation(slug: string, conversationId: string) {
+  return apiRequest<ApiChatMessage[]>(`/api/courses/slug/${slug}/conversation/${conversationId}`)
+}
+
+/** DELETE /api/courses/slug/:slug/conversation/:id — remove a chat. */
+export function deleteCourseConversation(slug: string, conversationId: string) {
+  return apiRequest<void>(`/api/courses/slug/${slug}/conversation/${conversationId}`, {
+    method: 'DELETE',
+  })
+}
+
+/** POST /api/newsletter/subscribe — footer signup form. */
 export function subscribeNewsletter(email: string) {
   return apiRequest<{ ok: boolean; message?: string }>('/api/newsletter/subscribe', {
     method: 'POST',

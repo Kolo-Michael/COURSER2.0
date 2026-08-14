@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../state/auth_state.dart';
 import '../theme/app_theme.dart';
 
+/// ─── Login ───
+/// Email/password sign-in form. Delegates the actual authentication to
+/// `AuthState.login`, supports a "remember me" preference, and navigates to
+/// `/home` on success; failures surface as a SnackBar.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -25,6 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  /// Submits the credentials through the auth provider; disables the button
+  /// while in flight and shows a SnackBar if the backend rejects them.
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
@@ -57,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
+              // Brand icon tile with a soft glow.
               Container(
                 width: 72,
                 height: 72,

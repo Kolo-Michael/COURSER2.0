@@ -1,9 +1,14 @@
+// ─── SignupForm.tsx : new-account registration ──────────────────────────
+// Creates a student account (username/email/password). The backend sets
+// the auth cookies in the same response, so after signup the local
+// session is restored and the new user is routed to their dashboard.
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { signup } from '@/api/auth'
 import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 
+/** Registration form: submits credentials, then logs the user straight in. */
 export function SignupForm() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)

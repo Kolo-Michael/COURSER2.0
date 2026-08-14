@@ -2,6 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+/// ─── App configuration ───
+/// Central place for environment-aware settings. Picks the backend base URL
+/// between production (Render) and local development (emulator / simulator /
+/// physical device over Wi-Fi), plus global limits like the idle sign-out
+/// timeout and monthly streak-restore budget.
 class Config {
   static const String appName = 'COURSER';
 
@@ -20,6 +25,10 @@ class Config {
   static const String _localhost = 'http://127.0.0.1:8000/api';
   static const String _lanApiBaseUrl = 'http://192.168.1.192:8000/api';
 
+  /// Resolves the backend URL for the current build/runtime. A
+  /// `--dart-define=COURSER_API_URL` override wins over everything; otherwise
+  /// debug builds pick a local endpoint by platform and release builds use
+  /// the production Render host.
   static String get apiBaseUrl {
     const localOverride = String.fromEnvironment('COURSER_API_URL');
     if (localOverride.isNotEmpty) return localOverride;
@@ -41,6 +50,7 @@ class Config {
     return _prodApiBaseUrl;
   }
 
+  /// True for debug/profile builds (i.e. not `dart.vm.product` release mode).
   static bool get _isDevelopment {
     return !const bool.fromEnvironment('dart.vm.product');
   }

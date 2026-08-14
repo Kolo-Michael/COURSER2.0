@@ -1,19 +1,26 @@
+// ─── SiteFooter.tsx : marketing footer with newsletter form ─────────────
+// Dark footer shown across the public pages: brand blurb, link columns
+// (Product / Resources / Contact), and a newsletter subscribe form with
+// its own idle → sending → ok/error status state.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { subscribeNewsletter } from '@/api/courses'
 
+/** Static "Product" column links. */
 const productLinks = [
   { label: 'Courses', to: '/courses' },
   { label: 'Create account', to: '/auth?mode=signup' },
   { label: 'Sign in', to: '/auth?mode=login' },
 ]
 
+/** Static "Resources" column links. */
 const resourceLinks = [
   { label: 'Learning tracks', to: '/courses' },
   { label: 'AI course builder', to: '/courses' },
   { label: 'Browse catalog', to: '/courses' },
 ]
 
+/** Static social icon row (placeholders for now). */
 const socialLinks = [
   { label: 'Twitter', icon: 'fa-brands fa-x-twitter', href: '#' },
   { label: 'GitHub', icon: 'fa-brands fa-github', href: '#' },
@@ -21,9 +28,11 @@ const socialLinks = [
   { label: 'YouTube', icon: 'fa-brands fa-youtube', href: '#' },
 ]
 
+/** Marketing footer; handles newsletter subscription inline. */
 export function SiteFooter() {
   const year = new Date().getFullYear()
 
+  // Newsletter form state — 'status' drives the button label + inline feedback.
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
 

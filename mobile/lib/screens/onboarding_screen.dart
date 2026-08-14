@@ -4,6 +4,11 @@ import '../core/config.dart';
 import '../core/storage.dart';
 import '../theme/app_theme.dart';
 
+/// ─── Onboarding ───
+/// Multi-page welcome flow shown to new (non-logged-in) users before the auth
+/// pages: welcome → interests → goals → streak preview. All progress (page
+/// index + choices) is persisted so an interrupted session resumes exactly
+/// where it left off.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -18,6 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _goal;
   late final SecureStore _store;
 
+  // Total number of onboarding pages.
   static const _pages = 4;
 
   @override
@@ -34,12 +40,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final interests = await _store.readOnboardingInterests();
     final goal = await _store.readOnboardingGoal();
     if (!mounted) return;
+    // Clamp the restored page so it can't point past the last page.
     final restored = page.clamp(0, _pages - 1);
     setState(() {
       _page = restored;
       _interests.addAll(interests);
       _goal = goal;
     });
+    // Snap the PageController to the restored page after the first frame so
+    // the new PageView is already laid out (jumpToPage before layout throws).
     if (restored > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _controller.jumpToPage(restored);
@@ -47,6 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  /// Persists the current page/choices; called after every change.
   void _saveProgress() {
     _store.saveOnboardingProgress(
       page: _page,
@@ -55,6 +65,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  /// Adds/removes an interest chip and immediately persists the selection.
   void _toggleInterest(String name) {
     setState(() {
       _interests.contains(name)
@@ -64,6 +75,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _saveProgress();
   }
 
+  /// Marks the chosen goal and persists it.
   void _selectGoal(String goal) {
     setState(() => _goal = goal);
     _saveProgress();
@@ -75,11 +87,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  /// Ends onboarding toward the auth page. Progress is deliberately kept so
+  /// returning users (before they actually create an account) resume here.
   void _finish() {
     _saveProgress();
     context.go('/login');
   }
 
+  /// Advances to the next page, or finishes when on the last page.
   void _next() {
     if (_page < _pages - 1) {
       _controller.nextPage(
@@ -155,6 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
+/// Row of animated dots indicating the current onboarding page.
 class _PageDots extends StatelessWidget {
   final int count;
   final int current;
@@ -169,6 +185,7 @@ class _PageDots extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           margin: const EdgeInsets.only(right: 6),
+          // Active dot stretches into a pill; inactive ones are small circles.
           width: active ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
@@ -181,6 +198,8 @@ class _PageDots extends StatelessWidget {
   }
 }
 
+/// Shared layout scaffolding for each onboarding page: gradient icon tile,
+/// heading text, subtitle, and an optional custom body widget.
 class _PageShell extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -239,6 +258,7 @@ class _PageShell extends StatelessWidget {
   }
 }
 
+/// Page 1 — welcome message and streak pitch.
 class _WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -275,12 +295,14 @@ class _WelcomePage extends StatelessWidget {
   }
 }
 
+/// Page 2 — topic interest chips. Multi-select, restored from storage.
 class _InterestsPage extends StatelessWidget {
   final Set<String> interests;
   final ValueChanged<String> onToggle;
 
   const _InterestsPage({required this.interests, required this.onToggle});
 
+  // Icon + label pairs offered as selectable chips.
   static const _options = [
     ('🧑‍💻', 'Web development'),
     ('📊', 'Data & analytics'),
@@ -338,12 +360,14 @@ class _InterestsPage extends StatelessWidget {
   }
 }
 
+/// Page 3 — single-select goal cards. The chosen goal drives content ranking.
 class _GoalsPage extends StatelessWidget {
   final String? selected;
   final ValueChanged<String> onSelect;
 
   const _GoalsPage({required this.selected, required this.onSelect});
 
+  // Icon + label pairs offered as goals.
   static const _goals = [
     ('💼', 'Level up my career'),
     ('🎯', 'Prepare for an exam'),
@@ -404,6 +428,7 @@ class _GoalsPage extends StatelessWidget {
   }
 }
 
+/// Page 4 — explains the daily streak and the monthly restore budget.
 class _StreakPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

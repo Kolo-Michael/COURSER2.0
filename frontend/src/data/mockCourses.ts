@@ -1,3 +1,6 @@
+// ─── mockCourses.ts : static catalog fallback data ──────────────────────
+// Hardcoded courses + category chips used where the live API is not wired
+// up (or is still loading) so the catalog UI can render immediately.
 export type MockCourse = {
   id: string
   slug: string
@@ -11,6 +14,7 @@ export type MockCourse = {
   isFeatured?: boolean
 }
 
+/** Sample courses rendering on the catalog when mock data is used. */
 export const mockCourses: MockCourse[] = [
   {
     id: '1',
@@ -48,6 +52,7 @@ export const mockCourses: MockCourse[] = [
   },
 ]
 
+/** Category filter chips (readonly literal, so TS infers exact ids). */
 export const mockCategories = [
   { id: 'all', label: 'All topics', icon: 'fa-solid fa-layer-group' },
   { id: 'AI & ML', label: 'AI & ML', icon: 'fa-solid fa-robot' },

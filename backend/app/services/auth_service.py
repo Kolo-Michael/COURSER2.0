@@ -14,10 +14,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete  # select for reads, delete for token cleanup
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import settings  # lockout/expiry constants
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -40,6 +40,21 @@ def _utcnow_naive() -> datetime:
     `datetime` for every comparison (and for values being written to
     naive columns) avoids that mismatch."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _to_naive_utc(value: Optional[datetime]) -> Optional[datetime]:
+    """Normalize a DB-read datetime to naive UTC.
+
+    Neon's `timestamptz` columns come back with `tzinfo=utc`, while SQLite
+    returns naive values. Comparisons in this module use naive UTC
+    (`_utcnow_naive()`), so strip the tzinfo (after converting to UTC) from
+    anything read from the database — otherwise `expires_at <= now` etc.
+    raise `TypeError` and surface as a 500."""
+    if value is None:
+        return None
+    if value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
 
 
 async def create_user(
@@ -82,7 +97,8 @@ async def authenticate_user(
     now = _utcnow_naive()
 
     # Lockout check — short-circuits before bcrypt even runs.
-    if user.locked_until and user.locked_until > now:
+    locked_until = _to_naive_utc(user.locked_until)
+    if locked_until and locked_until > now:
         return None
 
     if not verify_password(password, user.hashed_password):
@@ -168,14 +184,19 @@ async def rotate_refresh_token(
     if session is None:
         return None
 
+    # Calculate the inactivity deadline once so both checks below compare
+# against the same instant.
     now = _utcnow_naive()
-    if session.expires_at <= now:
+    expires_at = _to_naive_utc(session.expires_at)
+    last_used = _to_naive_utc(session.last_used)
+    created_at = _to_naive_utc(session.created_at)
+    if expires_at <= now:
         return None
 
     # Inactivity gate: a session that hasn't been touched (rotated / used)
     # within INACTIVITY_TIMEOUT_MINUTES is treated as expired. This makes
     # authentication inactivity-based on top of the fixed expiry.
-    if now - session.last_used > timedelta(minutes=settings.INACTIVITY_TIMEOUT_MINUTES):
+    if now - last_used > timedelta(minutes=settings.INACTIVITY_TIMEOUT_MINUTES):
         return None
 
     user_result = await db.execute(select(User).where(User.id == session.user_id))
@@ -184,8 +205,11 @@ async def rotate_refresh_token(
         return None
 
     # Preserve the original lifetime (e.g. 30d for remember-me, 7d default).
-    lifetime = session.expires_at - session.created_at
+    lifetime = expires_at - created_at
     if lifetime <= timedelta(0):
+        # Degenerate rows (created and expired at the same time) fall back
+        # to the default refresh lifetime rather than minting an already
+        # dead session.
         lifetime = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     new_expires_at = now + lifetime
 
@@ -223,16 +247,19 @@ async def revoke_session(db: AsyncSession, refresh_token: str) -> bool:
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    """Look up a single user by exact email match, or None."""
     result = await db.execute(select(User).where(User.email == email))
     return result.scalar_one_or_none()
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
+    """Look up a single user by primary key, or None."""
     result = await db.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
 
 
 async def get_session_by_token(db: AsyncSession, refresh_token: str) -> Optional[UserSession]:
+    """Return a non-revoked, not-yet-expired session row for a token."""
     result = await db.execute(
         select(UserSession).where(
             UserSession.refresh_token == refresh_token,

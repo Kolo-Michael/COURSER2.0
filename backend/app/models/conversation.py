@@ -1,3 +1,9 @@
+"""Conversation models for the (future) AI tutor chat feature.
+
+`Conversation` groups a user's chats per course; `Message` holds each turn
+(user or assistant). Neither table is currently wired to a live endpoint.
+"""
+
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, UUID as SA_UUID
@@ -6,6 +12,8 @@ from app.core.database import Base
 
 
 class Conversation(Base):
+    """A chat thread. Belongs to a user, optionally scoped to one course."""
+
     __tablename__ = "conversations"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -16,10 +24,20 @@ class Conversation(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="conversations")
-    messages = relationship("Message", back_populates="conversation", order_by="Message.created_at")
+    # Order messages oldest→newest so rendering the thread is trivial.
+    # cascade="all, delete-orphan" removes the messages when the conversation
+    # row is deleted (chat delete must clean up its turns too).
+    messages = relationship(
+        "Message",
+        back_populates="conversation",
+        order_by="Message.created_at",
+        cascade="all, delete-orphan",
+    )
 
 
 class Message(Base):
+    """One chat turn inside a Conversation. `role` is 'user' or 'assistant'."""
+
     __tablename__ = "messages"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

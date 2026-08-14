@@ -12,10 +12,11 @@ import logging
 
 from fastapi import APIRouter
 
-from app.schemas.course import NewsletterSubscribe
+from app.schemas.course import NewsletterSubscribe  # Pydantic-validates the email
 
 router = APIRouter()
 
+# Logger with a namespaced name so it's easy to filter in log shipping.
 logger = logging.getLogger("courser.newsletter")
 
 

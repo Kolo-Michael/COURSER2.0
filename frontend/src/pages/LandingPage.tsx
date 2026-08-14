@@ -1,7 +1,13 @@
+// ─── LandingPage: public marketing homepage ─────────────────────────────────
+// Serves the Hero, a stats strip, and a "career paths" library preview inside
+// the shared PublicShell. All content here is static demo copy; the real
+// courses/catalog live on /courses.
+
 import { Hero } from '@/components/landing/Hero'
 import { PublicShell } from '@/components/layout/PublicShell'
 import { Link } from 'react-router-dom'
 
+// Marketing numbers shown in the stats strip below the hero.
 const stats = [
   { label: 'Free courses prepared', value: '12', detail: 'Web, data, AI, mobile, DevOps' },
   { label: 'Guided lessons', value: '86', detail: 'Structured for start-today learning' },
@@ -9,12 +15,15 @@ const stats = [
 ]
 
 // Reduced palette — only blue and orange for category icons.
+// Static career-path preview cards; the lesson counts are demo numbers.
 const tracks = [
   { title: 'Frontend Developer', icon: 'fa-code', lessons: '18 lessons', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
   { title: 'Data Analyst', icon: 'fa-chart-simple', lessons: '16 lessons', color: 'bg-orange-50 text-accent dark:bg-orange-950/40 dark:text-accent-dark' },
   { title: 'AI Course Builder', icon: 'fa-brain', lessons: '14 lessons', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
 ]
 
+// LandingPage: composes the marketing sections. No data fetching — links into
+// the catalog via /courses and into the auth flow via the Hero.
 export function LandingPage() {
   return (
     <PublicShell>

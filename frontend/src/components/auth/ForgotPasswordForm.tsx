@@ -1,8 +1,13 @@
+// ─── ForgotPasswordForm.tsx : step 1 of the password-reset flow ─────────
+// Collects the user's email and requests a 6-digit reset code. The email is
+// stashed in sessionStorage for the next step (verify code), then the mode
+// query param switches to the verify-code form.
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { forgotPassword } from '@/api/auth'
 import { useNavigate } from 'react-router-dom'
 
+/** Step 1: email input -> sends reset code -> redirects to code entry. */
 export function ForgotPasswordForm() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)

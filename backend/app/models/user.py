@@ -1,3 +1,10 @@
+"""User + password-reset models.
+
+`User` carries identity, role, auth-failure bookkeeping (for lockout), and
+account settings the web Settings page writes (`avatar_url`, nav prefs).
+`PasswordResetToken` stores the 6-digit codes emailed during reset flows.
+"""
+
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Integer, UUID as SA_UUID
@@ -6,6 +13,8 @@ from app.core.database import Base
 
 
 class User(Base):
+    """A COURSER account. Role is student / admin / super_admin."""
+
     __tablename__ = "users"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -16,6 +25,7 @@ class User(Base):
     role = Column(String(20), nullable=False, default="student")
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    # Who created this account (super-admins creating admin accounts).
     created_by = Column(SA_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -34,6 +44,8 @@ class User(Base):
     nav_style = Column(String(20), nullable=False, default="sidebar")
     nav_collapsed = Column(Boolean, nullable=False, default=False)
 
+    # Self-referential FK: an admin who created this account, and the users
+    # this account created, so we can trace the admin tree.
     creator = relationship("User", remote_side=[id], back_populates="created_users")
     created_users = relationship("User", back_populates="creator")
     courses = relationship("Course", back_populates="instructor")
@@ -45,6 +57,12 @@ class User(Base):
 
 
 class PasswordResetToken(Base):
+    """A 6-digit reset code (with attempt counter) tied to one user.
+
+    `attempts` lets the API invalidate the code after too many wrong
+    guesses; `expires_at` bounds the code's lifetime to 15 minutes.
+    """
+
     __tablename__ = "password_reset_tokens"
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

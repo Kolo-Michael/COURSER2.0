@@ -1,20 +1,21 @@
-# Keep the Vercel Python Function warm and dodge cold starts.
+# Keep the Render Python API warm and dodge cold starts.
 #
-# Vercel Hobby Functions go idle and pay a cold-start cost on the next
-# request. Pinging /api/health on a schedule keeps the Python runtime warm.
-# This runs in GitHub Actions — free (unlimited on public repos) and needs
-# no third-party account.
+# Render free instances go idle after ~15 minutes and pay a cold-start
+# cost on the next request. Pinging /api/health on a schedule keeps the
+# Python runtime warm. This runs in GitHub Actions — free and needs no
+# third-party account. cron-job.org (backend/cronjob_org_setup.md) is a
+# cloud backup that runs even when this repo is inactive.
 #
 # Notes:
 #   * `schedule` uses UTC and is approximate; GitHub may delay a run under
-#     load, so treat an external monitor (README) as a backup if you still
-#     see cold starts.
+#     load, so treat cron-job.org (README) as a backup if you still see
+#     cold starts.
 #   * GitHub disables scheduled workflows after ~60 days of repo inactivity
 #     — any push to main re-enables them.
 #   * Override the URL with a repo Variable named HEALTH_URL if the app
-#     moves off its default vercel.app host.
+#     moves off its default onrender.com host.
 
-name: Keep Vercel API warm
+name: Keep Render API warm
 
 on:
   schedule:
@@ -32,6 +33,6 @@ jobs:
         env:
           HEALTH_URL: ${{ vars.HEALTH_URL }}
         run: |
-          URL="${HEALTH_URL:-https://courser2.vercel.app/api/health}"
+          URL="${HEALTH_URL:-https://courser-api-18uo.onrender.com/api/ping}"
           echo "Pinging $URL"
           curl -fsS -m 30 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" "$URL"

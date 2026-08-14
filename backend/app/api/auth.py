@@ -16,21 +16,21 @@ Differences from the previous version:
 
 from __future__ import annotations
 
-import collections
-import json
-import time
+import collections  # deque for the sliding-window rate limiter
+import json  # serializing the session-cookie payload
+import time  # monotonic clock for the rate limiter
 import uuid
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote  # URL-encode the session cookie value
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.core.database import get_db
+from app.core.config import settings  # token lifetimes / security constants
+from app.core.database import get_db  # per-request DB session dependency
 from app.core.security import (
     decode_token,
-    get_current_user_id,
+    get_current_user_id,  # resolves user UUID from the access token
     get_refresh_token,
     hash_password,
     verify_password,
@@ -48,7 +48,7 @@ from app.schemas.auth import (
     UserResponse,
     VerifyCodeRequest,
 )
-from app.services import auth_service
+from app.services import auth_service  # DB-side user/session logic
 
 router = APIRouter()
 
@@ -146,6 +146,8 @@ from slowapi.util import get_remote_address
 # `limiter._check_request_limit(...)` directly expects a Werkzeug request
 # (not a Starlette `Request`). A custom dependency gives us 429s with the
 # right shape without those issues.
+# A bare Limiter instance is created only to reuse `get_remote_address`
+# as the key function for the per-route limiters.
 limiter = Limiter(key_func=get_remote_address)
 
 
@@ -187,6 +189,7 @@ def _parse_spec(spec: str) -> tuple[int, int]:
     return count, seconds
 
 
+# Per-route limiters: (max calls, window) each keyed on the client IP.
 signup_limit = _InMemoryLimit(*_parse_spec("3/hour"))
 login_limit = _InMemoryLimit(*_parse_spec("5/minute"))
 refresh_limit = _InMemoryLimit(*_parse_spec("30/minute"))
@@ -322,6 +325,8 @@ async def refresh_token(
     """
     cookie_token = get_refresh_token(request)
     body_token = payload.refresh_token if payload else None
+    # Web clients use the HttpOnly cookie; mobile uses the JSON body. Pick
+    # whichever source is present (cookie wins if both somehow exist).
     refresh = cookie_token or body_token
     if not refresh:
         raise HTTPException(

@@ -1,3 +1,8 @@
+// ─── theme.tsx : light/dark theme context ───────────────────────────────
+// Provides the current theme plus toggle/set helpers. The choice is read
+// once from localStorage (falling back to the OS prefers-color-scheme),
+// applied as a `dark` class on <html>, persisted on every change, and
+// re-synced to system changes until the user picks an explicit theme.
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
 export type Theme = 'light' | 'dark'
@@ -12,6 +17,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 const STORAGE_KEY = 'courser.theme'
 
+/** Initial theme: saved preference, else the OS dark-mode setting. */
 function readInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'light'
 
@@ -21,6 +27,7 @@ function readInitialTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+/** Add/remove the `dark` class so Tailwind's dark: variants take effect. */
 function applyTheme(theme: Theme) {
   const root = document.documentElement
   if (theme === 'dark') {
@@ -28,9 +35,11 @@ function applyTheme(theme: Theme) {
   } else {
     root.classList.remove('dark')
   }
+  // Tell the browser which scheme the page uses (scrollbars, form controls).
   root.style.colorScheme = theme
 }
 
+/** Provides theme state and applies/persists it on every change. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => readInitialTheme())
 
@@ -62,6 +71,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
+/** Access the theme context; throws if used outside the provider. */
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext)
   if (!ctx) {

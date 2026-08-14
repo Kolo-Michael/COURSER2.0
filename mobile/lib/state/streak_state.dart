@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 import '../core/api_client.dart';
 import '../models/streak.dart';
 
+/// ─── Streak state ───
+/// ChangeNotifier for the learning-streak card: holds the current ``Streak`
+/// snapshot, tracks loading/error, and exposes the one-shot `restore` action
+/// used by the dashboard's Restore button.
 class StreakState extends ChangeNotifier {
   final ApiClient apiClient;
 
@@ -17,6 +21,7 @@ class StreakState extends ChangeNotifier {
 
   StreakState({required this.apiClient});
 
+  /// Reloads the streak snapshot from the backend.
   Future<void> fetch() async {
     _isLoading = true;
     _error = null;

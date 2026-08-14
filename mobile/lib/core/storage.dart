@@ -9,12 +9,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// countdown. Keeping JWTs here instead of `SharedPreferences` keeps them
 /// out of plain text on the device.
 class SecureStore {
+  // Android uses EncryptedSharedPreferences (backed by the Android Keystore)
+  // rather than plain SharedPreferences, which is deprecated in newer SDKs.
   static const _options = AndroidOptions(
     encryptedSharedPreferences: true,
   );
 
   static const _storage = FlutterSecureStorage(aOptions: _options);
 
+  // Stable keys for everything persisted in secure storage. Keeping them as
+  // private consts avoids typos across reads/writes.
   static const _kAccessToken = 'access_token';
   static const _kRefreshToken = 'refresh_token';
   static const _kSessionExpiresAt = 'session_expires_at';
@@ -43,6 +47,8 @@ class SecureStore {
     return DateTime.tryParse(raw)?.toUtc();
   }
 
+  /// Persists the full token set (access + refresh + optional session expiry).
+  /// The expiry is normalized to UTC ISO-8601 so it round-trips cleanly.
   Future<void> writeTokens({
     required String accessToken,
     required String refreshToken,
@@ -69,6 +75,7 @@ class SecureStore {
     return int.tryParse(raw ?? '') ?? 0;
   }
 
+  /// Reads interests back as a list; stored as a comma-separated string.
   Future<List<String>> readOnboardingInterests() async {
     final raw = await _storage.read(key: _kOnboardingInterests);
     if (raw == null || raw.isEmpty) return const [];
@@ -95,12 +102,16 @@ class SecureStore {
     }
   }
 
+  /// Wipes onboarding state after the flow is deliberately finished so a new
+  /// run starts fresh.
   Future<void> clearOnboardingProgress() async {
     await _storage.delete(key: _kOnboardingPage);
     await _storage.delete(key: _kOnboardingInterests);
     await _storage.delete(key: _kOnboardingGoal);
   }
 
+  /// Clears all auth/session data (used on logout). Onboarding state is left
+  /// untouched so the user's choices survive a sign-out.
   Future<void> clear() async {
     await _storage.delete(key: _kAccessToken);
     await _storage.delete(key: _kRefreshToken);

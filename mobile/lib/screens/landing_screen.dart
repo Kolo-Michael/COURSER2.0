@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 
+/// ─── Marketing landing page ───
+/// Long-scrolling public page (not wired into the current router) that pitches
+/// COURSER to visitors: hero with sign-in/signup CTAs, stats, a course
+/// spotlight, career tracks, and a closing call-to-action. Each section is a
+/// private widget composed through a CustomScrollView of slivers.
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
 
@@ -22,6 +27,7 @@ class LandingScreen extends StatelessWidget {
   }
 }
 
+/// Top hero: brand bar, tagline, primary CTA, and the feature row.
 class _HeroSection extends StatelessWidget {
   const _HeroSection();
 
@@ -179,6 +185,7 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
+/// The three-value feature strip shown beneath the hero CTAs.
 class _FeatureRow extends StatelessWidget {
   const _FeatureRow();
 
@@ -196,6 +203,7 @@ class _FeatureRow extends StatelessWidget {
   }
 }
 
+/// A single icon + label feature tile used inside the hero feature row.
 class _FeatureItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -246,6 +254,7 @@ class _FeatureItem extends StatelessWidget {
   }
 }
 
+/// Band of static "marketing number" stats (courses / lessons / support).
 class _StatsSection extends StatelessWidget {
   const _StatsSection();
 
@@ -292,6 +301,7 @@ class _StatsSection extends StatelessWidget {
   }
 }
 
+/// Gradient "spotlight" card featuring the AI Tutor Foundations course.
 class _SpotlightSection extends StatelessWidget {
   const _SpotlightSection();
 
@@ -410,6 +420,7 @@ class _SpotlightSection extends StatelessWidget {
   }
 }
 
+/// Bullet line (colored dot + text) used to spell out course modules.
 class _ModuleLine extends StatelessWidget {
   final Color color;
   final String text;
@@ -441,6 +452,7 @@ class _ModuleLine extends StatelessWidget {
   }
 }
 
+/// "Career paths" section that lists the static track cards.
 class _TracksSection extends StatelessWidget {
   const _TracksSection();
 
@@ -493,6 +505,7 @@ class _TracksSection extends StatelessWidget {
   }
 }
 
+/// A single career-track card (icon, title, lesson count, progress hint).
 class _TrackCard extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -552,6 +565,7 @@ class _TrackCard extends StatelessWidget {
   }
 }
 
+/// Dark closing call-to-action band with a "Get started free" button.
 class _FooterCta extends StatelessWidget {
   const _FooterCta();
 

@@ -2,6 +2,11 @@ import '../core/api_client.dart';
 import '../core/storage.dart';
 import '../models/user.dart';
 
+/// ─── Auth domain service ───
+/// Wraps the raw `ApiClient` calls plus `SecureStore` persistence for all
+/// authentication flows: auto-login from stored tokens, login, signup, token
+/// refresh, and logout. Returns typed `AuthTokens` and keeps storage and the
+/// API client's in-memory token in sync.
 class AuthService {
   final ApiClient apiClient;
   final SecureStore storage;
@@ -18,6 +23,7 @@ class AuthService {
     final refresh = await storage.readRefreshToken();
 
     if (access != null && access.isNotEmpty) {
+      // Try the stored access token first; it may still be valid.
       apiClient.setToken(access);
       try {
         final userData = await apiClient.fetchCurrentUser();
@@ -40,6 +46,7 @@ class AuthService {
     return null;
   }
 
+  /// Authenticates and persists the resulting token pair.
   Future<AuthTokens> login(
     String email,
     String password, {
@@ -59,12 +66,14 @@ class AuthService {
     return tokens;
   }
 
+  /// Creates an account and persists the auto-issued token pair.
   Future<AuthTokens> signup(
     String email,
     String firstName,
     String lastName,
     String password,
   ) async {
+    // The API requires a username; derive one deterministically from the email.
     final username = _usernameFromEmail(email);
     final fullName = '$firstName $lastName'.trim();
     final data = await apiClient.signup(email, username, fullName, password);

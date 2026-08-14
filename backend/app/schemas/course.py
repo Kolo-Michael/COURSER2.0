@@ -1,9 +1,19 @@
+"""Pydantic request/response models for the course catalog + learning flow.
+
+Each entity has a *Base model (shared fields), request models (create
+variants with nested children), and response models (add ids, timestamps,
+and computed per-user fields like lesson progress).
+"""
+
+# BaseModel = Pydantic validation; EmailStr validates the newsletter email;
+# Field constrains values; List/UUID/datetime type the nested structures.
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
 class CategoryBase(BaseModel):
+    """Shared category fields (name/slug/description/icon)."""
     name: str
     slug: str
     description: Optional[str] = None
@@ -11,6 +21,7 @@ class CategoryBase(BaseModel):
 
 
 class CategoryResponse(CategoryBase):
+    """Category as returned to clients — adds id + created_at."""
     id: UUID
     created_at: datetime
 
@@ -19,6 +30,7 @@ class CategoryResponse(CategoryBase):
 
 
 class LessonBase(BaseModel):
+    """Shared lesson fields; order defaults to 0 and is assigned later."""
     title: str
     content: Optional[str] = None
     video_url: Optional[str] = None
@@ -28,6 +40,7 @@ class LessonBase(BaseModel):
 
 
 class LessonResponse(LessonBase):
+    """Lesson plus per-user progress fields added at read time."""
     id: UUID
     module_id: UUID
     created_at: datetime
@@ -41,16 +54,19 @@ class LessonResponse(LessonBase):
 
 
 class ModuleBase(BaseModel):
+    """Shared module fields."""
     title: str
     description: Optional[str] = None
     order: int = 0
 
 
 class ModuleCreate(ModuleBase):
+    """Module request body — carries the lessons it contains."""
     lessons: List[LessonBase] = Field(default_factory=list)
 
 
 class ModuleResponse(ModuleBase):
+    """Module with id + nested lessons for the response tree."""
     id: UUID
     course_id: UUID
     created_at: datetime
@@ -61,6 +77,7 @@ class ModuleResponse(ModuleBase):
 
 
 class CourseBase(BaseModel):
+    """Shared course fields used by request and response models."""
     title: str
     slug: str
     description: Optional[str] = None
@@ -76,10 +93,12 @@ class CourseBase(BaseModel):
 
 
 class CourseCreate(CourseBase):
+    """Course request body — accepts a full module/lesson tree."""
     modules: List[ModuleCreate] = Field(default_factory=list)
 
 
 class CourseUpdate(BaseModel):
+    """Partial course update — all fields optional, only sent fields apply."""
     title: Optional[str] = None
     slug: Optional[str] = None
     description: Optional[str] = None
@@ -93,6 +112,7 @@ class CourseUpdate(BaseModel):
 
 
 class CourseResponse(CourseBase):
+    """Full course with category + nested modules/lessons."""
     id: UUID
     created_at: datetime
     updated_at: Optional[datetime]
@@ -104,6 +124,7 @@ class CourseResponse(CourseBase):
 
 
 class CourseListResponse(BaseModel):
+    """Lightweight course row for the catalog grid (no full lesson tree)."""
     id: UUID
     title: str
     slug: str
@@ -121,6 +142,7 @@ class CourseListResponse(BaseModel):
 
 
 class EnrollmentResponse(BaseModel):
+    """Enrollment row as returned to clients."""
     id: UUID
     user_id: UUID
     course_id: UUID
@@ -164,12 +186,44 @@ class EnrollmentCreate(BaseModel):
 
 
 class AskRequest(BaseModel):
-    """Body for POST /courses/{slug}/ask (the 'Ask Cora' widget)."""
+    """Body for POST /courses/{slug}/ask (the 'Ask Cora' widget).
+
+    `conversation_id` is optional: when omitted (or null) a brand-new chat
+    is started for this (user, course); when provided, the question is
+    appended to that existing chat so the learner can continue it.
+    """
     question: str = Field(min_length=1, max_length=2000)
+    conversation_id: Optional[UUID] = None
 
 
 class AskResponse(BaseModel):
+    """Reply body for the tutor — answer text plus the chat it belongs to."""
     answer: str
+    conversation_id: UUID
+
+
+class ConversationMessageResponse(BaseModel):
+    """One persisted chat turn (user or assistant)."""
+    id: UUID
+    conversation_id: UUID
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ConversationSummaryResponse(BaseModel):
+    """Lightweight conversation row for the chat-list sidebar."""
+    id: UUID
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int
+
+    class Config:
+        from_attributes = True
 
 
 class NewsletterSubscribe(BaseModel):

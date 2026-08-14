@@ -1,3 +1,7 @@
+// ─── vite.config.ts : bundler / dev-server configuration ────────────────
+// React plugin, the `@/` import-alias to src/, and a dev server that binds
+// all interfaces and proxies /api to the local FastAPI backend so auth
+// cookies stay same-origin with the Vite app in development.
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'

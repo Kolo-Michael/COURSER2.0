@@ -1,3 +1,9 @@
+"""Streak/learning-day persistence.
+
+Each row is one (user, calendar day) where the student actually learned.
+Streak math lives in `app.services.streak_service`.
+"""
+
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Boolean, UUID as SA_UUID, UniqueConstraint
@@ -15,6 +21,7 @@ class LearningDay(Base):
     """
 
     __tablename__ = "learning_days"
+    # One row per (user, day) — re-learning the same day is idempotent.
     __table_args__ = (UniqueConstraint("user_id", "day", name="uq_user_learning_day"),)
 
     id = Column(SA_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

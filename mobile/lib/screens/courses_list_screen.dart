@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../state/courses_state.dart';
 import 'components/course_card.dart';
 
+/// Stand-alone courses catalog screen (simple grid of `CourseCard`s).
+/// It is not part of the current go_router config — the catalog lives inside
+/// `HomeScreen`'s courses tab — but it remains available for linking directly
+/// to a full-scroll course list.
 class CoursesListScreen extends StatelessWidget {
   const CoursesListScreen({super.key});
 

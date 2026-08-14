@@ -1,5 +1,10 @@
+// ─── Hero.tsx : landing-page hero section ───────────────────────────────
+// Top banner of the marketing landing page: headline, CTA buttons
+// (Get started / Explore courses), a three-point feature strip, and a
+// frosted "spotlight" card teasing the flagship course.
 import { Link } from 'react-router-dom'
 
+/** Landing hero: pitch + CTAs + feature list + spotlight course card. */
 export function Hero() {
   return (
     <section

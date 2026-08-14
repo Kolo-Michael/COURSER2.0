@@ -1,21 +1,32 @@
+// ─── AdminPage: course creation workspace (admin / super_admin) ─────────────
+// Provides a long "Add a free course" form: title, summary, description,
+// category, level, duration, cover image preview, an organized outline of
+// modules->lessons, and learning-environment / mascot / publish settings.
+// On submit it slugifies the title and POSTs the assembled draft via
+// createCourse().
+
 import { createCourse, listCategories, type ApiCategory } from '@/api/courses'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { adminNav } from '@/components/layout/navItems'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+// Visual "learning environment" presets shown in the sidebar; admins pick one
+// per course. Only the id/label are used as options today.
 const environmentStyles = [
   { id: 'focus', label: 'Focus', icon: 'fa-solid fa-bullseye', tone: 'bg-blue-50 text-primary' },
   { id: 'studio', label: 'Studio', icon: 'fa-solid fa-display', tone: 'bg-stone-100 text-stone-700' },
   { id: 'guided', label: 'Guided', icon: 'fa-solid fa-route', tone: 'bg-orange-50 text-accent' },
 ]
 
+// Mascot choices for the default learning environment.
 const mascots = [
   { id: 'cora', name: 'Cora', accent: 'bg-primary' },
   { id: 'nova', name: 'Nova', accent: 'bg-accent' },
   { id: 'sage', name: 'Sage', accent: 'bg-emerald-600' },
 ]
 
+// Turn "My Cool Course!" into "my-cool-course" — the URL/fetch key for a course.
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -24,18 +35,21 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
+// Working shape of one lesson while the course is still being drafted.
 type DraftLesson = {
   title: string
   duration: string
   content: string
 }
 
+// A drafted module holds its own list of drafted lessons.
 type DraftModule = {
   title: string
   description: string
   lessons: DraftLesson[]
 }
 
+// Factory for a blank module with a single empty lesson row.
 function createDraftModule(): DraftModule {
   return {
     title: '',
@@ -45,6 +59,7 @@ function createDraftModule(): DraftModule {
 }
 
 export function AdminPage() {
+  // Form field state for the top-level course metadata.
   const [categories, setCategories] = useState<ApiCategory[]>([])
   const [title, setTitle] = useState('')
   const [summary, setSummary] = useState('')
@@ -52,14 +67,19 @@ export function AdminPage() {
   const [level, setLevel] = useState('beginner')
   const [duration, setDuration] = useState('Self-paced')
   const [categoryId, setCategoryId] = useState('')
+  // Outline builder state: modules with nested lessons.
   const [modules, setModules] = useState<DraftModule[]>([createDraftModule()])
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  // Learning environment + mascot selection.
   const [environment, setEnvironment] = useState('focus')
   const [mascot, setMascot] = useState('cora')
   const [published, setPublished] = useState(true)
+  // Submit lifecycle.
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  // Load the category list once on mount so the dropdown works.
+  // The `active` guard prevents setState after unmount.
   useEffect(() => {
     let active = true
 
@@ -81,11 +101,14 @@ export function AdminPage() {
     }
   }, [])
 
+  // Resolve the picked mascot id to its full config for the preview card.
   const selectedMascot = useMemo(
     () => mascots.find((item) => item.id === mascot) ?? mascots[0],
     [mascot],
   )
 
+  // Trim + order the draft into the API payload shape. Drops any module or
+  // lesson with an empty title, and folds the publish flag into each lesson.
   const organizedModules = useMemo(
     () =>
       modules
@@ -107,12 +130,14 @@ export function AdminPage() {
     [modules, published],
   )
 
+  // Immutably patch one field of a module at `index`.
   function updateModule(index: number, field: keyof DraftModule, value: string) {
     setModules((current) =>
       current.map((module, moduleIndex) => (moduleIndex === index ? { ...module, [field]: value } : module)),
     )
   }
 
+  // Immutably patch one field of a lesson inside a specific module.
   function updateLesson(moduleIndex: number, lessonIndex: number, field: keyof DraftLesson, value: string) {
     setModules((current) =>
       current.map((module, currentModuleIndex) =>
@@ -128,6 +153,7 @@ export function AdminPage() {
     )
   }
 
+  // Append a new blank lesson to the given module.
   function addLesson(moduleIndex: number) {
     setModules((current) =>
       current.map((module, currentModuleIndex) =>
@@ -138,6 +164,7 @@ export function AdminPage() {
     )
   }
 
+  // Remove a lesson from the given module.
   function removeLesson(moduleIndex: number, lessonIndex: number) {
     setModules((current) =>
       current.map((module, currentModuleIndex) =>
@@ -148,6 +175,8 @@ export function AdminPage() {
     )
   }
 
+  // Form submit handler: assemble the API payload from all draft state,
+  // create the course, then reset the form on success.
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaving(true)
@@ -182,6 +211,8 @@ export function AdminPage() {
     }
   }
 
+  // Live "course card" preview (right column): mirrors the final card a learner
+  // would see — free badge, environment label, cover, title/summary, mascot, outline counts.
   return (
     <DashboardLayout
       title="Admin workspace"

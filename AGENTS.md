@@ -1,8 +1,20 @@
-# Activity Log
+## Student-Focused Research Instrument
 
-> **Codebase reference:** read `CODEBASE.md` for an up-to-date map of the three
-> subprojects (web frontend / backend API / mobile app) and how they fit
-> together. Update `CODEBASE.md` whenever a feature is added.
+### New: Student Problem Questionnaire (DOCX)
+
+A new research instrument has been produced for the dissertation:
+- **File:** `Student_Problem_Questionnaire.docx`
+- **Focus:** Student problems and experiences on the learning platform
+- **Perspective:** Changed from admin-focused to student-focused — questions target student challenges, engagement, motivation, technical issues, accessibility, and satisfaction
+- **Design:** 54 questions across 10 sections (demographics, platform usage, course experience, academic support, peer interaction, assessment, motivation, accessibility, improvement suggestions, and additional comments)
+- **References:** 8 research frameworks included (Self-Determination Theory, Constructive Alignment, Learner Centric Design, Accessibility in Higher Education, Student Engagement, Learning Analytics, Technology-Enhanced Learning, Social Cognitive Theory)
+- **Use:** For data collection in the dissertation; analyze patterns in student problems to inform platform improvements
+
+## Document Creation Rule
+
+- When the user asks to **create a document** and does **not specify the format**,
+  always **ask which format they want** (e.g. Word `.docx`, PDF, Markdown, PPTX)
+  before generating it. Do not assume a default format.
 
 ## Frontend Auth / Session Cleanup
 
@@ -245,4 +257,175 @@
   textures (`.courser-bg-dots` / `-dense`) that the frosted-glass panels blur.
 - Hero overlay is now a flat `bg-primary/5` tint instead of the blue→orange
   diagonal fade.
+
+## Organized Study Notes + Completion Flow
+
+### Structured notes for every lesson (no video required)
+- `backend/seed_courses.py` — every seeded lesson (18 across 6 courses) now
+  ships with organized, readable study notes via the `LESSON_NOTES` dict
+  (keyed by lesson title). Format: `## Heading` sections, `- ` bullets,
+  paragraphs, and **bold** emphasis. Seeding is idempotent (content is
+  re-applied on every run).
+- `frontend/src/pages/CourseDetailPage.tsx` — new `LessonNotes` renderer
+  (`parseNotes`/`NoteBody`) turns the structured text into professional notes
+  with tinted "Key takeaways" (accent) and "Check your understanding"
+  (primary) boxes; tabs renamed `Transcript` → `Study notes`; per-lesson
+  status chip + lesson position + **Previous/Next lesson** navigation added so
+  learners can work through and complete the course.
+- `mobile/lib/screens/lesson_screen.dart` — new `_LessonNotes` widget parses
+  the same `##`/`-`/`**` format on Android/iOS instead of printing raw text.
+
+### Completion is measured end-to-end
+- Lesson progress (0–100) is persisted per (user, lesson) via
+  `PATCH /lessons/{id}/progress` and `POST /lessons/{id}/complete`
+  (`backend/app/api/lessons.py`); enrollment progress = lesson average
+  (`_recompute_course_progress`), surfaced as `progress_percent` on
+  `GET /courses/enrollments/me` and the course detail card.
+
+### Dashboard access for all roles
+- `frontend/src/App.tsx` — `/dashboard` now allows `student`, `admin`, and
+  `super_admin` so the "Student view" link in the admin/super-admin sidebars
+  works instead of bouncing back.
+
+## Cora AI Tutor (real RAG, wired 12 Aug 2026)
+
+- `backend/app/services/ai_service.py` — NEW. Retrieval-augmented Q&A over a
+  course's lesson notes. `retrieve_context()` ranks every published lesson
+  against the question by term overlap (lexical, no embeddings needed) and
+  returns the top 4 chunks; `generate_answer()` calls an OpenAI-compatible
+  `/chat/completions` endpoint (httpx) with the notes pinned into a system
+  prompt; `get_or_create_conversation()` / `append_message()` persist one
+  thread per (user, course). `answer_course_question()` orchestrates and
+  degrades to a canned reply when `OPENAI_API_KEY` is missing.
+- `backend/app/api/courses.py` — `ask_cora` now runs the real flow (was a
+  stub) and adds `GET /courses/slug/{slug}/conversation` for chat history.
+- `backend/app/schemas/course.py` — added `ConversationMessageResponse`.
+- `backend/requirements.txt` — added `httpx==0.28.1`.
+- Env: `OPENAI_API_KEY`, `OPENAI_BASE_URL` (default `https://api.openai.com/v1`),
+  `OPENAI_MODEL` (default `gpt-4o-mini`). Without the key the UI still works
+  (fallback answer).
+- `frontend/src/api/courses.ts` — `getCourseConversation()` +
+  `ApiChatMessage` type; the shared `CourseWorkspacePanel` (rendered by
+  `CourseDetailPage` and embedded on the dashboard) loads the saved
+  conversation on mount (signed-in) so the Cora sidebar isn't wiped on
+  reload.
+- NOTE: the `Conversation`/`Message` models already existed and were already
+  created by `init_db.py`; they're now actually used.
+
+## Commenting pass (12 Aug 2026)
+
+- All ~90 source files across `backend/`, `frontend/`, and `mobile/` received
+  explanatory comments (module headers, function/class docstrings, and line
+  comments on non-obvious logic) at the user's explicit request. Comment-only
+  edits; verified via `py_compile`, `npx tsc -b`, `flutter analyze`.
+- ⚠️ Watch-out: during that pass a sub-agent went off-script and half-extracted
+  a `CourseWorkspacePanel` + `auth/course.ts` (last-course localStorage
+  tracker) from `CourseDetailPage`, leaving the build broken (an unused local).
+  The user asked to **keep** that feature, so it was finished instead of
+  deleted: the unused `workCourse` state was dropped, the panel is now the
+  single lesson workspace used by both `CourseDetailPage` and `DashboardPage`,
+  the Cora chat history is loaded inside the panel, and the build is green.
+ - Note: `CourseDetailPage` delegates its reading flow to
+   `CourseWorkspacePanel` (see `frontend/src/components/course/`); the seeded
+   study-notes renderer lives in `lessonNotes.tsx` as `LessonNotes`/`parseNotes`.
+ - Note: if a background sub-agent is still running (watch file mtimes / `git
+   status`), it can silently rewrite these files mid-task. Stop it in your
+   terminal/IDE before committing or hand-editing the workspace pages.
+
+## Dashboard workspace + stable Cora (13 Aug 2026)
+
+ - `CourseWorkspacePanel` — the module view lives *inside* the reading-workspace
+   grid as a header bar **above the lesson** (grid is now
+   `grid-cols-1 lg:grid-cols-[1fr_320px]`): only the module containing the active
+   lesson is displayed (heading "Module N of M" + title + its lessons, with
+   **Previous module / Next module** controls), so the modules stay clearly
+   visible and reading controls sit below the active module. Lesson prev/next are
+   scoped within the current module, and the pane offers "Next module" when the
+   lesson list is exhausted. The module banner is `sticky top-0`; the Cora rail
+   is `lg:sticky` pinned to the right with a fixed-height scrollable transcript +
+   always-visible input.
+ - `DashboardPage` — embeds `CourseWorkspacePanel` for the learner's most-
+   advanced in-progress enrollment (course detail fetched on demand via
+   `getCourseBySlug`/`getLastCourseSlug`), and injects a "Course workspace"
+   sidebar entry pointing at the last-open course so the workspace is reachable
+   from every dashboard page.
+ - Cora rail — made `lg:sticky lg:top-24` and fixed-height with a scrollable
+   transcript + always-visible input, so the assistant stays pinned to the right
+   of the lesson and question-asking never scrolls out of reach.
+
+## Hidden scrollbars + fixed expanded chat (13 Aug 2026)
+
+ - `frontend/src/index.css` — app-wide scrollbar hiding (`scrollbar-width: none`,
+   `-ms-overflow-style: none`, `*::-webkit-scrollbar { display: none }`).
+   Scrolling still works; only the visible bar is removed.
+ - `frontend/src/components/course/CoraChat.tsx` — the expanded (full-screen)
+   Cora chat now locks the background page scroll while open
+   (`document.body.style.overflow = 'hidden'`, restored on close/unmount), so
+   the chat space never moves with the page.
+
+## Neon "Invalid token" / resource-loading fix (13 Aug 2026)
+
+ - Symptom: authenticated endpoints (incl. Cora `/ask`) returned errors; a
+   valid bearer token got 500 on `/api/auth/me` instead of 200/404.
+ - Root cause 1: `backend/.env.local` was replaced (by the user) with a Neon
+   `DATABASE_URL` + a **new `SECRET_KEY`** (`8b02d163...`). The running uvicorn
+   had restarted and adopted the new secret, so access-token cookies signed
+   under the OLD dev secret (in the browser) now fail `decode_token` → 401
+   "Invalid token". Fix for that: re-login (cookies are re-issued under the new
+   secret).
+ - Root cause 2 (the 500): the Neon `users` table was created before the
+   `avatar_url` / `nav_style` / `nav_collapsed` columns existed, so
+   `select(User)` (which selects all mapped columns) blew up on
+   `UndefinedColumn`. Running `python init_db.py` applies the idempotent
+   `_USER_MIGRATION_COLUMNS` ALTERs against Neon; afterwards `/auth/me` and
+   Cora `/ask` return 200. Re-run `init_db.py` whenever Neon is re-provisioned.
+ - Groq key in `.env`/`.env.local` verified live (200); backend `/api/health`
+   verified 200; DB connectivity through app config verified (12 users).
+
+## Cookie flag + refresh 401s fixed (13 Aug 2026)
+
+ - Symptom 1: `api/auth/login` returned 200 with cookies but every
+   authenticated call (`/me`, enrollments, streak) returned 401 "Not
+   authenticated". Root cause: the user's new `backend/.env.local` had dropped
+   `APP_ENV=development`, so `_cookie_secure()` returned True → cookies were
+   set `Secure; SameSite=None` — which browsers refuse to send back over plain
+   HTTP `localhost`. Fix: restored `APP_ENV=development` in `.env.local`
+   (keeps the Neon `DATABASE_URL`; only flips cookie flags to non-Secure,
+   SameSite=Lax). Backend must be restarted after env edits — `--reload` does
+   NOT watch `.env` files.
+ - Symptom 2: `POST /api/auth/refresh` returned 500. Root cause: Neon stores
+   `user_sessions` timestamps as `timestamptz` (timezone-aware), but the code
+   compared them against naive UTC `_utcnow_naive()` → `TypeError: can't
+   compare offset-naive and offset-aware datetimes`. Fix: added
+   `_to_naive_utc()` in `backend/app/services/auth_service.py` and wrapped the
+   DB-read values (`expires_at`, `last_used`, `created_at`, `locked_until`) in
+   `authenticate_user` and `rotate_refresh_token`.
+ - Frontend resilience: `frontend/src/api/client.ts` now handles 401
+   globally — on an authenticated call it POSTs `/api/auth/refresh` once
+   (single-flight) and transparently retries; if refresh fails it clears the
+   `courser_session`/`access_token`/`refresh_token` cookies and redirects to
+   `/auth`. This ends the "phantom login" loop where a stale (not-signed)
+   `courser_session` cookie kept the app calling authenticated endpoints with
+   an access token signed under an old `SECRET_KEY`. Auth endpoints whose 401
+   is a normal business result (login/signup/forgot/verify/reset) are excluded
+   from this path. `apiRequestOnce` guards so a request is only refreshed once.
+ - Verified end-to-end after fixes: login → 200, refresh → 200, `/me` → 200,
+   enrollments/me → 200, streak → 200, with `SameSite=lax` cookies over
+   http://127.0.0.1:8000.
+
+## SQLite → Neon account migration (13 Aug 2026)
+
+ - Symptom: `student@courser.com` (and `admin@courser.com`) returned 401
+   "Invalid email or password" after the backend switched to the Neon
+   DATABASE_URL. Root cause: those seed accounts lived only in the old
+   SQLite DB (`backend/courser_local.db`); the Neon `users` table never had
+   them, so login correctly rejected them.
+ - Fix: one-off migration script inserted the test accounts into Neon,
+   preserving their bcrypt hashes and original UUIDs (idempotent — skips
+   existing email/username). `superadmin@courser.com` was skipped because a
+   `superadmin` username already existed in Neon (that one uses
+   `superadmin@smarttutor.com` / `SuperAdmin123!`).
+ - `student@courser.com` password was not recoverable (bcrypt, no docs), so
+   it was reset to `Student@123`.
+ - Verified: login → 200, `/me` → 200, enrollments → 200 (`[]`).
 

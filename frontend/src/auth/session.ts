@@ -1,3 +1,9 @@
+// ─── session.ts : client-side session state ─────────────────────────────
+// The source of truth for "who is logged in" on the client. Reads the
+// non-HttpOnly `courser_session` cookie the backend sets alongside the
+// auth tokens, and maps it to an AuthSession for role-based routing.
+// Previous versions stored auth in localStorage; those records are now
+// migrated once and cleared (see LEGACY_STORAGE_KEY handling below).
 export type UserRole = 'student' | 'admin' | 'super_admin'
 
 export type AuthSession = {

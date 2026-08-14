@@ -21,3 +21,7 @@ PyJWT==2.8.0
 # stuffing and brute force can't iterate without backoff.
 slowapi==0.1.9
 
+# AI tutor (Cora): async HTTP client used to call the OpenAI-compatible
+# /chat/completions endpoint. Install httpx before enabling the chatbot.
+httpx==0.28.1
+
