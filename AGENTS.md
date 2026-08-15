@@ -695,3 +695,48 @@ linked with `vercel link --yes --project <name>`:
  - Verified: backend `tsc` + 12/12 vitest green; frontend `tsc -b` + `vite
    build` green; live `GET /api/courses` returns 13 courses / 47 total
    lessons with `lesson_count` present; bundle contains `lesson_count`.
+
+## Sign in with Google — server-side OAuth redirect (16 Aug 2026)
+
+- **Flow:** SPA links to `GET /api/auth/google?origin=<frontend origin>`; the
+  backend 302s to Google''s consent screen (a short-lived HttpOnly
+  `google_oauth_state` cookie carries a random CSRF `state` + the origin to
+  return to). The callback `GET /api/auth/google/callback` verifies the state,
+  exchanges the `code` at `https://oauth2.googleapis.com/token` (client_secret
+  auth), validates the id_token claims (aud/iss/exp/email_verified — trusted
+  because it came straight from Google over TLS, so no JWKS round-trip), then
+  find-or-creates the user and issues the normal session cookies before
+  redirecting to `${origin}/auth?google=success`.
+- **New backend:** `backend-node/src/services/googleAuth.ts`
+  (`isGoogleConfigured`, `googleAuthorizeUrl`, `exchangeGoogleCode`);
+  `routes/auth.ts` added `GET /google` + `GET /google/callback`; `config.ts`
+  gained `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`;
+  `authService.createUser` accepts `verified` + `avatarUrl` opts.
+- **New accounts:** username derived from the email local-part (hex suffix on
+  collision), random password, role student, pre-verified, avatar = Google
+  picture. Existing accounts: marked verified, Google profile data adopted
+  only where blank (never overwrites user-set values).
+- **Frontend:** `GoogleButton.tsx` (official G SVG, no external asset) on both
+  LoginForm and SignupForm with an "or" divider; `GoogleCallback.tsx` handles
+  `/auth?google=success` by calling `GET /auth/me` (cross-origin cookies are
+  sent but not readable via document.cookie) then routing to the role
+  dashboard; `/auth?google=error&reason=…` shows a human-readable banner
+  (config/denied/state/email).
+- **Session mirror fix:** `session.ts` `saveSession()` now WRITES a
+  `courser_session` cookie on the current origin (60-min, same payload shape
+  as the backend). This unbreaks getSession()/ProtectedRoute for the
+  split-origin Vercel deployment (API origin ? SPA origin) — the backend
+  cookie is invisible to `document.cookie` on the SPA origin, so login/Google/
+  verify-email persist the session client-side too. Harmless same-origin.
+- **Env to set (Vercel backend project `courser-backend-node` + dev
+  `.env.local`):** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+  `GOOGLE_REDIRECT_URI`. Prod redirect URI:
+  `https://courser-backend-node.vercel.app/api/auth/google/callback`. Dev uses
+  `http://localhost:5173/api/auth/google/callback` (through the Vite proxy so
+  cookies land on the frontend origin). Google Cloud Console must register the
+  exact same redirect URIs (localhost:5173 is allowed on http for dev).
+  Unconfigured ? `/google` 302s to `/auth?google=error&reason=config` (graceful,
+  no 503 mid-redirect).
+- Verified: backend `tsc` + 12/12 vitest; frontend `tsc -b` + `vite build`;
+  live `/api/auth/google` ? 302 config-error redirect; bundle contains
+  "Sign in with Google" + `api/auth/google` + "Signing you in with Google".
