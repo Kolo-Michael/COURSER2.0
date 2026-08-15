@@ -224,7 +224,7 @@ function courseJson(
   };
 }
 
-function courseListJson(c: CourseRow, category: CategoryRow | null): Record<string, unknown> {
+function courseListJson(c: CourseRow, category: CategoryRow | null, lessonCount: number): Record<string, unknown> {
   return {
     id: c.id,
     title: c.title,
@@ -237,6 +237,7 @@ function courseListJson(c: CourseRow, category: CategoryRow | null): Record<stri
     is_featured: c.is_featured,
     is_ai_generated: c.is_ai_generated,
     image_url: c.image_url,
+    lesson_count: lessonCount,
     category: category ? categoryJson(category) : null,
   };
 }
@@ -397,10 +398,12 @@ router.get(
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     try {
-      const rows = await db.query<CourseRow & { cat_id: string | null }>(
+      const rows = await db.query<CourseRow & { cat_id: string | null; lesson_count: string | null }>(
         `SELECT c.*, cat.id AS cat_id, cat.name AS cat_name, cat.slug AS cat_slug,
                 cat.description AS cat_description, cat.icon AS cat_icon,
-                cat.created_at AS cat_created_at
+                cat.created_at AS cat_created_at,
+                (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id
+                  WHERE m.course_id = c.id) AS lesson_count
            FROM courses c
            LEFT JOIN categories cat ON cat.id = c.category_id
            ${whereSql}
@@ -418,7 +421,7 @@ router.get(
               created_at: (r.cat_created_at as string | null) ?? null,
             }
           : null;
-        return courseListJson(r as unknown as CourseRow, category);
+        return courseListJson(r as unknown as CourseRow, category, Number(r.lesson_count) || 0);
       });
       res.json(out);
     } catch {
@@ -438,6 +441,7 @@ router.get(
           is_featured: c.is_featured,
           is_ai_generated: c.is_ai_generated,
           image_url: (c as { image_url?: string | null }).image_url ?? null,
+          lesson_count: c.modules.reduce((n, m) => n + m.lessons.length, 0),
           category: c.category,
         }))
       );

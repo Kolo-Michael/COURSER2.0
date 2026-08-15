@@ -99,6 +99,7 @@ export type ApiCourse = {
   is_featured: boolean
   is_ai_generated: boolean
   image_url: string | null
+  lesson_count?: number
   category: ApiCategory | null
   modules?: ApiModule[]
 }

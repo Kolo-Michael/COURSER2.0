@@ -1,33 +1,60 @@
 // ─── LandingPage: public marketing homepage ─────────────────────────────────
 // Serves the Hero, a stats strip, and a "career paths" library preview inside
-// the shared PublicShell. All content here is static demo copy; the real
-// courses/catalog live on /courses.
+// the shared PublicShell. The stats strip and career-path lesson counts are
+// computed from the real published catalog (lesson_count per course) instead
+// of demo numbers; the rest of the copy is marketing.
 
+import { useEffect, useState } from 'react'
 import { Hero } from '@/components/landing/Hero'
 import { HowLearningCarousel } from '@/components/landing/HowLearningCarousel'
 import { InfoMarquee } from '@/components/landing/InfoMarquee'
 import { StatsMarquee } from '@/components/landing/StatsMarquee'
 import { PublicShell } from '@/components/layout/PublicShell'
+import { listCourses, ApiCourse } from '@/api/courses'
 import { Link } from 'react-router-dom'
 
-// Marketing numbers shown in the stats strip below the hero.
-const stats = [
-  { label: 'Free courses prepared', value: '12', detail: 'Web, data, AI, mobile, DevOps' },
-  { label: 'Guided lessons', value: '86', detail: 'Structured for start-today learning' },
-  { label: 'Mascot help', value: '24/7', detail: 'Cora is built into the learning workspace' },
-]
-
-// Reduced palette — only blue and orange for category icons.
-// Static career-path preview cards; the lesson counts are demo numbers.
+// Career-path preview cards. Lesson counts are computed at runtime by summing
+// lesson_count over the catalog courses in each category slug.
 const tracks = [
-  { title: 'Frontend Developer', icon: 'fa-code', lessons: '18 lessons', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
-  { title: 'Data Analyst', icon: 'fa-chart-simple', lessons: '16 lessons', color: 'bg-orange-50 text-accent dark:bg-orange-950/40 dark:text-accent-dark' },
-  { title: 'AI Course Builder', icon: 'fa-brain', lessons: '14 lessons', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
+  { title: 'Frontend Developer', icon: 'fa-code', categorySlug: 'web-development', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
+  { title: 'Data Analyst', icon: 'fa-chart-simple', categorySlug: 'data-science', color: 'bg-orange-50 text-accent dark:bg-orange-950/40 dark:text-accent-dark' },
+  { title: 'AI Course Builder', icon: 'fa-brain', categorySlug: 'ai-ml', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
 ]
 
-// LandingPage: composes the marketing sections. No data fetching — links into
-// the catalog via /courses and into the auth flow via the Hero.
+/** Sum lesson_count over every catalog course in the given category slug. */
+function trackLessons(courses: ApiCourse[] | null, categorySlug: string): number {
+  if (!courses) return 0
+  return courses
+    .filter((c) => c.category?.slug === categorySlug)
+    .reduce((n, c) => n + (c.lesson_count ?? 0), 0)
+}
+
+// LandingPage: composes the marketing sections. Fetching the published course
+// list once on mount so the stats strip and career-path cards show real counts;
+// links into the catalog via /courses and into the auth flow via the Hero.
 export function LandingPage() {
+  const [courses, setCourses] = useState<ApiCourse[] | null>(null)
+
+  useEffect(() => {
+    let active = true
+    listCourses()
+      .then((c) => {
+        if (active) setCourses(c)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // Marketing numbers shown in the stats strip below the hero; the first two
+  // are derived from the real catalog while loaded (… placeholder during fetch).
+  const stats = [
+    { label: 'Free courses prepared', value: courses ? String(courses.length) : '…', detail: 'Web, data, AI, mobile, DevOps' },
+    { label: 'Guided lessons', value: courses ? String(courses.reduce((n, c) => n + (c.lesson_count ?? 0), 0)) : '…', detail: 'Structured for start-today learning' },
+    { label: 'Mascot help', value: '24/7', detail: 'Cora is built into the learning workspace' },
+  ]
+
   return (
     <PublicShell>
       <Hero />
@@ -65,7 +92,9 @@ export function LandingPage() {
                   <i className={`fa-solid ${track.icon}`} aria-hidden />
                 </span>
                 <h3 className="mt-4 text-lg font-bold text-stone-900 dark:text-stone-100">{track.title}</h3>
-                <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{track.lessons} with projects, notes, progress checkpoints, and Cora support.</p>
+                <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
+                  {courses ? `${trackLessons(courses, track.categorySlug)} lessons` : '… lessons'} with projects, notes, progress checkpoints, and Cora support.
+                </p>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
                   <div className="h-full w-3/4 rounded-full bg-accent dark:bg-accent-dark" />
                 </div>
