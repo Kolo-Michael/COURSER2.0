@@ -591,6 +591,13 @@ Three features bring the best free course content directly into the web app
 
 ## Vercel deployment (16 Aug 2026)
 
+> **Rule:** after every major change, always commit → `git push origin main`
+> → deploy BOTH frontend projects (`courser-frontend` from `frontend/`,
+> `courser-2-0` from the repo root) and the backend (`courser-backend-node`
+> from `backend-node/`) when backend code changed, then verify the live
+> bundle contains the new feature string. Never deploy a major change without
+> also pushing it first.
+
 Deployed as two separate Vercel projects via the CLI (account `kolo4`), both
 linked with `vercel link --yes --project <name>`:
 
