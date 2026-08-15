@@ -76,6 +76,22 @@ export const config = {
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || "12", 10),
   MAX_FAILED_LOGINS: 5,
   LOCKOUT_DURATION_MINUTES: 15,
+  // Email addresses that skip the verify-your-email step (seed/test accounts).
+  VERIFY_BYPASS_EMAILS: (
+    process.env.VERIFY_BYPASS_EMAILS ||
+    "student@courser.com,admin@courser.com,superadmin@smarttutor.com"
+  )
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
+  VERIFICATION_CODE_EXPIRE_MINUTES: parseInt(
+    process.env.VERIFICATION_CODE_EXPIRE_MINUTES || "60",
+    10
+  ),
+  VERIFICATION_MAX_ATTEMPTS: parseInt(
+    process.env.VERIFICATION_MAX_ATTEMPTS || "5",
+    10
+  ),
   MAX_STREAK_RESTORES_PER_MONTH: parseInt(
     process.env.MAX_STREAK_RESTORES_PER_MONTH || "4",
     10

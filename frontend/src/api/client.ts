@@ -104,9 +104,21 @@ async function apiRequestOnce<T>(path: string, options: RequestInit = {}, retrie
   }
 
   if (!response.ok) {
-    const message = await response.text()
-    const readable = readableError(message, response.status)
-    throw new Error(readable || `Request failed with status ${response.status}`)
+    const text = await response.text()
+    const readable = readableError(text, response.status)
+    const error = new ApiRequestError(readable || `Request failed with status ${response.status}`, response.status)
+    // Attach any extra JSON fields (e.g. the `email` on a 403 not-verified
+    // login) so callers can read them off the error object.
+    try {
+      const data = JSON.parse(text)
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const { detail, ...rest } = data as Record<string, unknown>
+        if (Object.keys(rest).length > 0) Object.assign(error, rest)
+      }
+    } catch {
+      // Non-JSON body — nothing extra to attach.
+    }
+    throw error
   }
 
   if (response.status === 204) {
@@ -132,5 +144,18 @@ function readableError(body: string, status: number): string | null {
     return null
   } catch {
     return status >= 500 ? null : body || null
+  }
+}
+
+/**
+ * API error that also carries the HTTP status, so callers can branch on it
+ * (e.g. a 403 from login means "email not verified yet", not bad credentials).
+ */
+export class ApiRequestError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.status = status
   }
 }

@@ -19,6 +19,7 @@ import { getAccessToken } from "../security.js";
 import { normalizeDt } from "../serialize.js";
 import { answerCourseQuestion, findOwnedConversation } from "../services/aiService.js";
 import { getUserById } from "../services/authService.js";
+import { generateCoursePdf } from "../services/pdfService.js";
 import { validate } from "../validate.js";
 
 export const router = Router();
@@ -736,6 +737,54 @@ router.post(
       [id, userId, course.id, new Date().toISOString()]
     );
     res.status(201).json(await enrollmentJson(id));
+  })
+);
+
+router.get(
+  "/slug/:slug/pdf",
+  requireUser,
+  wrap(async (req, res) => {
+    const userId = (req as AuthedRequest).userId;
+    const course = await db.get<CourseRow>(`SELECT * FROM courses WHERE slug = $1`, [req.params.slug]);
+    if (!course) throw notFound("Course not found");
+
+    // Gate: must be enrolled AND at least 50% through the course (the
+    // enrollment `progress` column is recomputed from lesson averages).
+    const enrollment = await db.get<Row>(
+      `SELECT * FROM enrollments WHERE user_id = $1 AND course_id = $2`,
+      [userId, course.id]
+    );
+    if (!enrollment) throw notFound("You are not enrolled in this course");
+    const progress = Number(enrollment.progress || 0);
+    if (progress < 50) {
+      throw forbidden("Download the course PDF once you're at least 50% through it.");
+    }
+
+    const tree = await loadCourseTree(course);
+    const modules = (tree.modules as Record<string, unknown>[]) ?? [];
+    const pdf = await generateCoursePdf({
+      title: course.title,
+      slug: course.slug,
+      description: course.description,
+      short_description: course.short_description,
+      level: course.level,
+      duration: course.duration,
+      generatedAt: new Date(),
+      modules: modules.map((m) => ({
+        title: String(m.title ?? ""),
+        description: (m.description as string | null) ?? null,
+        lessons: ((m.lessons as Record<string, unknown>[]) ?? []).map((l) => ({
+          title: String(l.title ?? ""),
+          duration: (l.duration as string | null) ?? null,
+          content: (l.content as string | null) ?? null,
+        })),
+      })),
+    });
+
+    const filename = `${course.slug}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(pdf);
   })
 );
 

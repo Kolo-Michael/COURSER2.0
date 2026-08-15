@@ -21,14 +21,14 @@ function devLog(title: string, email: string, code: string): void {
   console.log("=".repeat(50) + "\n");
 }
 
-function htmlBody(subject: string, code: string, intro: string): string {
+function htmlBody(subject: string, code: string, intro: string, expiresIn = "15 minutes"): string {
   return `
     <html>
       <body>
         <h2>${subject}</h2>
         <p>${intro}</p>
         <p>Your verification code is: <strong style="font-size: 24px; letter-spacing: 4px;">${code}</strong></p>
-        <p>This code will expire in 15 minutes.</p>
+        <p>This code will expire in ${expiresIn}.</p>
         <p>If you didn't request this, please ignore this email.</p>
         <hr>
         <p style="color: #666; font-size: 12px;">COURSER Team</p>
@@ -42,7 +42,8 @@ async function send(
   code: string,
   subject: string,
   intro: string,
-  devTitle: string
+  devTitle: string,
+  expiresIn = "15 minutes"
 ): Promise<boolean> {
   if (isDev()) {
     devLog(devTitle, email, code);
@@ -71,7 +72,7 @@ async function send(
       from: fromEmail,
       to: email,
       subject,
-      html: htmlBody(subject, code, intro),
+      html: htmlBody(subject, code, intro, expiresIn),
     });
     return true;
   } catch (err) {
@@ -96,6 +97,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
     code,
     "COURSER Email Verification",
     "Welcome to COURSER! Please verify your email address.",
-    "EMAIL VERIFICATION"
+    "EMAIL VERIFICATION",
+    "1 hour"
   );
 }

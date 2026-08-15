@@ -38,6 +38,15 @@ export const CREATE_TABLES: string[] = [
      created_at timestamp DEFAULT now()
    )`,
 
+  `CREATE TABLE IF NOT EXISTS email_verifications (
+     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     code varchar(6) NOT NULL,
+     attempts integer NOT NULL DEFAULT 0,
+     expires_at timestamp NOT NULL,
+     created_at timestamp DEFAULT now()
+   )`,
+
   `CREATE TABLE IF NOT EXISTS user_sessions (
      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -212,5 +221,6 @@ export const DROP_TABLES: string[] = [
   "categories",
   "user_sessions",
   "password_reset_tokens",
+  "email_verifications",
   "users",
 ];

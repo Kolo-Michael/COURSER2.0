@@ -307,3 +307,34 @@ export function subscribeNewsletter(email: string) {
     body: JSON.stringify({ email }),
   })
 }
+
+/**
+ * GET /api/courses/slug/:slug/pdf — download the course as a PDF. Requires
+ * an enrolled user at ≥50% progress (the backend enforces the gate). The
+ * PDF is fetched as a blob (credentials included) and saved client-side.
+ */
+export async function downloadCoursePdf(slug: string): Promise<void> {
+  const base = import.meta.env.VITE_API_BASE_URL ?? ''
+  const response = await fetch(`${base}/api/courses/slug/${slug}/pdf`, {
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    let message = `Could not download the PDF (${response.status}).`
+    try {
+      const data = await response.json()
+      if (typeof data.detail === 'string') message = data.detail
+    } catch {
+      // Non-JSON error body — keep the generic message.
+    }
+    throw new Error(message)
+  }
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${slug}.pdf`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}

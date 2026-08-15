@@ -1,13 +1,15 @@
-// ─── AuthPage: login / signup / password reset shell ───────────────────────
+// ─── AuthPage: login / signup / reset / email-verify shell ───────────────
 // A single page driven by the ?mode= query param ("login" default, "signup",
-// "forgot-password", "verify-code", "reset-password"). Reads the param to
-// pick which auth form to render and to vary the hero copy to its left.
+// "forgot-password", "verify-code", "reset-password", "verify-email"). Reads
+// the param to pick which auth form to render and to vary the hero copy to
+// its left.
 
 import { LoginForm } from '@/components/auth/LoginForm'
 import { SignupForm } from '@/components/auth/SignupForm'
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm'
 import { VerifyCodeForm } from '@/components/auth/VerifyCodeForm'
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm'
+import { VerifyEmailForm } from '@/components/auth/VerifyEmailForm'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -22,6 +24,7 @@ export function AuthPage() {
   const isSignup = mode === 'signup'
   const isForgot = mode === 'forgot-password'
   const isVerify = mode === 'verify-code'
+  const isVerifyEmail = mode === 'verify-email'
 
   // Static copy per auth flow, shown in the left hero column.
   const pageConfig = {
@@ -50,10 +53,15 @@ export function AuthPage() {
       subtitle: 'Reset password',
       description: 'Enter your new password below.',
     },
+    'verify-email': {
+      title: 'Verify your email',
+      subtitle: 'Check your inbox',
+      description: 'Enter the 6-digit code we emailed you to confirm your address and finish signing up.',
+    },
   }
 
   // Resolve the flags above to the matching hero-copy entry.
-  const config = pageConfig[isLogin ? 'login' : isSignup ? 'signup' : isForgot ? 'forgot-password' : isVerify ? 'verify-code' : 'reset-password']
+  const config = pageConfig[isLogin ? 'login' : isSignup ? 'signup' : isForgot ? 'forgot-password' : isVerify ? 'verify-code' : isVerifyEmail ? 'verify-email' : 'reset-password']
 
   return (
     <div className="courser-bg-dots relative min-h-screen overflow-hidden bg-stone-50 dark:bg-stone-950">
@@ -131,7 +139,7 @@ export function AuthPage() {
             </div>
           )}
           {/* Render the form matching the current mode. */}
-          {isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : <ResetPasswordForm />}
+          {isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : isVerifyEmail ? <VerifyEmailForm /> : <ResetPasswordForm />}
         </section>
       </div>
     </div>

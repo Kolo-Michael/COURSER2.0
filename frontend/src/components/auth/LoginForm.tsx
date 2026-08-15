@@ -1,11 +1,13 @@
-// ─── LoginForm.tsx : email + password sign-in ───────────────────────────
+// ─── LoginForm.tsx : email/username + password sign-in ───────────────────
 // Submits credentials to the backend (tokens land in HttpOnly cookies),
 // refreshes the local session state, then redirects to the role-specific
 // dashboard. Includes show/hide password, "remember me" (longer-lived
-// refresh cookie), and the forgot-password entry point.
+// refresh cookie), the forgot-password entry point, and a "verify your
+// email" detour when the account hasn't been verified yet.
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { login } from '@/api/auth'
+import { ApiRequestError } from '@/api/client'
 import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
@@ -21,7 +23,7 @@ export function LoginForm() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    const email = String(formData.get('email') ?? '').trim()
+    const identifier = String(formData.get('identifier') ?? '').trim()
     const password = String(formData.get('password') ?? '')
 
     setError(null)
@@ -29,8 +31,9 @@ export function LoginForm() {
 
     try {
       // POST /auth/login — server returns only the user; tokens live in
-      // HttpOnly cookies set as part of the same response.
-      const response = await login(email, password, rememberMe)
+      // HttpOnly cookies set as part of the same response. `identifier`
+      // accepts an email address or a username.
+      const response = await login(identifier, password, rememberMe)
 
       // Trigger getSession() to read the freshly set courser_session cookie
       // so the next render sees an authenticated state.
@@ -45,6 +48,14 @@ export function LoginForm() {
       // super_admin → /super-admin.
       navigate(dashboardFor(response.user.role), { replace: true })
     } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 403) {
+        // Credentials were correct but the email isn't verified yet — the
+        // backend includes the account email so we can prefill the code
+        // screen even when the user logged in with a username.
+        const email = (err as ApiRequestError & { email?: string }).email
+        navigate(`/auth?mode=verify-email${email ? `&email=${encodeURIComponent(email)}` : ''}`, { replace: true })
+        return
+      }
       setError(err instanceof Error ? err.message : 'Login failed. Check your email and password, then try again.')
     } finally {
       setSubmitting(false)
@@ -54,14 +65,14 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="login-email" className="mb-1 block text-sm font-semibold text-stone-700 dark:text-stone-200">
-          Email
+        <label htmlFor="login-identifier" className="mb-1 block text-sm font-semibold text-stone-700 dark:text-stone-200">
+          Email or username
         </label>
         <input
-          id="login-email"
-          name="email"
-          type="email"
-          autoComplete="email"
+          id="login-identifier"
+          name="identifier"
+          type="text"
+          autoComplete="username"
           required
           className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
         />

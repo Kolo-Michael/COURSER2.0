@@ -38,6 +38,8 @@ export type ProfileUpdatePayload = {
 // dashboard without an extra /auth/me round-trip.
 export type LoginResponse = {
   user: ApiUser
+  requires_verification?: boolean
+  message?: string
 }
 
 export type SignupPayload = {
@@ -75,12 +77,15 @@ export function getMe() {
 
 /**
  * POST /api/auth/login
- * Returns access + (optional) refresh tokens plus the authenticated user.
+ * `identifier` accepts an email address or a username (or pass `email` for
+ * the legacy mobile field). Returns access + (optional) refresh tokens plus
+ * the authenticated user. Throws ApiRequestError with status 403 when the
+ * email isn't verified yet.
  */
-export function login(email: string, password: string, rememberMe = false) {
+export function login(identifier: string, password: string, rememberMe = false) {
   return apiRequest<LoginResponse>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password, remember_me: rememberMe }),
+    body: JSON.stringify({ identifier, password, remember_me: rememberMe }),
   })
 }
 
@@ -133,6 +138,29 @@ export function verifyCode(payload: VerifyCodePayload) {
  */
 export function resetPassword(payload: ResetPasswordPayload) {
   return apiRequest<{ message: string }>('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/verify-email
+ * Validates the 6-digit email-verification code, marks the user verified,
+ * and (on success) issues the session cookies so the user is signed in.
+ */
+export function verifyEmail(payload: VerifyCodePayload) {
+  return apiRequest<LoginResponse>('/api/auth/verify-email', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/resend-verification
+ * Re-sends a fresh 6-digit verification code for an unverified account.
+ */
+export function resendVerification(payload: ForgotPasswordPayload) {
+  return apiRequest<{ message: string }>('/api/auth/resend-verification', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

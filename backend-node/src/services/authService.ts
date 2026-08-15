@@ -11,7 +11,7 @@ import { config } from "../config.js";
 import { db } from "../db.js";
 import { createAccessToken, createRefreshToken, decodeToken, hashPassword, verifyPassword } from "../security.js";
 import { epochUtc, nowIso, nowNaive } from "../serialize.js";
-import { generateResetCode, sendPasswordResetEmail } from "./emailService.js";
+import { generateResetCode, sendPasswordResetEmail, sendVerificationEmail } from "./emailService.js";
 
 export interface UserRow {
   id: string;
@@ -52,6 +52,30 @@ export interface ResetTokenRow {
   created_at: string;
 }
 
+export interface VerificationRow {
+  id: string;
+  user_id: string;
+  code: string;
+  attempts: number;
+  expires_at: string;
+  created_at: string;
+}
+
+/** True when an email is on the verification bypass list (seed/test accounts). */
+export function isVerificationBypassed(email: string): boolean {
+  return config.VERIFY_BYPASS_EMAILS.some(
+    (candidate) => candidate === email.trim().toLowerCase()
+  );
+}
+
+/** Look a user up by email first, then by exact username. */
+export async function getUserByIdentifier(identifier: string): Promise<UserRow | null> {
+  const trimmed = identifier.trim();
+  const user = await getUserByEmail(trimmed.toLowerCase());
+  if (user) return user;
+  return db.get<UserRow>(`SELECT * FROM users WHERE username = $1`, [trimmed]);
+}
+
 export async function createUser(
   username: string,
   email: string,
@@ -90,12 +114,12 @@ async function getSessionByToken(token: string): Promise<SessionRow | null> {
   );
 }
 
-/** Authenticate by (email, password) with brute-force lockout. Returns null on failure. */
+/** Authenticate by (identifier, password) with brute-force lockout. Returns null on failure. */
 export async function authenticateUser(
-  email: string,
+  identifier: string,
   password: string
 ): Promise<UserRow | null> {
-  const user = await getUserByEmail(email);
+  const user = await getUserByIdentifier(identifier);
   if (!user) {
     // Constant-time-ish: still run bcrypt against a dummy hash so a timing
     // side-channel can't enumerate which emails exist.
@@ -272,4 +296,59 @@ export async function resetPassword(
   );
   await db.query(`DELETE FROM password_reset_tokens WHERE id = $1`, [token.id]);
   return [true, "Password reset successfully."];
+}
+
+// --- email verification ---------------------------------------------------
+
+/**
+ * Generate and store a fresh 6-digit email-verification code, then send it.
+ * A previous code for the user is discarded so only the newest one works.
+ */
+export async function requestEmailVerification(user: UserRow): Promise<boolean> {
+  await db.query(`DELETE FROM email_verifications WHERE user_id = $1`, [user.id]);
+  const code = generateResetCode();
+  const expiresAt = new Date(
+    Date.now() + config.VERIFICATION_CODE_EXPIRE_MINUTES * 60_000
+  ).toISOString();
+  await db.query(
+    `INSERT INTO email_verifications (id, user_id, code, attempts, expires_at, created_at)
+     VALUES ($1,$2,$3,0,$4,$5)`,
+    [randomUUID(), user.id, code, expiresAt, nowIso()]
+  );
+  return sendVerificationEmail(user.email, code);
+}
+
+/**
+ * Validate an email-verification code. On success the user is marked
+ * verified and the code row is consumed (so it can't be replayed).
+ */
+export async function verifyEmailCode(
+  email: string,
+  code: string
+): Promise<[boolean, string]> {
+  const user = await getUserByEmail(email);
+  if (!user) return [false, "Invalid code."];
+
+  const row = await db.get<VerificationRow>(
+    `SELECT * FROM email_verifications WHERE user_id = $1 AND expires_at > $2 ORDER BY created_at DESC LIMIT 1`,
+    [user.id, nowNaive()]
+  );
+  if (!row) return [false, "Code expired or not found. Please request a new one."];
+
+  if (row.code !== code) {
+    const attempts = (row.attempts || 0) + 1;
+    if (attempts >= config.VERIFICATION_MAX_ATTEMPTS) {
+      await db.query(`DELETE FROM email_verifications WHERE id = $1`, [row.id]);
+      return [false, "Too many failed attempts. Please request a new code."];
+    }
+    await db.query(`UPDATE email_verifications SET attempts = $2 WHERE id = $1`, [
+      row.id,
+      attempts,
+    ]);
+    return [false, `Invalid code. ${config.VERIFICATION_MAX_ATTEMPTS - attempts} attempts remaining.`];
+  }
+
+  await db.query(`UPDATE users SET is_verified = TRUE WHERE id = $1`, [user.id]);
+  await db.query(`DELETE FROM email_verifications WHERE id = $1`, [row.id]);
+  return [true, "Email verified successfully."];
 }

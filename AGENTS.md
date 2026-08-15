@@ -627,3 +627,54 @@ linked with `vercel link --yes --project <name>`:
 - ⚠️ `vercel link` writes a gitignored `.vercel/` + `.env.local` per project;
   those are dev-only and not committed.
 
+## Auth hardening + course PDF download (16 Aug 2026)
+
+### Verified email, strict passwords, email-or-username login
+- **Email verification (block until verified).** `users.is_verified` was already
+  wired but unused. Now: `POST /auth/signup` for a non-test email creates the
+  user with `is_verified=FALSE`, stores a 6-digit code in the new
+  `email_verifications` table and emails it (`sendVerificationEmail`), and
+  returns `{ user, requires_verification: true }` WITHOUT auto-login cookies.
+  `POST /auth/verify-email` (`{email, code}`) marks verified and issues the
+  session cookies; `POST /auth/resend-verification` re-sends. `POST /auth/login`
+  returns **403 `{detail, email}`** when the account isn't verified so the SPA
+  routes to the verify-email screen (email prefilled even for username logins).
+  Test accounts skip the whole step (verified instantly + auto-login).
+- **Bypass list:** `config.VERIFY_BYPASS_EMAILS` (env, comma-separated; default
+  `student@courser.com,admin@courser.com,superadmin@smarttutor.com`). Codes
+  expire in `VERIFICATION_CODE_EXPIRE_MINUTES` (default 60) after
+  `VERIFICATION_MAX_ATTEMPTS` (default 5) wrong tries. Test accounts must stay
+  in the bypass list or the seed logins will break.
+- **Password policy (all password fields):** `strongPassword` zod schema in
+  `routes/auth.ts` — min 8, at least one lowercase, one uppercase, one number.
+  Applied to signup, admin-create, change-password, reset-password. Frontend
+  mirrors it in `SignupForm` (`passwordIssues`) with a hint + repeat-password
+  field.
+- **Email-or-username login.** `LoginSchema` takes `identifier` (email or
+  username; `email` still accepted for mobile compatibility); `authService`
+  gained `getUserByIdentifier`. Login form field is now "Email or username".
+- **`frontend/src/api/client.ts`** now throws `ApiRequestError` (carries
+  `status` + any extra JSON fields, e.g. `email` on the 403) so callers can
+  branch on status. `api/auth.ts` added `verifyEmail`, `resendVerification`.
+  `AuthPage` gained a `verify-email` mode; `VerifyEmailForm.tsx` is the new
+  code screen (resend + "use a different email").
+- ⚠️ Existing unverified real users (created before this change) are now blocked
+  from login — they must use the forgot-password → (then login shows the 403
+  verify path) or be re-created. Test accounts unaffected.
+
+### Course PDF download (enrolled + ≥50%)
+- **`backend-node/src/services/pdfService.ts`** (`generateCoursePdf`) renders a
+  course as a PDF with pdfkit (`bufferPages` footer pass via
+  `bufferedPageRange` — do NOT draw footers in the `pageAdded` handler, that
+  recurses): cover (title/meta/desc/generated date) then one page per module
+  with lessons + flattened study notes (markdown markers stripped, fenced code
+  kept). Pure-JS, serverless-safe. New dep: `pdfkit` (+ `@types/pdfkit`).
+- **`GET /api/courses/slug/:slug/pdf`** (`requireUser`): 404 unless enrolled,
+  403 until `enrollments.progress >= 50` (the recomputed lesson average), then
+  streams the PDF as `attachment`.
+- **Frontend:** `downloadCoursePdf(slug)` in `api/courses.ts` (credentialed
+  blob fetch + object-URL save). `CourseWorkspacePanel` module header shows a
+  "Download PDF" button once `session && enrollment && progress_percent >= 50`.
+- Verified: backend `tsc` + 12/12 vitest green; frontend `tsc -b` + `vite build`
+  green; smoke test produced a valid `%PDF` (4,218 bytes).
+
