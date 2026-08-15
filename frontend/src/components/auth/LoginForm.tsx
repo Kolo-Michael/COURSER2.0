@@ -11,6 +11,7 @@ import { ApiRequestError } from '@/api/client'
 import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
+import { GoogleButton, AuthDivider } from './GoogleButton'
 
 /** Sign-in form: authenticates, restores session state, routes by role. */
 export function LoginForm() {
@@ -63,11 +64,14 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="login-identifier" className="mb-1 block text-sm font-semibold text-stone-700 dark:text-stone-200">
-          Email or username
-        </label>
+    <div className="space-y-4">
+      <GoogleButton />
+      <AuthDivider />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="login-identifier" className="mb-1 block text-sm font-semibold text-stone-700 dark:text-stone-200">
+            Email or username
+          </label>
         <input
           id="login-identifier"
           name="identifier"
@@ -126,6 +130,7 @@ export function LoginForm() {
       >
         {submitting ? 'Logging in...' : 'Log in'}
       </button>
-    </form>
+      </form>
+    </div>
   )
 }

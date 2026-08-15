@@ -144,12 +144,27 @@ export function getSession(): AuthSession | null {
 }
 
 /**
- * Cookies are server-set — keep this as a no-op so callers that still
- * `saveSession(...)` don't crash. The server's response is the source of
- * truth.
+ * Cookies are normally server-set. This client-side mirror exists for the
+ * split-origin deployments (Vercel API ≠ Vercel SPA): the backend's
+ * `courser_session` cookie lives on the API origin, which `document.cookie`
+ * on the SPA origin can't see. Writing the same payload to the current origin
+ * lets getSession()/ProtectedRoute see who's signed in after login, Google
+ * OAuth, or a verify-email completion. In same-origin setups the value is
+ * identical, so this is harmless.
  */
-export function saveSession(_session: AuthSession) {
-  // intentionally empty
+export function saveSession(session: AuthSession) {
+  if (typeof document === 'undefined') return
+  const payload = {
+    identifier: session.identifier,
+    email: session.email ?? undefined,
+    fullName: session.fullName ?? null,
+    role: session.role,
+    avatarUrl: session.avatarUrl ?? null,
+    navStyle: session.navStyle ?? 'sidebar',
+    navCollapsed: Boolean(session.navCollapsed),
+  }
+  // 60 minutes mirrors the access-token lifetime the backend uses.
+  document.cookie = `${SESSION_COOKIE}=${encodeURIComponent(JSON.stringify(payload))}; Max-Age=3600; Path=/`
 }
 
 export function clearSession() {

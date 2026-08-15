@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { signup } from '@/api/auth'
 import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
+import { GoogleButton, AuthDivider } from './GoogleButton'
 
 // Mirrors the backend zod policy: 8+ chars, at least one lowercase, one
 // uppercase, and one number.
@@ -86,11 +87,14 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="signup-username" className="mb-1 block text-sm font-semibold text-stone-700 dark:text-stone-200">
-          Username
-        </label>
+    <div className="space-y-4">
+      <GoogleButton />
+      <AuthDivider />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="signup-username" className="mb-1 block text-sm font-semibold text-stone-700 dark:text-stone-200">
+            Username
+          </label>
         <input
           id="signup-username"
           name="username"
@@ -175,6 +179,7 @@ export function SignupForm() {
       >
         {submitting ? 'Creating account...' : 'Create account'}
       </button>
-    </form>
+      </form>
+    </div>
   )
 }

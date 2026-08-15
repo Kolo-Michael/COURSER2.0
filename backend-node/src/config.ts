@@ -113,6 +113,12 @@ export const config = {
     ""
   ),
   OPENAI_MODEL: process.env.OPENAI_MODEL || "llama-3.3-70b-versatile",
+  // Google OAuth (sign in with Google). GOOGLE_REDIRECT_URI must exactly match
+  // a registered redirect URI in Google Cloud Console (prod uses the backend
+  // URL; dev uses the Vite proxy so cookies land on the frontend origin).
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || "",
 } as const;
 
 /** True when running in development (disables Secure cookie flag + real SMTP). */

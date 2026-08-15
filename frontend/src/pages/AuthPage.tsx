@@ -10,13 +10,17 @@ import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm'
 import { VerifyCodeForm } from '@/components/auth/VerifyCodeForm'
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm'
 import { VerifyEmailForm } from '@/components/auth/VerifyEmailForm'
+import { GoogleCallback } from '@/components/auth/GoogleCallback'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Link, useSearchParams } from 'react-router-dom'
 
 // AuthPage: reads ?mode= from the URL and renders the matching auth flow.
+// A ?google=success / ?google=error param (set by the OAuth callback
+// redirect) takes over the form area while the Google session resolves.
 export function AuthPage() {
   const [params] = useSearchParams()
   const mode = params.get('mode')
+  const google = params.get('google')
 
   // Mode flags: no param means login. "reset-password" is the fallback,
   // reached via the logged-out flow after verify-code confirms an email.
@@ -138,8 +142,10 @@ export function AuthPage() {
               </Link>
             </div>
           )}
-          {/* Render the form matching the current mode. */}
-          {isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : isVerifyEmail ? <VerifyEmailForm /> : <ResetPasswordForm />}
+          {/* Google OAuth handoff takes over the card; otherwise render the form matching the current mode. */}
+          {google ? (
+            <GoogleCallback status={google === 'success' ? 'success' : 'error'} reason={params.get('reason')} />
+          ) : isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : isVerifyEmail ? <VerifyEmailForm /> : <ResetPasswordForm />}
         </section>
       </div>
     </div>

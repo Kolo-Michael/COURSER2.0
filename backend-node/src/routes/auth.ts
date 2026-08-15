@@ -5,10 +5,12 @@
  * the non-HttpOnly `courser_session` cookie lets the SPA know who is signed in.
  */
 import { Router } from "express";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
 import { config, isDev } from "../config.js";
 import { badRequest, forbidden, notFound, unauthorized, wrap } from "../errors.js";
+import { allowedOrigins } from "../headers.js";
 import { requireUser } from "../middleware/auth.js";
 import {
   adminLimiter,
@@ -20,9 +22,15 @@ import {
   verifyLimiter,
 } from "../rateLimit.js";
 import { hashPassword, verifyPassword } from "../security.js";
-import { normalizeDt } from "../serialize.js";
+import { normalizeDt, nowIso } from "../serialize.js";
 import * as authService from "../services/authService.js";
 import type { UserRow } from "../services/authService.js";
+import {
+  exchangeGoogleCode,
+  googleAuthorizeUrl,
+  isGoogleConfigured,
+  type GoogleProfile,
+} from "../services/googleAuth.js";
 import { normalizeEmail, validate } from "../validate.js";
 
 export const router = Router();
@@ -193,6 +201,50 @@ function tokenResponse(user: UserRow, access: string, refresh: string, sessionEx
   };
 }
 
+// --- Google OAuth helpers ----------------------------------------------------
+
+const GOOGLE_STATE_COOKIE = "google_oauth_state";
+
+/** Cookie holding the CSRF state + the frontend origin to return to. */
+function setGoogleStateCookie(
+  res: { cookie: (k: string, v: string, o: Record<string, unknown>) => void },
+  bundle: { state: string; origin: string }
+): void {
+  res.cookie(GOOGLE_STATE_COOKIE, encodeURIComponent(JSON.stringify(bundle)), {
+    httpOnly: true,
+    secure: cookieSecure(),
+    sameSite: cookieSameSite(),
+    path: "/",
+    maxAge: 10 * 60 * 1000,
+  });
+}
+
+/**
+ * Resolve the frontend origin to redirect back to after Google. The SPA sends
+ * its own origin; it must be on the CORS allowlist (or a dev localhost). Falls
+ * back to the configured production origin otherwise.
+ */
+function resolveFrontendOrigin(origin: string | undefined): string {
+  if (origin && allowedOrigins.includes(origin)) return origin;
+  if (config.FRONTEND_ORIGIN) return config.FRONTEND_ORIGIN;
+  const fromList = config.FRONTEND_ORIGINS.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)[0];
+  return fromList || "https://courser2.vercel.app";
+}
+
+/** Derive a username from a Google email; collisions get a short hex suffix. */
+function usernameFromEmail(email: string): string {
+  const base =
+    email
+      .split("@")[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 30) || "user";
+  return base;
+}
+
 // --- endpoints ------------------------------------------------------------
 
 router.post(
@@ -316,6 +368,113 @@ router.post(
     if (cookieToken) await authService.revokeSession(cookieToken);
     clearAuthCookies(res);
     res.status(204).end();
+  })
+);
+
+router.get(
+  "/google",
+  wrap(async (req, res) => {
+    const origin = resolveFrontendOrigin(
+      typeof req.query.origin === "string" ? req.query.origin : undefined
+    );
+    // Not configured → send the user back to the app with a readable banner
+    // instead of an ugly 503 error page mid-redirect.
+    if (!isGoogleConfigured()) {
+      res.redirect(302, `${origin}/auth?google=error&reason=config`);
+      return;
+    }
+    const state = randomBytes(24).toString("hex");
+    setGoogleStateCookie(res, { state, origin });
+    res.redirect(302, googleAuthorizeUrl(state));
+  })
+);
+
+router.get(
+  "/google/callback",
+  wrap(async (req, res) => {
+    // Read the state bundle set by /google. Its origin wins so the user lands
+    // back on whichever frontend they started from (dev or one of the prod
+    // projects), and its state must match Google's echo to block login CSRF.
+    let bundle: { state?: string; origin?: string } | null = null;
+    try {
+      const raw = req.cookies?.[GOOGLE_STATE_COOKIE] as string | undefined;
+      if (raw) bundle = JSON.parse(decodeURIComponent(raw)) as { state?: string; origin?: string };
+    } catch {
+      bundle = null;
+    }
+    const state = typeof req.query.state === "string" ? req.query.state : "";
+    const targetOrigin = resolveFrontendOrigin(
+      bundle && typeof bundle.origin === "string" ? bundle.origin : undefined
+    );
+
+    const fail = (reason: string): void => {
+      res.clearCookie(GOOGLE_STATE_COOKIE, { path: "/" });
+      res.redirect(302, `${targetOrigin}/auth?google=error&reason=${reason}`);
+    };
+
+    // CSRF guard: no state cookie or mismatch → reject before exchanging.
+    if (!bundle || bundle.state !== state) return fail("state");
+    // User cancelled at Google's consent screen.
+    if (req.query.error) return fail("denied");
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    if (!code) return fail("code");
+
+    let profile: GoogleProfile;
+    try {
+      ({ profile } = await exchangeGoogleCode(code));
+    } catch {
+      return fail("exchange");
+    }
+    // A Google account whose email isn't verified is exceedingly rare; refuse
+    // to create an account for it rather than skip the verified-email rule.
+    if (!profile.emailVerified) return fail("email");
+
+    const email = profile.email.toLowerCase();
+    let user = await authService.getUserByEmail(email);
+    if (!user) {
+      // New account: random password (login happens via Google), role student,
+      // pre-verified because Google already verified the email.
+      let username = usernameFromEmail(email);
+      const taken = await db.get<{ id: string }>(
+        `SELECT id FROM users WHERE username = $1`,
+        [username]
+      );
+      if (taken) username = `${username.slice(0, 24)}${randomBytes(3).toString("hex")}`;
+      user = await authService.createUser(username, email, randomBytes(24).toString("hex"), {
+        fullName: profile.name,
+        role: "student",
+        verified: true,
+        avatarUrl: profile.picture,
+      });
+    } else {
+      // Existing account: Google-verified ⇒ mark verified; adopt Google profile
+      // data only where the account has none (never overwrite user-set values).
+      const sets: string[] = [];
+      const params: unknown[] = [user.id];
+      let i = 2;
+      const mark = (field: string, value: unknown): void => {
+        sets.push(`${field} = $${i++}`);
+        params.push(value);
+      };
+      if (!user.is_verified) mark("is_verified", true);
+      if (user.avatar_url == null && profile.picture) mark("avatar_url", profile.picture);
+      if ((user.full_name == null || user.full_name === "") && profile.name) {
+        mark("full_name", profile.name);
+      }
+      mark("failed_login_attempts", 0);
+      mark("locked_until", null);
+      mark("last_login", nowIso());
+      if (sets.length) await db.query(`UPDATE users SET ${sets.join(", ")} WHERE id = $1`, params);
+      user = (await authService.getUserById(user.id)) ?? user;
+    }
+
+    const tokens = await authService.issueTokens(user);
+    setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+    setSessionCookie(res, user);
+    res.clearCookie(GOOGLE_STATE_COOKIE, { path: "/" });
+    // The SPA's AuthPage handles ?google=success by resolving /auth/me and
+    // routing to the role dashboard.
+    res.redirect(302, `${targetOrigin}/auth?google=success`);
   })
 );
 

@@ -80,7 +80,13 @@ export async function createUser(
   username: string,
   email: string,
   password: string,
-  opts: { fullName?: string | null; role?: string; createdBy?: string | null } = {}
+  opts: {
+    fullName?: string | null;
+    role?: string;
+    createdBy?: string | null;
+    verified?: boolean;
+    avatarUrl?: string | null;
+  } = {}
 ): Promise<UserRow> {
   const id = randomUUID();
   const now = nowIso();
@@ -91,8 +97,19 @@ export async function createUser(
        (id, username, email, hashed_password, full_name, role, is_active, is_verified,
         created_by, created_at, updated_at, last_login, failed_login_attempts, locked_until,
         avatar_url, nav_style, nav_collapsed)
-     VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$8,NULL,0,NULL,NULL,'sidebar',FALSE)`,
-    [id, username, email, hashPassword(password), opts.fullName ?? null, role, createdBy, now]
+     VALUES ($1,$2,$3,$4,$5,$6,TRUE,$7,$8,$9,$9,NULL,0,NULL,$10,'sidebar',FALSE)`,
+    [
+      id,
+      username,
+      email,
+      hashPassword(password),
+      opts.fullName ?? null,
+      role,
+      opts.verified ? true : false,
+      createdBy,
+      now,
+      opts.avatarUrl ?? null,
+    ]
   );
   const user = await getUserById(id);
   if (!user) throw new Error("user insert failed");

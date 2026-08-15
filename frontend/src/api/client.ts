@@ -8,7 +8,9 @@
 // project) they're literally the same origin. Keep API_BASE_URL empty so
 // cookies stay same-origin and readable by getSession(). Set
 // VITE_API_BASE_URL to a different origin only if the deployments split.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+// Exposed so components can build absolute links (e.g. the "Sign in with
+// Google" button navigates to {API_BASE_URL}/api/auth/google).
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 // Endpoints whose 401 is a normal business result (bad credentials), NOT an
 // expired/invalid session. These must not trigger the refresh/redirect path.
