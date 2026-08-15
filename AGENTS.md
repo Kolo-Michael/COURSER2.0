@@ -589,3 +589,34 @@ Three features bring the best free course content directly into the web app
  - Profile update schema caps `avatar_url` at 20000 chars — keep avatar
    data URLs small.
 
+## Vercel deployment (16 Aug 2026)
+
+Deployed as two separate Vercel projects via the CLI (account `kolo4`), both
+linked with `vercel link --yes --project <name>`:
+
+- **Backend API** → `https://courser-backend-node.vercel.app`
+  (`backend-node/` project `courser-backend-node`). New
+  `backend-node/api/index.ts` exports the Express app (`app.ts`) as the
+  serverless default; `backend-node/vercel.json` routes `/api/(.*)` to that
+  one function (`@vercel/node` builds it with esbuild, resolving `.js`→`.ts`).
+  Env set on Vercel (production): `DATABASE_URL`, `SECRET_KEY`,
+  `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, `APP_ENV=production`,
+  `FRONTEND_ORIGINS=https://courser-frontend.vercel.app,...`.
+  Redeploy: `vercel deploy --prod --yes` from `backend-node/`.
+- **Frontend SPA** → `https://courser-frontend.vercel.app`
+  (`frontend/` project `courser-frontend`). Vercel auto-detects Vite.
+  Env: `VITE_API_BASE_URL=https://courser-backend-node.vercel.app` (inlined
+  at build; bundle verified to contain the URL). Redeploy: `vercel deploy
+  --prod --yes` from `frontend/`.
+- **Cross-origin auth note**: in production the backend sets cookies
+  `Secure; SameSite=None` (see `routes/auth.ts` `cookieSecure()`/
+  `cookieSameSite()`), CORS allows the frontend origin with credentials
+  (`headers.ts`), and the SPA sends `credentials: 'include'` via
+  `apiRequest`. Verified: `/api/health` 200, `/api/courses` returns all 13
+  from Neon, `Access-Control-Allow-Origin` + `-Credentials: true` from the
+  frontend origin.
+- The old Render keepalive (`backend/keepalive.py`, `courser-api-18uo.onrender.com`)
+  is unchanged and still used by the mobile app's release config.
+- ⚠️ `vercel link` writes a gitignored `.vercel/` + `.env.local` per project;
+  those are dev-only and not committed.
+

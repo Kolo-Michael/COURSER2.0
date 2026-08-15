@@ -256,12 +256,12 @@ export function CourseWorkspacePanel({
 
   return (
     <>
-      <section className="mt-8 courser-card overflow-hidden">
+      <section className="mt-8 courser-card overflow-clip">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px]">
           <div className="flex flex-col">
           {showOutline ? (
             <nav
-              className="sticky top-0 z-20 border-b bg-stone-50/60 dark:border-stone-700/60 dark:bg-stone-800/40"
+              className="sticky top-20 z-20 border-b bg-stone-50/60 dark:border-stone-700/60 dark:bg-stone-800/40"
               aria-label="Course modules"
             >
               <div className="p-4">

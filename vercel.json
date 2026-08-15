@@ -6,6 +6,6 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
-    "VITE_API_BASE_URL": "https://api-black-six-17.vercel.app"
+    "VITE_API_BASE_URL": "https://courser-backend-node.vercel.app"
   }
 }

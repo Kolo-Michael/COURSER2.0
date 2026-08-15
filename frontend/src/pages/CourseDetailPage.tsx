@@ -5,8 +5,9 @@
 // browser-local personal-notes box, previous/next lesson navigation, an
 // enroll + mark-complete + restart flow, a course-progress bar, and the Cora
 // Q&A sidebar. Video watching is disabled for now — reading is the primary
-// path through every lesson. The page is public (logged-out visitors get a
-// PublicShell) but enrollment/progress act differently when a session exists.
+// path through every lesson. Logged-out visitors get a PublicShell with an
+// explanatory teaser page (CourseExplainer) instead of the workspace — the
+// reading UI, progress, and Cora require a session.
 
 import {
   enrollInCourse,
@@ -18,6 +19,7 @@ import {
 } from '@/api/courses'
 import { getSession, type AuthSession } from '@/auth/session'
 import { rememberCourseSlug } from '@/auth/course'
+import { CourseExplainer } from '@/components/course/CourseExplainer'
 import { CourseWorkspacePanel } from '@/components/course/CourseWorkspacePanel'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { navItemsFor } from '@/components/layout/navItems'
@@ -379,23 +381,27 @@ export function CourseDetailPage() {
           </section>
         ) : null}
 
-        <CourseWorkspacePanel
-          course={course}
-          session={session}
-          enrollment={enrollment}
-          headerAction={
-            admin ? (
-              <Link
-                to="/admin"
-                className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
-              >
-                <i className="fa-solid fa-sliders mr-2 text-primary dark:text-primary-dark" aria-hidden />
-                Configure
-              </Link>
-            ) : null
-          }
-          onEnrollmentChange={setEnrollment}
-        />
+        {session ? (
+          <CourseWorkspacePanel
+            course={course}
+            session={session}
+            enrollment={enrollment}
+            headerAction={
+              admin ? (
+                <Link
+                  to="/admin"
+                  className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
+                >
+                  <i className="fa-solid fa-sliders mr-2 text-primary dark:text-primary-dark" aria-hidden />
+                  Configure
+                </Link>
+              ) : null
+            }
+            onEnrollmentChange={setEnrollment}
+          />
+        ) : (
+          <CourseExplainer course={course} />
+        )}
       </div>
     </CourseDetailShell>
   )
