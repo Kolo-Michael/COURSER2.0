@@ -1,9 +1,8 @@
 // ─── SignupForm.tsx : new-account registration ──────────────────────────
 // Creates a student account (username/email/password). Enforces the shared
 // password policy client-side (min 8 chars, upper + lower + number) plus a
-// repeat-password check. Non-test signups receive a 6-digit verification
-// code by email and are routed to the verify-email screen instead of being
-// signed straight in.
+// repeat-password check. Email format is validated by emailSchema on the
+// backend; the account is verified instantly and issued auth cookies.
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { signup } from '@/api/auth'
@@ -53,23 +52,14 @@ export function SignupForm() {
     setSubmitting(true)
 
     try {
-      // POST /auth/signup — either returns the user + sets auth cookies
-      // (test accounts), or returns `requires_verification` so we route to
-      // the verify-email screen.
+      // POST /auth/signup — creates the account and issues the auth cookies
+      // in the same response (email format is validated client-side above).
       const response = await signup({
         username,
         email,
         password,
         role: 'student',
       })
-
-      if (response.requires_verification) {
-        // Pass the demo code (when SMTP isn't configured) to the verify
-        // screen so the flow is still demonstrable end-to-end.
-        const demo = response.demo_code ? `&demo=${response.demo_code}` : ''
-        navigate(`/auth?mode=verify-email&email=${encodeURIComponent(response.user.email)}${demo}`, { replace: true })
-        return
-      }
 
       saveSession({
         identifier: response.user.full_name || response.user.username,

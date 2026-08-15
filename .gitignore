@@ -26,6 +26,10 @@ node_modules/
 ~$*.docx
 *.pdf
 generate_chapters.py
+docs/gaps/
+fix_questionnaire.py
+*_Questionnaire_text.txt
+student_q_text.txt
 
 # Dissertation (not part of development)
 docs/dissertation/

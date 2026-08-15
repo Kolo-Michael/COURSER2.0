@@ -148,9 +148,8 @@ export function getSession(): AuthSession | null {
  * split-origin deployments (Vercel API ≠ Vercel SPA): the backend's
  * `courser_session` cookie lives on the API origin, which `document.cookie`
  * on the SPA origin can't see. Writing the same payload to the current origin
- * lets getSession()/ProtectedRoute see who's signed in after login, Google
- * OAuth, or a verify-email completion. In same-origin setups the value is
- * identical, so this is harmless.
+ * lets getSession()/ProtectedRoute see who's signed in after login or Google
+ * OAuth. In same-origin setups the value is identical, so this is harmless.
  */
 export function saveSession(session: AuthSession) {
   if (typeof document === 'undefined') return

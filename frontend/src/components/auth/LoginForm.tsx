@@ -1,13 +1,11 @@
 // ─── LoginForm.tsx : email/username + password sign-in ───────────────────
 // Submits credentials to the backend (tokens land in HttpOnly cookies),
 // refreshes the local session state, then redirects to the role-specific
-// dashboard. Includes show/hide password, "remember me" (longer-lived
-// refresh cookie), the forgot-password entry point, and a "verify your
-// email" detour when the account hasn't been verified yet.
+// dashboard. Includes show/hide password and "remember me" (longer-lived
+// refresh cookie) plus the forgot-password entry point.
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { login } from '@/api/auth'
-import { ApiRequestError } from '@/api/client'
 import { dashboardFor, saveSession } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
@@ -49,14 +47,6 @@ export function LoginForm() {
       // super_admin → /super-admin.
       navigate(dashboardFor(response.user.role), { replace: true })
     } catch (err) {
-      if (err instanceof ApiRequestError && err.status === 403) {
-        // Credentials were correct but the email isn't verified yet — the
-        // backend includes the account email so we can prefill the code
-        // screen even when the user logged in with a username.
-        const email = (err as ApiRequestError & { email?: string }).email
-        navigate(`/auth?mode=verify-email${email ? `&email=${encodeURIComponent(email)}` : ''}`, { replace: true })
-        return
-      }
       setError(err instanceof Error ? err.message : 'Login failed. Check your email and password, then try again.')
     } finally {
       setSubmitting(false)

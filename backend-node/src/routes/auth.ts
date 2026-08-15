@@ -99,8 +99,6 @@ const ResetPasswordSchema = z.object({
   new_password: strongPassword,
 });
 const RefreshSchema = z.object({ refresh_token: z.string().nullish() });
-const VerifyEmailSchema = z.object({ email: emailSchema, code: z.string().length(6) });
-const ResendVerificationSchema = z.object({ email: emailSchema });
 
 // --- serializers ----------------------------------------------------------
 
@@ -260,12 +258,7 @@ router.post(
       fullName: data.full_name ?? null,
       role: data.role,
     });
-    // Seed/test accounts verify instantly; everyone else gets an email code.
-    if (authService.isVerificationBypassed(email)) {
-      await db.query(`UPDATE users SET is_verified = TRUE WHERE id = $1`, [user.id]);
-    } else {
-      await authService.requestEmailVerification(user);
-    }
+    await db.query(`UPDATE users SET is_verified = TRUE WHERE id = $1`, [user.id]);
     res.status(201).json(userJson(user));
   })
 );
@@ -285,28 +278,13 @@ router.post(
       role: data.role,
     });
 
-    // Seed/test accounts skip verification and sign in immediately.
-    if (authService.isVerificationBypassed(email)) {
-      await db.query(`UPDATE users SET is_verified = TRUE WHERE id = $1`, [user.id]);
-      const verified = { ...user, is_verified: true };
-      const tokens = await authService.issueTokens(verified);
-      setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
-      setSessionCookie(res, verified);
-      res.status(201).json(tokenResponse(verified, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
-      return;
-    }
-
-    // Real users: send the 6-digit code and do NOT auto-login — the
-    // frontend moves to the "verify your email" screen. If the email
-    // couldn't be sent (SMTP not configured), return the code as a demo
-    // fallback so the flow still works for the deployed demo.
-    const { sent, code } = await authService.requestEmailVerification(user);
-    res.status(201).json({
-      user: userJson(user),
-      requires_verification: true,
-      message: "We sent a 6-digit code to your email. Verify to finish signing up.",
-      ...(sent ? {} : { demo_code: code }),
-    });
+    // Accounts are verified instantly (email format is validated above);
+    // the session cookies are issued in the same response.
+    const verified = { ...user, is_verified: true };
+    const tokens = await authService.issueTokens(verified);
+    setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+    setSessionCookie(res, verified);
+    res.status(201).json(tokenResponse(verified, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
   })
 );
 
@@ -319,15 +297,6 @@ router.post(
     const user = await authService.authenticateUser(identifier, data.password);
     if (!user) {
       throw unauthorized("Invalid email or password.");
-    }
-    if (!user.is_verified && !authService.isVerificationBypassed(user.email)) {
-      // The user authenticated correctly but hasn't verified their email.
-      // Return their email so the SPA can prefill the verify-email screen.
-      res.status(403).json({
-        detail: "Your email isn't verified yet. Check your inbox for the 6-digit code we sent you.",
-        email: user.email,
-      });
-      return;
     }
     const tokens = await authService.issueTokens(user, data.remember_me);
     setAuthCookies(res, tokens.accessToken, tokens.refreshToken, data.remember_me);
@@ -605,46 +574,5 @@ router.post(
     );
     if (!ok) throw badRequest(message);
     res.json({ message });
-  })
-);
-
-router.post(
-  "/verify-email",
-  verifyLimiter,
-  wrap(async (req, res) => {
-    const data = validate(VerifyEmailSchema, req.body);
-    const email = normalizeEmail(data.email);
-    const [ok, message] = await authService.verifyEmailCode(email, data.code);
-    if (!ok) throw badRequest(message);
-    const user = await authService.getUserByEmail(email);
-    if (!user) throw notFound("User not found");
-    const tokens = await authService.issueTokens(user);
-    setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
-    setSessionCookie(res, user);
-    res.json(tokenResponse(user, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
-  })
-);
-
-router.post(
-  "/resend-verification",
-  verifyLimiter,
-  wrap(async (req, res) => {
-    const data = validate(ResendVerificationSchema, req.body);
-    const email = normalizeEmail(data.email);
-    const user = await authService.getUserByEmail(email);
-    if (!user) {
-      // Never reveal whether the email exists.
-      res.json({ message: "If an account exists for that email, a new code has been sent." });
-      return;
-    }
-    if (user.is_verified) {
-      res.json({ message: "This email is already verified. You can sign in now." });
-      return;
-    }
-    const { sent, code } = await authService.requestEmailVerification(user);
-    res.json({
-      message: "A new verification code has been sent to your email.",
-      ...(sent ? {} : { demo_code: code }),
-    });
   })
 );
