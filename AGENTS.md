@@ -678,3 +678,20 @@ linked with `vercel link --yes --project <name>`:
 - Verified: backend `tsc` + 12/12 vitest green; frontend `tsc -b` + `vite build`
   green; smoke test produced a valid `%PDF` (4,218 bytes).
 
+
+## Real lesson counts on the landing page (16 Aug 2026)
+
+ - `GET /api/courses` now returns `lesson_count` per course (correlated
+   subquery joining lessons?modules per course; pg bigint coerced via
+   `Number()`; fallback computes it from `modules[].lessons.length`).
+   `courseListJson` gained a `lessonCount` arg.
+ - `frontend/src/api/courses.ts` — `ApiCourse.lesson_count?: number`.
+ - `frontend/src/pages/LandingPage.tsx` — no longer fully static: fetches the
+   published catalog once on mount, derives the stats strip ("Free courses
+   prepared" = course count, "Guided lessons" = summed lesson_count) and the
+   career-path cards (lesson counts summed per category slug:
+   web-development / data-science / ai-ml). Shows `…` while loading; demo
+   numbers 18/16/14 and 12/86 removed.
+ - Verified: backend `tsc` + 12/12 vitest green; frontend `tsc -b` + `vite
+   build` green; live `GET /api/courses` returns 13 courses / 47 total
+   lessons with `lesson_count` present; bundle contains `lesson_count`.
