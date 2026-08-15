@@ -64,7 +64,10 @@ export function SignupForm() {
       })
 
       if (response.requires_verification) {
-        navigate(`/auth?mode=verify-email&email=${encodeURIComponent(response.user.email)}`, { replace: true })
+        // Pass the demo code (when SMTP isn't configured) to the verify
+        // screen so the flow is still demonstrable end-to-end.
+        const demo = response.demo_code ? `&demo=${response.demo_code}` : ''
+        navigate(`/auth?mode=verify-email&email=${encodeURIComponent(response.user.email)}${demo}`, { replace: true })
         return
       }
 

@@ -17,11 +17,13 @@ export function VerifyEmailForm() {
   const [email, setEmail] = useState(params.get('email') ?? '')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [demoCode, setDemoCode] = useState<string | null>(params.get('demo'))
   const [submitting, setSubmitting] = useState(false)
   const [resending, setResending] = useState(false)
 
   useEffect(() => {
     setEmail(params.get('email') ?? '')
+    setDemoCode(params.get('demo'))
   }, [params])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -73,6 +75,8 @@ export function VerifyEmailForm() {
     try {
       const response = await resendVerification({ email })
       setNotice(response.message)
+      // Show the demo code in place of an email when SMTP isn't configured.
+      if (response.demo_code) setDemoCode(response.demo_code)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not resend the code. Please try again.')
     } finally {
@@ -118,6 +122,11 @@ export function VerifyEmailForm() {
       </div>
       {error ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p> : null}
       {notice ? <p className="rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-300">{notice}</p> : null}
+      {demoCode ? (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+          Demo mode — no SMTP configured, so no email is sent. Your code: <span className="font-mono tracking-[0.3em]">{demoCode}</span>
+        </p>
+      ) : null}
       <button
         type="submit"
         disabled={submitting}

@@ -68,3 +68,20 @@ function buildAllowedOrigins(): string[] {
 }
 
 export const allowedOrigins = buildAllowedOrigins();
+
+/**
+ * CORS origin callback — allows any origin in the explicit allowlist plus any
+ * `*.vercel.app` deployment (production and per-deployment preview URLs, whose
+ * hostnames change on every push). All of the project's frontends are hosted
+ * on Vercel, so the wildcard keeps previews working without hardcoding hashes.
+ */
+export function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return false;
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    return hostname.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
+}

@@ -320,8 +320,12 @@ export async function resetPassword(
 /**
  * Generate and store a fresh 6-digit email-verification code, then send it.
  * A previous code for the user is discarded so only the newest one works.
+ * Returns whether the email was actually delivered plus the code, so the
+ * API can surface a demo fallback when SMTP isn't configured.
  */
-export async function requestEmailVerification(user: UserRow): Promise<boolean> {
+export async function requestEmailVerification(
+  user: UserRow
+): Promise<{ sent: boolean; code: string }> {
   await db.query(`DELETE FROM email_verifications WHERE user_id = $1`, [user.id]);
   const code = generateResetCode();
   const expiresAt = new Date(
@@ -332,7 +336,8 @@ export async function requestEmailVerification(user: UserRow): Promise<boolean> 
      VALUES ($1,$2,$3,0,$4,$5)`,
     [randomUUID(), user.id, code, expiresAt, nowIso()]
   );
-  return sendVerificationEmail(user.email, code);
+  const sent = await sendVerificationEmail(user.email, code);
+  return { sent, code };
 }
 
 /**

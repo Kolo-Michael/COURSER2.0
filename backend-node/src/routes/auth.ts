@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { config, isDev } from "../config.js";
 import { badRequest, forbidden, notFound, unauthorized, wrap } from "../errors.js";
-import { allowedOrigins } from "../headers.js";
+import { isAllowedOrigin } from "../headers.js";
 import { requireUser } from "../middleware/auth.js";
 import {
   adminLimiter,
@@ -225,7 +225,7 @@ function setGoogleStateCookie(
  * back to the configured production origin otherwise.
  */
 function resolveFrontendOrigin(origin: string | undefined): string {
-  if (origin && allowedOrigins.includes(origin)) return origin;
+  if (origin && isAllowedOrigin(origin)) return origin;
   if (config.FRONTEND_ORIGIN) return config.FRONTEND_ORIGIN;
   const fromList = config.FRONTEND_ORIGINS.split(",")
     .map((s) => s.trim())
@@ -297,12 +297,15 @@ router.post(
     }
 
     // Real users: send the 6-digit code and do NOT auto-login — the
-    // frontend moves to the "verify your email" screen.
-    await authService.requestEmailVerification(user);
+    // frontend moves to the "verify your email" screen. If the email
+    // couldn't be sent (SMTP not configured), return the code as a demo
+    // fallback so the flow still works for the deployed demo.
+    const { sent, code } = await authService.requestEmailVerification(user);
     res.status(201).json({
       user: userJson(user),
       requires_verification: true,
       message: "We sent a 6-digit code to your email. Verify to finish signing up.",
+      ...(sent ? {} : { demo_code: code }),
     });
   })
 );
@@ -638,7 +641,10 @@ router.post(
       res.json({ message: "This email is already verified. You can sign in now." });
       return;
     }
-    await authService.requestEmailVerification(user);
-    res.json({ message: "A new verification code has been sent to your email." });
+    const { sent, code } = await authService.requestEmailVerification(user);
+    res.json({
+      message: "A new verification code has been sent to your email.",
+      ...(sent ? {} : { demo_code: code }),
+    });
   })
 );

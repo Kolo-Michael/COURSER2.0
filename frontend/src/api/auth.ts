@@ -40,6 +40,8 @@ export type LoginResponse = {
   user: ApiUser
   requires_verification?: boolean
   message?: string
+  /** Present only when the verification email couldn't be sent (no SMTP). */
+  demo_code?: string
 }
 
 export type SignupPayload = {
@@ -160,7 +162,7 @@ export function verifyEmail(payload: VerifyCodePayload) {
  * Re-sends a fresh 6-digit verification code for an unverified account.
  */
 export function resendVerification(payload: ForgotPasswordPayload) {
-  return apiRequest<{ message: string }>('/api/auth/resend-verification', {
+  return apiRequest<{ message: string; demo_code?: string }>('/api/auth/resend-verification', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

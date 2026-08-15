@@ -15,7 +15,7 @@ import express from "express";
 import type { Request, Response } from "express";
 
 import { errorMiddleware } from "./errors.js";
-import { allowedOrigins, securityHeaders } from "./headers.js";
+import { isAllowedOrigin, securityHeaders } from "./headers.js";
 import { globalLimiter } from "./rateLimit.js";
 import { router as authRouter } from "./routes/auth.js";
 import { router as coursesRouter } from "./routes/courses.js";
@@ -30,7 +30,15 @@ apiApp.disable("x-powered-by");
 apiApp.use(securityHeaders);
 apiApp.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, cb) => {
+      // Allow explicit origins plus any *.vercel.app deployment (production
+      // and per-push preview URLs, whose hostnames change every deploy).
+      // `cb(null, origin)` reflects the allowed origin; `cb(null, false)`
+      // sends NO CORS headers so the browser blocks the cross-origin call.
+      if (!origin) return cb(null, false);
+      if (isAllowedOrigin(origin)) return cb(null, origin);
+      return cb(null, false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
