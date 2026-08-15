@@ -4,6 +4,9 @@
 // courses/catalog live on /courses.
 
 import { Hero } from '@/components/landing/Hero'
+import { HowLearningCarousel } from '@/components/landing/HowLearningCarousel'
+import { InfoMarquee } from '@/components/landing/InfoMarquee'
+import { StatsMarquee } from '@/components/landing/StatsMarquee'
 import { PublicShell } from '@/components/layout/PublicShell'
 import { Link } from 'react-router-dom'
 
@@ -29,19 +32,8 @@ export function LandingPage() {
     <PublicShell>
       <Hero />
 
-      <section className="courser-bg-dots border-y border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950/50">
-        <div className="mx-auto grid max-w-6xl gap-4 px-2 py-6 sm:grid-cols-2 sm:px-3 lg:grid-cols-3 lg:px-4">
-          {stats.map((item) => (
-            <div
-              key={item.label}
-              className="courser-card p-4"
-            >
-              <p className="text-2xl font-bold text-stone-900 dark:text-stone-100">{item.value}</p>
-              <p className="mt-1 text-sm font-semibold text-stone-800 dark:text-stone-100">{item.label}</p>
-              <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{item.detail}</p>
-            </div>
-          ))}
-        </div>
+      <section className="courser-bg-dots border-y border-stone-200 bg-stone-50 py-4 dark:border-stone-800 dark:bg-stone-950/50">
+        <StatsMarquee stats={stats} />
       </section>
 
       <section className="courser-bg-dots-dense">
@@ -82,6 +74,10 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <HowLearningCarousel />
+
+      <InfoMarquee />
     </PublicShell>
   )
 }

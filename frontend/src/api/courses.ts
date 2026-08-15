@@ -13,6 +13,24 @@ export type ApiCategory = {
   created_at: string
 }
 
+/** A curated link to the best free external resource for a lesson. */
+export type ApiResourceLink = {
+  title: string
+  url: string
+  license?: string
+}
+
+/** A license-compliant article imported in-app for a lesson. */
+export type ApiImportedResource = {
+  id: string
+  source: string
+  title: string
+  url: string
+  license: string | null
+  body: string | null
+  fetched_at: string
+}
+
 /** A single lesson; `progress` / `is_completed` are attached when a
  *  logged-in user's per-lesson state exists. */
 export type ApiLesson = {
@@ -24,9 +42,36 @@ export type ApiLesson = {
   duration: string | null
   order: number
   is_published: boolean
+  resource_links?: ApiResourceLink[]
+  resources?: ApiImportedResource[]
   created_at: string
   progress?: number
   is_completed?: boolean
+}
+
+/** One end-of-module quiz question (correct index included so the workspace
+ *  can grade in-app; it is a self-check, not a certification). */
+export type ApiQuizQuestion = {
+  question: string
+  options: string[]
+  correct_index: number
+  explanation: string | null
+}
+
+export type ApiQuiz = {
+  module_id: string
+  title: string
+  pass_percent: number
+  questions: ApiQuizQuestion[]
+}
+
+export type ApiQuizResult = {
+  id: string
+  module_id: string
+  score: number
+  passed: boolean
+  total_questions: number
+  created_at: string
 }
 
 export type ApiModule = {
@@ -35,6 +80,8 @@ export type ApiModule = {
   title: string
   description: string | null
   order: number
+  quiz?: ApiQuiz | null
+  quiz_result?: ApiQuizResult | null
   created_at: string
   lessons: ApiLesson[]
 }
@@ -51,6 +98,7 @@ export type ApiCourse = {
   is_published: boolean
   is_featured: boolean
   is_ai_generated: boolean
+  image_url: string | null
   category: ApiCategory | null
   modules?: ApiModule[]
 }
@@ -66,6 +114,7 @@ export type CreateCoursePayload = {
   is_published: boolean
   is_featured: boolean
   is_ai_generated: boolean
+  image_url?: string
   category_id?: string
   modules?: CreateCourseModule[]
 }
@@ -122,6 +171,7 @@ export type ApiEnrollmentDetail = {
   course_id: string
   course_title: string
   course_slug: string
+  course_image_url: string | null
   course_category: string | null
   level: string
   enrolled_at: string
@@ -179,6 +229,29 @@ export function updateLessonProgress(lessonId: string, progress: number, quizSco
     method: 'PATCH',
     // quiz_score is only sent when the caller provides it.
     body: JSON.stringify({ progress, ...(quizScore !== undefined ? { quiz_score: quizScore } : {}) }),
+  })
+}
+
+/** GET /api/modules/:id/quiz — end-of-module self-check questions. */
+export function getModuleQuiz(moduleId: string) {
+  return apiRequest<ApiQuiz>(`/api/modules/${moduleId}/quiz`)
+}
+
+/** GET /api/modules/:id/quiz/result — latest attempt (or null). */
+export function getModuleQuizResult(moduleId: string) {
+  return apiRequest<ApiQuizResult | null>(`/api/modules/${moduleId}/quiz/result`)
+}
+
+/** POST /api/modules/:id/quiz/result — record a graded attempt. */
+export function submitQuizResult(
+  moduleId: string,
+  score: number,
+  passed: boolean,
+  totalQuestions: number,
+) {
+  return apiRequest<ApiQuizResult>(`/api/modules/${moduleId}/quiz/result`, {
+    method: 'POST',
+    body: JSON.stringify({ score, passed, total_questions: totalQuestions }),
   })
 }
 

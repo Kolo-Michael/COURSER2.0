@@ -247,6 +247,13 @@ export function CourseDetailPage() {
             <i className="fa-solid fa-arrow-left mr-2 text-xs" aria-hidden />
             All courses
           </Link>
+          {course.image_url ? (
+            <img
+              src={course.image_url}
+              alt={`${course.title} cover`}
+              className="mt-6 h-44 w-full max-w-3xl rounded-xl object-cover shadow-sm"
+            />
+          ) : null}
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl space-y-3">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
@@ -334,6 +341,44 @@ export function CourseDetailPage() {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        {course.description || course.modules?.length ? (
+          <section className="courser-card mb-8 overflow-hidden">
+            <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:p-8">
+              <div className="max-w-2xl">
+                <h2 className="flex items-center gap-2 text-base font-bold text-stone-900 dark:text-stone-50">
+                  <i className="fa-solid fa-book-open text-primary dark:text-primary-dark" aria-hidden />
+                  About this course
+                </h2>
+                <p className="mt-3 text-[15px] leading-7 text-stone-700 dark:text-stone-200">
+                  {course.description}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-stone-200 bg-stone-50/70 p-5 dark:border-stone-700 dark:bg-stone-800/40">
+                <p className="text-sm font-bold text-stone-900 dark:text-stone-50">What you'll cover</p>
+                {course.modules?.length ? (
+                  <ul className="mt-3 space-y-2.5">
+                    {course.modules.map((module, moduleIndex) => (
+                      <li key={module.id} className="flex items-start gap-2.5 text-sm text-stone-700 dark:text-stone-200">
+                        <span className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary dark:bg-primary-dark/20 dark:text-primary-dark">
+                          {moduleIndex + 1}
+                        </span>
+                        <span>
+                          <span className="font-semibold">{module.title}</span>
+                          <span className="block text-xs text-stone-500 dark:text-stone-400">
+                            {module.lessons.length} lesson{module.lessons.length === 1 ? '' : 's'}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">Modules are being prepared.</p>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <CourseWorkspacePanel
           course={course}
           session={session}

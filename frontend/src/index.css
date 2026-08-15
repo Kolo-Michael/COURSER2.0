@@ -69,9 +69,158 @@ body {
 
 /* Frosted glass utility — for headers, sidebars, and floating panels */
 .courser-glass {
-  @apply border border-stone-200/70 bg-white/70 shadow-sm backdrop-blur-md;
+  @apply border border-stone-200/70 bg-white/70 shadow-md backdrop-blur-md;
 }
 
 .dark .courser-glass {
   @apply border-stone-700/60 bg-stone-900/50 backdrop-blur-xl;
+}
+
+/* ── 3D landing visuals ────────────────────────────────────────────────────
+   Pure-CSS "3D image": cards stacked along the Z axis inside a perspective
+   scene. `.scene3d` is the camera; `.stage3d` carries the shared rotation;
+   each `.float3d` card floats gently with its own delay/duration. */
+.scene3d {
+  perspective: 1200px;
+}
+
+.stage3d {
+  transform-style: preserve-3d;
+  transition: transform 220ms ease-out;
+}
+
+.tilt-3d:hover .stage3d {
+  /* A slight extra tilt when hovered so the effect feels alive. */
+  transform: rotateX(2deg) rotateY(2deg);
+}
+
+@keyframes float3d {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.float3d {
+  animation: float3d 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+.float3d-slow {
+  animation-duration: 10s;
+}
+
+/* ── Ambient floating bubbles (background decoration) ───────────────────
+   A fixed layer painted below all content (z-index: -1). Because the
+   bubbles sit behind the page, every frosted surface (.courser-card,
+   .courser-glass, sticky header) blurs them through backdrop-filter —
+   reinforcing the glassmorphism instead of covering it. */
+.floating-bubbles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  will-change: transform;
+  animation: bubble-float 16s ease-in-out infinite alternate;
+}
+
+@keyframes bubble-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(18px, -30px, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-14px, 22px, 0) scale(0.94);
+  }
+}
+
+/* ── Left-to-right info ticker (pre-footer marquee) ──────────────────────
+   The track holds two identical copies of the content; animating from
+   translateX(-50%) to translateX(0) scrolls it rightward and loops
+   seamlessly because the start and end frames look identical. */
+@keyframes marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.info-marquee {
+  overflow: hidden;
+}
+
+.info-marquee-track {
+  width: max-content;
+  display: flex;
+  animation: marquee-right 45s linear infinite;
+}
+
+.info-marquee:hover .info-marquee-track {
+  animation-play-state: paused;
+}
+
+/* ── Right-to-left stats marquee (below the hero) ──────────────────────
+   Mirrors the ticker above: two identical halves, but animating from
+   translateX(0) to translateX(-50%) scrolls the cards leftward, i.e. the
+   strip reads from right to left and loops seamlessly. */
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.stats-marquee {
+  overflow: hidden;
+}
+
+.stats-marquee-track {
+  width: max-content;
+  display: flex;
+  animation: marquee-left 32s linear infinite;
+}
+
+.stats-marquee:hover .stats-marquee-track {
+  animation-play-state: paused;
+}
+
+/* ── Typewriter cursor (hero TypedPhrases) ─────────────────────────────
+   Blinks at the end of the phrase currently being typed. */
+.typing-cursor {
+  display: inline-block;
+  margin-left: 1px;
+  animation: cursor-blink 1s step-end infinite;
+}
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Respect users who prefer reduced motion: kill the decorative loops. */
+@media (prefers-reduced-motion: reduce) {
+  .float3d,
+  .bubble,
+  .typing-cursor,
+  .info-marquee-track,
+  .stats-marquee-track {
+    animation: none;
+  }
 }

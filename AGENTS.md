@@ -87,6 +87,16 @@ A new research instrument has been produced for the dissertation:
   orange radial glows over a gentle vertical fade) so frosted surfaces have something
   to blur. `.courser-card` is now translucent (`bg-white/70`) with `backdrop-blur-md`;
   added `.courser-glass` utility for headers/sidebars/panels.
+- `frontend/src/components/landing/StatsMarquee.tsx` — the hero stats strip
+  (Free courses / Guided lessons / Mascot help) is now a seamless right-to-left
+  marquee (`@keyframes marquee-left` in `index.css`, translateX(0 → -50%),
+  32s linear, pause on hover, prefers-reduced-motion off). Mirrors the
+  pre-footer `InfoMarquee` which scrolls left-to-right (`marquee-right`).
+- `frontend/src/components/landing/FloatingBubbles.tsx` — a few large blurred
+  gradient circles (`.floating-bubbles` in `index.css`) drift behind the page
+  at `z-index: -1`, so frosted surfaces blur them through backdrop-filter
+  rather than letting them sit on top. Mounted once in `PublicShell`
+  (landing/auth/catalog). Pause on hover + reduced-motion guards.
 - `frontend/src/components/layout/SiteHeader.tsx` — sticky header is frosted
   (`bg-white/75 backdrop-blur-xl`); "Sign up" CTA uses a subtle orange gradient.
 - `frontend/src/components/layout/DashboardLayout.tsx` — sidebar and top bar use the
@@ -428,4 +438,154 @@ A new research instrument has been produced for the dissertation:
  - `student@courser.com` password was not recoverable (bcrypt, no docs), so
    it was reset to `Student@123`.
  - Verified: login → 200, `/me` → 200, enrollments → 200 (`[]`).
+
+## Best external content in-app: references, CC import, module quizzes (15 Aug 2026)
+
+Three features bring the best free course content directly into the web app
+(w3schools-style reading workspace kept; Cora rail + module nav unchanged).
+
+### Curated references per lesson (Resources tab)
+ - `backend-node/src/seed/courseSeedData.ts` — every seeded lesson now ships a
+   `resources: SeedLink[]` (title/url/license). Sources are **open-licensed only**:
+   MDN (CC-BY-SA), freeCodeCamp (CC-BY-SA), The Odin Project (CC-BY-SA),
+   react.dev (MIT), pandas/Matplotlib (BSD-3-Clause), Python docs (PSF),
+   12 Factor (CC-BY), Wikipedia (CC-BY-SA), Google/OpenAI docs. **W3Schools and
+   Khan Academy are proprietary — never used.**
+ - `lessons.resource_links` jsonb column (CREATE + MIGRATIONS); `seed.ts`
+   writes it; `lessonJson`/`lessonDict` serializers expose it as
+   `resource_links: []` (pg returns jsonb pre-parsed — no JSON.parse).
+ - `CourseWorkspacePanel` Resources tab now renders the links as clickable
+   cards with a license badge (was a placeholder).
+
+### CC import pipeline (in-app reading)
+ - `backend-node/scripts/importContent.ts` (`npm run import:content`) — fetches
+   a manifest of CC sources per lesson, strips HTML to readable text (blocks
+   script/style/nav/header/footer/iframe/svg/form), caps at 6000 chars, stores
+   into the new `lesson_resources` table. Idempotent by (lesson_id, url); each
+   source wrapped in a SAVEPOINT so one bad write can't poison the txn;
+   network failures are logged + skipped (script exits cleanly, rerun to retry).
+ - ⚠️ Client-rendered SPAs (freeCodeCamp, react.dev, reactnative.dev) return an
+   empty shell — **only server-rendered sources are imported** (Wikipedia, MDN,
+   Python/pandas/Matplotlib docs, 12factor). SPA sites stay as curated links.
+ - `loadCourseTree` attaches `resources: [{id,source,title,url,license,body,
+   fetched_at}]` to each lesson; Resources tab renders the full article in-app
+   with a "source · license" badge + "Read the original" external link.
+ - Verified live: `npm run import:content` → 18/18 sources imported; course
+   tree returns both `resource_links` (4) and `resources` (2 bodies ≈6k chars).
+
+### Module-end quizzes (level guarantee)
+ - `modules.quiz` jsonb column; seed ships 8 quizzes (one per module, 4
+   questions each, `pass_percent: 70`) with `correct_index` + `explanation`.
+ - New `quiz_results` table (user_id, module_id, score, passed,
+   total_questions) + `backend-node/src/routes/quizzes.ts` mounted at
+   `/api/modules`: `GET /:id/quiz`, `GET /:id/quiz/result`, `POST /:id/quiz/
+   result` (clamps score 0-100, derives passed from `pass_percent`).
+ - `attachLessonProgress` (courses.ts) now also attaches each module's latest
+   `quiz_result` on authenticated course loads, so "passed ✓" shows on reload.
+ - `frontend/src/components/course/ModuleQuiz.tsx` — graded self-check in the
+   reading pane: pick answers → submit → score + per-question explanations →
+   retry; results recorded via the API. Grading is local (self-check, not a
+   certification); the backend re-derives pass/fail and clamps the score.
+ - API frontends: `getModuleQuiz`, `getModuleQuizResult`, `submitQuizResult`;
+   `ApiLesson` gained `resource_links`/`resources`, `ApiModule` gained
+   `quiz`/`quiz_result`.
+ - Verified: typecheck + 12/12 tests green, frontend `tsc -b` + `vite build`
+   green, quiz POST/GET + quiz_result attach verified via curl (test row
+   cleaned up afterwards).
+ - Note: after editing the seed/schema, rerun `npm run init:db` (idempotent
+   ALTERs) → `npm run seed` → `npm run import:content`, and **restart the dev
+   server** (it runs `tsx src/index.ts`, not watch — new routes require a
+   restart).
+
+## Markdown course import + multi-level heading notes (15 Aug 2026)
+
+### Multi-level headings in the notes renderer
+ - `frontend/src/components/course/lessonNotes.tsx` — `parseNotes` now parses
+   `#`–`######` headings (regex `^(#{1,6})\s+(.+)$`) with a section stack, so
+   a `### subheading` nests under its `## section`; `NoteBlock` sections carry
+   `level`. `LessonNotes` is a recursive in-order renderer (`NoteBody` +
+   `Heading`) sized by level — headings/subheadings/body render exactly as
+   authored in Markdown.
+ - `mobile/lib/screens/lesson_screen.dart` — heading regex widened to
+   `^#{1,6}\s+(.+)$` to match (still flat-rendered on mobile).
+ - Verified: `parseNotes` structure check over live imported content + a
+   synthetic nested-heading case (`###` nests under `##`), frontend `tsc -b` +
+   `vite build`, `flutter analyze`.
+
+### Shared course writer (`src/db/writeCourse.ts`)
+ - Upsert logic extracted out of `src/db/seed.ts` into
+   `src/db/writeCourse.ts` (`upsertCourse(client, course: SeedCourse)` —
+   category → course → modules → lessons, idempotent by natural key, forced
+   free + published). `seed.ts` is now just a thin loop over `COURSES`;
+   `scripts/importMarkdown.ts` reuses the same writer.
+
+### Markdown importer (`npm run import:md`)
+ - `backend-node/scripts/importMarkdown.ts` — one `.md` file per course.
+   YAML-ish front-matter between `---` lines carries course metadata
+   (`title`, `slug`, `description`, `short_description`, `level`, `duration`,
+   `category_slug`, `is_featured`, `is_ai_generated`); `[MODULE: title]` and
+   `[LESSON: title | N min]` markers build the tree; lesson content is the
+   study-notes body (## / ### headings, bullets, fenced code — same grammar
+   the renderer displays). Pre-lesson lines become the module description.
+   Lesson slug fallback: slugify(title); missing metadata defaults.
+ - `package.json` — `"import:md": "tsx scripts/importMarkdown.ts"`. Default
+   target `./courses` (scans `*.md`); pass a file path to import a single
+   file. Idempotent by slug — re-running updates the same course.
+ - Example: `backend-node/courses/advanced-css-layouts.md` (2 modules, 5
+   lessons) — verified imported live and served at
+   `/api/courses/slug/advanced-css-layouts` with headings, durations, and
+   code fences intact.
+ - Note: the dev server now runs `npm run dev` (`tsx watch`), so backend
+   route changes auto-reload; the earlier "tsx src/index.ts, not watch"
+   note is outdated.
+
+## Course covers + more catalog courses + settings verification (15 Aug 2026)
+
+### Matching SVG cover images per course
+ - `backend-node/scripts/generateCovers.ts` (`npm run gen:covers`) — writes a
+   deterministic SVG cover per course into `frontend/public/course-covers/
+   <slug>.svg` (640×360 gradient + dot pattern + title + category chip, colors
+   derived from a per-course palette). No external assets, so no licensing
+   concerns; covers are served statically by Vite from `/course-covers/`.
+ - `courses.image_url` text column (CREATE + idempotent ALTER in
+   `src/db/schema.ts`); `CourseCreateSchema`/`CourseUpdateSchema`/`CourseRow`
+   gained `image_url`; `courseJson`/`courseListJson`/admin INSERT/fallback
+   mapping expose it. `src/db/writeCourse.ts` INSERT/UPDATE persists it;
+   `SeedCourse.image_url` + `importMarkdown.ts` front-matter `image_url`
+   (`/course-covers/<slug>.svg`).
+ - Frontend: `ApiCourse.image_url`, `CreateCoursePayload.image_url`,
+   `ApiEnrollmentDetail.course_image_url` (enrollments/me SELECT now joins
+   `c.image_url AS course_image_url`). Covers render on the public catalog
+   card, the logged-in catalog thumbnail, the `CourseDetailPage` hero, and the
+   dashboard continue-learning cards.
+ - `AdminPage` cover upload now reads the picked file as a **data URL**
+   (was `URL.createObjectURL` — a blob URL died on reload) and sends it as
+   `image_url` in `createCourse`, so admin-uploaded covers persist.
+ - Verified: 13 covers generated; `npm run init:db` → `npm run seed` →
+   `npm run import:md`; `GET /api/courses` returns `image_url` for all 13
+   courses; covers return 200 from `http://localhost:5173/course-covers/...`
+   and are copied into `dist/`.
+
+### More catalog courses incl. programming languages
+ - `CATEGORIES` gained `Programming Languages` (`programming-languages`,
+   icon `fa-code`). Six new courses authored as markdown in
+   `backend-node/courses/` (2 modules × 2 lessons each, real study notes):
+   `python-for-beginners.md`, `javascript-essentials.md`,
+   `java-programming-basics.md`, `html-css-from-scratch.md`,
+   `sql-databases-for-beginners.md`, `git-version-control-basics.md`. Total
+   catalog is now 13 courses (6 seeded + 7 markdown-imported including
+   `advanced-css-layouts`).
+ - ⚠️ `import:md` scans all `*.md` in `backend-node/courses/` — the example
+   `advanced-css-layouts.md` (no `image_url` originally) was given one so it
+   also gets a cover. `upsertCategory` throws "Unknown category slug" if a
+   front-matter `category_slug` isn't in `CATEGORIES`.
+
+### User settings verified working (live, student@courser.com)
+ - `PATCH /auth/me` persists `full_name`, `avatar_url` (data URL), `nav_style`,
+   `nav_collapsed`; `GET /auth/me` reflects changes; `change-password`
+   (wrong → 400, correct → success, subsequent login OK). `DashboardLayout`
+   consumes `getNavStyle()`/`getNavCollapsed()`; collapse applies only on
+   desktop (`min-width: 1024px`). Test user was restored to defaults.
+ - Profile update schema caps `avatar_url` at 20000 chars — keep avatar
+   data URLs small.
 

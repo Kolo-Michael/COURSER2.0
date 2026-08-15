@@ -1,0 +1,45 @@
+# Render blueprint for the Node.js COURSER API.
+#
+# Deploys the Express/TypeScript backend (src/index.ts). The Python FastAPI
+# deploy on https://courser-api-18uo.onrender.com stays live until this is
+# verified, then the keepalive + frontend FRONTEND_ORIGINS can be switched.
+#
+# Usage: Render > New > Blueprint, or `render blueprint launch` from this dir.
+services:
+  - type: web
+    name: courser-api-node
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        sync: false # set in the Render dashboard (match the old SECRET_KEY or force re-login)
+      - key: DATABASE_URL
+        sync: false # Neon connection string (postgres:// or postgresql:// both work)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: OPENAI_MODEL
+        value: llama-3.3-70b-versatile
+      - key: FRONTEND_ORIGINS
+        value: https://courser2.vercel.app
+      - key: API_ORIGIN
+        value: https://courser2.vercel.app
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: FROM_EMAIL
+        value: noreply@courser.app

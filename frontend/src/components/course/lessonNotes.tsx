@@ -1,29 +1,43 @@
 // ─── lessonNotes.tsx : structured study-notes renderer ─────────────────────
-// Parses the seeded markdown-style lesson notes (`## Heading` sections, `- `
-// bullets, `1. ` numbered lists, paragraphs, **bold** emphasis) and renders
-// them as friendly, readable study material. Reused by the course workspace
-// panel on the course page and by the embedded workspace on the dashboard.
+// Parses the seeded markdown-style lesson notes and renders them as friendly,
+// highly readable study material:
+//   `## Heading`   section headers — `#`…`######` all supported, deeper
+//                  levels nest inside shallower ones
+//   `- item`      unordered list  |  `1. item` ordered list
+//   ``` fenced ``` code block (also indented-free, starts with triple backtick)
+//   **bold**      inline emphasis | `code` inline monospace
+//   plain lines   paragraphs
+// The same text powers the mobile app (its parser mirrors this grammar), so
+// keep the vocabulary above stable when editing content.
 
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 
-// Parsed note hierarchy: a section (## heading) owns nested body blocks,
-// which are either paragraphs or (ordered/unordered) lists.
+// Parsed note hierarchy: sections (with a heading level) own nested body
+// blocks; body blocks are paragraphs, (ordered/unordered) lists, or fenced
+// code blocks (with an optional language tag like ```html).
 export type NoteBlock =
-  | { kind: 'section'; heading: string; body: NoteBlock[] }
+  | { kind: 'section'; level: number; heading: string; body: NoteBlock[] }
   | { kind: 'para'; text: string }
   | { kind: 'list'; ordered: boolean; items: string[] }
+  | { kind: 'code'; code: string; lang?: string }
 
-/** Split lesson notes into structured blocks. Convention:
- *  `## Heading` opens a section, `- ` bullets / `1. ` numbers form lists,
- *  plain lines are paragraphs, and **bold** marks inline emphasis. */
+export type NoteCodeBlock = Extract<NoteBlock, { kind: 'code' }>
+
+// A fenced code line: three backticks with an optional language tag (```, ```html, ```css, …).
+const FENCE = /^```([a-zA-Z0-9_-]*)\s*$/
+
+/** Split lesson notes into structured blocks. Heading lines (`#`…`######`)
+ *  open sections — a deeper level nests inside the previous one, a shallower
+ *  level pops back up. `- ` / `1. ` runs accumulate into lists, triple-backtick
+ *  lines wrap a code block, and anything else is a paragraph. */
 export function parseNotes(content: string): NoteBlock[] {
   const blocks: NoteBlock[] = []
-  // `open` is the block list currently receiving content: the top level until
-  // a heading switches it to that section's body.
   let open: NoteBlock[] = blocks
-  // A run of consecutive bullet/number lines accumulates into one list.
+  const sectionStack: { level: number; body: NoteBlock[] }[] = []
   let list: { kind: 'list'; ordered: boolean; items: string[] } | null = null
+  let codeLines: string[] | null = null
+  let codeLang: string | undefined
   const flushList = () => {
     if (list) {
       open.push(list)
@@ -32,24 +46,46 @@ export function parseNotes(content: string): NoteBlock[] {
   }
   for (const raw of (content ?? '').split('\n')) {
     const line = raw.trim()
+    // Inside a fenced block: collect until the closing ```.
+    if (codeLines) {
+      if (FENCE.test(line)) {
+        open.push({ kind: 'code', code: codeLines.join('\n'), lang: codeLang })
+        codeLines = null
+        codeLang = undefined
+      } else {
+        codeLines.push(line)
+      }
+      continue
+    }
+    const fence = line.match(FENCE)
+    if (fence) {
+      flushList()
+      codeLines = []
+      codeLang = fence[1] || undefined
+      continue
+    }
     if (!line) {
       flushList()
       continue
     }
-    // `## ...` (1-3 hash levels all flatten to sections) opens a new section
-    // and redirects `open` into it, so everything after nests underneath.
-    const heading = line.match(/^#{1,3}\s+(.+)$/)
+    const heading = line.match(/^(#{1,6})\s+(.+)$/)
     if (heading) {
       flushList()
-      const section: NoteBlock = { kind: 'section', heading: heading[1], body: [] }
-      open.push(section)
+      const level = heading[1].length
+      // Pop sections deeper than or equal to this level so shallower headings
+      // become siblings rather than children.
+      while (sectionStack.length && sectionStack[sectionStack.length - 1].level >= level) {
+        sectionStack.pop()
+      }
+      const parent = sectionStack.length ? sectionStack[sectionStack.length - 1].body : blocks
+      const section: NoteBlock = { kind: 'section', level, heading: heading[2], body: [] }
+      parent.push(section)
+      sectionStack.push(section)
       open = section.body
       continue
     }
     const ordered = line.match(/^(\d+)[.)]\s+(.+)$/)
     const bullet = line.match(/^[-*]\s+(.+)$/)
-    // Bullets start (or extend) an unordered list; switching to/from ordered
-    // flushes the previous run first.
     if (bullet) {
       if (!list || list.ordered) {
         flushList()
@@ -59,7 +95,6 @@ export function parseNotes(content: string): NoteBlock[] {
       list.items.push(bullet[1])
       continue
     }
-    // Same accumulation logic for numbered lists.
     if (ordered) {
       if (!list || !list.ordered) {
         flushList()
@@ -69,52 +104,161 @@ export function parseNotes(content: string): NoteBlock[] {
       list.items.push(ordered[2])
       continue
     }
-    // Plain text -> paragraph, but only after closing any in-flight list.
     flushList()
     open.push({ kind: 'para', text: line })
   }
   flushList()
+  // An unclosed fence still deserves its content.
+  if (codeLines) open.push({ kind: 'code', code: codeLines.join('\n'), lang: codeLang })
   return blocks
 }
 
-/** Render **bold** segments inside a note line.
- *  Splits on the **...** regex; odd-index parts are the bolded text. */
+/** Render inline markup: **bold** segments and `code` segments inside a line.
+ *  Splits on the combined regex; bold parts are odd-index, code parts 3 (mod 4)
+ *  from each bold group. A simpler approach: tokenize in two passes. */
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
-  return text.split(/\*\*(.+?)\*\*/g).map((part, index) =>
-    index % 2 === 1 ? (
-      <strong key={`${keyPrefix}-${index}`} className="font-semibold text-stone-900 dark:text-stone-50">
-        {part}
-      </strong>
-    ) : (
-      part
-    ),
+  const parts = text.split(/\*\*(.+?)\*\*/g)
+  const out: ReactNode[] = []
+  parts.forEach((part, index) => {
+    if (index % 2 === 1) {
+      // Bold segment — still may contain `code`.
+      out.push(
+        <strong key={`${keyPrefix}-b-${index}`} className="font-semibold text-stone-900 dark:text-stone-50">
+          {renderCodeInline(part, `${keyPrefix}-bc-${index}`)}
+        </strong>,
+      )
+    } else {
+      out.push(...renderCodeInline(part, `${keyPrefix}-p-${index}`))
+    }
+  })
+  return out
+}
+
+// Second pass: split `code` spans (backtick-wrapped) into monospace segments.
+function renderCodeInline(text: string, keyPrefix: string): ReactNode[] {
+  const parts = text.split(/`([^`]+)`/g)
+  const out: ReactNode[] = []
+  parts.forEach((part, index) => {
+    if (index % 2 === 1) {
+      out.push(
+        <code
+          key={`${keyPrefix}-c-${index}`}
+          className="rounded bg-stone-200/70 px-1.5 py-0.5 font-mono text-[0.85em] text-primary dark:bg-stone-800 dark:text-primary-dark"
+        >
+          {part}
+        </code>,
+      )
+    } else if (part) {
+      out.push(part)
+    }
+  })
+  return out
+}
+
+// Section headings that get tinted callout treatment (word match, lowercase).
+function sectionKind(heading: string): 'quiz' | 'takeaway' | 'plain' {
+  const h = heading.trim().toLowerCase()
+  if (h.includes('check your understanding')) return 'quiz'
+  if (h.includes('takeaway')) return 'takeaway'
+  return 'plain'
+}
+
+// Heading element + sizing for a given markdown heading level.
+function Heading({ level, children }: { level: number; children: ReactNode }) {
+  const Tag = (level <= 2 ? 'h3' : level === 3 ? 'h4' : 'h5') as 'h3' | 'h4' | 'h5'
+  const sizing =
+    level <= 2
+      ? 'text-[15px]'
+      : level === 3
+        ? 'text-sm'
+        : 'text-[13px] uppercase tracking-wide text-stone-500 dark:text-stone-400'
+  return (
+    <Tag className={`flex items-center gap-2.5 font-bold text-stone-900 dark:text-stone-50 ${sizing}`}>
+      <span className="h-1.5 w-7 shrink-0 rounded-full bg-primary/70 dark:bg-primary-dark/70" aria-hidden />
+      {children}
+    </Tag>
   )
 }
 
-// Recursively render a block tree: paragraphs as <p>, lists as <ul> with a
-// colored bullet dot (ordered lists get the accent color).
+// Recursively render any block tree — sections call back into this renderer so
+// headings/subheadings stay nested and the original document order is kept.
 function NoteBody({ blocks }: { blocks: NoteBlock[] }) {
   return (
     <>
       {blocks.map((block, index) => {
         if (block.kind === 'para') {
           return (
-            <p key={index} className="text-sm leading-relaxed text-stone-700 dark:text-stone-200">
+            <p key={index} className="text-[15px] leading-7 text-stone-700 dark:text-stone-200">
               {renderInline(block.text, `p-${index}`)}
             </p>
           )
         }
+        if (block.kind === 'code') {
+          return (
+            <pre
+              key={index}
+              className="overflow-x-auto rounded-xl border border-stone-800 bg-stone-900 p-4 font-mono text-sm leading-6 text-stone-100 dark:border-stone-700 dark:bg-black/60"
+            >
+              <code>{block.code}</code>
+            </pre>
+          )
+        }
         if (block.kind === 'list') {
           const items = block.items.map((item, itemIndex) => (
-            <li key={itemIndex} className="flex gap-2.5 text-sm leading-relaxed text-stone-700 dark:text-stone-200">
+            <li key={itemIndex} className="flex gap-3 text-[15px] leading-7 text-stone-700 dark:text-stone-200">
               <span
-                className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${block.ordered ? 'bg-accent' : 'bg-primary/60 dark:bg-primary-dark/60'}`}
+                className={`mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full ${block.ordered ? 'bg-accent' : 'bg-primary/60 dark:bg-primary-dark/60'}`}
                 aria-hidden
               />
               <span>{renderInline(item, `i-${index}-${itemIndex}`)}</span>
             </li>
           ))
-          return <ul key={index} className="space-y-2.5">{items}</ul>
+          return (
+            <ul key={index} className="space-y-1.5">
+              {items}
+            </ul>
+          )
+        }
+        if (block.kind === 'section') {
+          const kind = sectionKind(block.heading)
+          if (kind === 'quiz') {
+            return (
+              <div key={index} className="rounded-2xl border border-primary/20 bg-primary/5 p-5 dark:border-primary-dark/30 dark:bg-primary-dark/10">
+                <p className="flex items-center gap-2.5 text-sm font-bold text-primary dark:text-primary-dark">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs dark:bg-primary-dark/20">
+                    <i className="fa-solid fa-circle-check" aria-hidden />
+                  </span>
+                  {block.heading}
+                </p>
+                <div className="mt-3 space-y-3">
+                  <NoteBody blocks={block.body} />
+                </div>
+              </div>
+            )
+          }
+          if (kind === 'takeaway') {
+            return (
+              <div key={index} className="rounded-2xl border border-accent/25 bg-accent/5 p-5 dark:border-accent-dark/30 dark:bg-accent-dark/10">
+                <p className="flex items-center gap-2.5 text-sm font-bold text-accent dark:text-accent-dark">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/10 text-xs dark:bg-accent-dark/20">
+                    <i className="fa-solid fa-lightbulb" aria-hidden />
+                  </span>
+                  {block.heading}
+                </p>
+                <div className="mt-3 space-y-3">
+                  <NoteBody blocks={block.body} />
+                </div>
+              </div>
+            )
+          }
+          return (
+            <div key={index}>
+              <Heading level={block.level}>{block.heading}</Heading>
+              <div className="mt-3 space-y-3.5">
+                <NoteBody blocks={block.body} />
+              </div>
+            </div>
+          )
         }
         return null
       })}
@@ -122,68 +266,19 @@ function NoteBody({ blocks }: { blocks: NoteBlock[] }) {
   )
 }
 
-/** Render a lesson's organized study notes with friendly section boxes.
- *  Splits content into pre-heading paragraphs + heading sections; recognized
- *  headings ("check your understanding", *takeaway*) get tinted callout boxes,
- *  everything else renders as a plain section header. */
+/** Render a lesson's organized study notes. Top-level paragraphs render first,
+ *  then headings/sections in document order — "Check your understanding" and
+ *  key-takeaway sections become tinted callout boxes, everything else renders
+ *  as readable sections with nested subheadings preserved. */
 export function LessonNotes({ content }: { content: string }) {
   const blocks = useMemo(() => parseNotes(content), [content])
   if (!blocks.length) {
     return <p className="text-sm text-stone-500 dark:text-stone-400">This lesson has no written notes yet — check back soon.</p>
   }
 
-  // Paragraphs living before any heading are shown first as intro content.
-  const contentOnly = blocks.filter((block) => block.kind !== 'section')
-  const sections = blocks.filter(
-    (block): block is Extract<NoteBlock, { kind: 'section' }> => block.kind === 'section',
-  )
-
   return (
-    <div className="space-y-5">
-      {contentOnly.length ? <NoteBody blocks={contentOnly} /> : null}
-
-      {sections.map((section, index) => {
-        const heading = section.heading.trim().toLowerCase()
-        if (heading.includes('check your understanding')) {
-          // Quiz section -> primary-tinted callout box.
-          return (
-            <div key={index} className="rounded-xl border border-primary/20 bg-primary/5 p-4 dark:border-primary-dark/30 dark:bg-primary-dark/10">
-              <p className="flex items-center gap-2 text-sm font-bold text-primary dark:text-primary-dark">
-                <i className="fa-solid fa-circle-check" aria-hidden />
-                {section.heading}
-              </p>
-              <div className="mt-3 space-y-2.5">
-                <NoteBody blocks={section.body} />
-              </div>
-            </div>
-          )
-        }
-        // Key takeaways -> accent-tinted callout box.
-        if (heading.includes('takeaway')) {
-          return (
-            <div key={index} className="rounded-xl border border-accent/25 bg-accent/5 p-4 dark:border-accent-dark/30 dark:bg-accent-dark/10">
-              <p className="flex items-center gap-2 text-sm font-bold text-accent dark:text-accent-dark">
-                <i className="fa-solid fa-lightbulb" aria-hidden />
-                {section.heading}
-              </p>
-              <div className="mt-3 space-y-2.5">
-                <NoteBody blocks={section.body} />
-              </div>
-            </div>
-          )
-        }
-        return (
-          <div key={index}>
-            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-stone-900 dark:text-stone-100">
-              <span className="h-1 w-6 rounded-full bg-primary/60 dark:bg-primary-dark/60" aria-hidden />
-              {section.heading}
-            </h3>
-            <div className="mt-3 space-y-3">
-              <NoteBody blocks={section.body} />
-            </div>
-          </div>
-        )
-      })}
+    <div className="space-y-6">
+      <NoteBody blocks={blocks} />
     </div>
   )
 }

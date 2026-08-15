@@ -1,8 +1,18 @@
 // ─── Hero.tsx : landing-page hero section ───────────────────────────────
 // Top banner of the marketing landing page: headline, CTA buttons
 // (Get started / Explore courses), a three-point feature strip, and a
-// frosted "spotlight" card teasing the flagship course.
+// 3D floating card stack (course · certificate · Cora chat) on the right.
 import { Link } from 'react-router-dom'
+import { ThreeDVisual } from './ThreeDVisual'
+import { TypedPhrases } from './TypedPhrases'
+
+// The hero sub-copy, split into three clauses so the typewriter reveals it
+// one phrase after the other.
+const heroPhrases = [
+  'Browse curated paths,',
+  'enroll in seconds, and follow lessons shaped by AI',
+  'without losing the clarity of a world-class LMS.',
+]
 
 /** Landing hero: pitch + CTAs + feature list + spotlight course card. */
 export function Hero() {
@@ -36,8 +46,7 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-stone-600 sm:text-xl dark:text-stone-300">
-            Browse curated paths, enroll in seconds, and follow lessons shaped by AI without
-            losing the clarity of a world-class LMS.
+            <TypedPhrases phrases={heroPhrases} />
           </p>
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -88,54 +97,25 @@ export function Hero() {
         </div>
 
         <div className="flex-1">
-          <div className="relative mx-auto max-w-lg rounded-2xl border border-stone-200/70 bg-white/70 p-8 shadow-md backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/70 lg:max-w-none">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">
-                  Spotlight
-                </p>
-                <h2 className="mt-1 text-2xl font-bold text-stone-900 dark:text-stone-100">AI Tutor Foundations</h2>
-              </div>
-              <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent/25 dark:bg-accent-dark/15 dark:text-accent-dark dark:ring-accent-dark/30">
-                New
-              </span>
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-              A polished intro path covering LLM basics, responsible use, and how to apply models
-              in learning products, matching the Modules & Lessons structure your teams expect.
-            </p>
-            <ul className="mt-6 space-y-3 text-sm text-stone-700 dark:text-stone-200">
-              <li className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-accent" aria-hidden />
-                Module 1: Foundations & prompting playbooks
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-primary dark:bg-primary-dark" aria-hidden />
-                Module 2: Evaluation guardrails & safety habits
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-accent" aria-hidden />
-                Capstone lesson: Ship a tutoring micro-feature
-              </li>
-            </ul>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to="/courses"
-                className="inline-flex flex-1 items-center justify-center rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 dark:bg-primary dark:hover:bg-primary/90"
-              >
-                Preview catalog
-              </Link>
-              <Link
-                to="/auth"
-                className="inline-flex flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-stone-900 ring-2 ring-stone-300 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 dark:text-stone-100 dark:ring-white/20 dark:hover:bg-stone-800"
-              >
-                Create account
-              </Link>
-            </div>
+          <ThreeDVisual />
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              to="/courses"
+              className="inline-flex flex-1 items-center justify-center rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 dark:bg-primary dark:hover:bg-primary/90"
+            >
+              Preview catalog
+            </Link>
+            <Link
+              to="/auth"
+              className="inline-flex flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-stone-900 ring-2 ring-stone-300 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 dark:text-stone-100 dark:ring-white/20 dark:hover:bg-stone-800"
+            >
+              Create account
+            </Link>
           </div>
 
           <p className="mt-6 text-center text-xs text-stone-500 dark:text-stone-400 sm:text-left">
-            Trusted by teams who want a Coursera-grade experience with modern automation.
+            Every course is free, structured, and ready to start today.
           </p>
         </div>
       </div>

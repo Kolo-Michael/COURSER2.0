@@ -340,15 +340,50 @@ class _LessonNotes extends StatelessWidget {
 
   /// Converts the structured note text into a list of widgets. Each line is
   /// classified as a heading, a `- ` bullet, or a plain paragraph; bold
-  /// segments (`**...**`) are handled later by `_spans`.
+  /// segments (`**...**`) and inline code (`` `...` ``) are handled later by
+  /// `_spans`. Triple-backtick fences collect a monospace code block.
   List<Widget> _parse(BuildContext context) {
     final theme = Theme.of(context);
-    final headingRe = RegExp(r'^#{1,3}\s+(.+)$');
+    final headingRe = RegExp(r'^#{1,6}\s+(.+)$');
     final bulletRe = RegExp(r'^[-*]\s+(.+)$');
+    final codeFenceRe = RegExp(r'^```[a-zA-Z0-9_-]*\s*$');
     final widgets = <Widget>[];
+    final codeLines = <String>[];
+    var inCode = false;
+
+    void flushCode() {
+      if (codeLines.isEmpty) return;
+      widgets.add(Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 10, top: 2),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          codeLines.join('\n'),
+          style: TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.5, color: theme.colorScheme.onSurface),
+        ),
+      ));
+      codeLines.clear();
+    }
 
     for (final rawLine in content.split('\n')) {
       final line = rawLine.trim();
+      if (inCode) {
+        if (codeFenceRe.hasMatch(line)) {
+          inCode = false;
+          flushCode();
+        } else {
+          codeLines.add(line);
+        }
+        continue;
+      }
+      if (codeFenceRe.hasMatch(line)) {
+        inCode = true;
+        continue;
+      }
       if (line.isEmpty) continue;
 
       final heading = headingRe.firstMatch(line);
@@ -358,7 +393,7 @@ class _LessonNotes extends StatelessWidget {
           padding: const EdgeInsets.only(top: 18, bottom: 8),
           child: Text.rich(
             TextSpan(
-              children: _spans(heading.group(1)!),
+              children: _spans(heading.group(1)!, theme),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -386,7 +421,7 @@ class _LessonNotes extends StatelessWidget {
               Expanded(
                 child: Text.rich(
                   TextSpan(
-                    children: _spans(bullet.group(1)!),
+                    children: _spans(bullet.group(1)!, theme),
                     style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
                 ),
@@ -402,24 +437,44 @@ class _LessonNotes extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 6),
         child: Text.rich(
           TextSpan(
-            children: _spans(line),
+            children: _spans(line, theme),
             style: const TextStyle(fontSize: 16, height: 1.5),
           ),
         ),
       ));
     }
+    // An unclosed fence still deserves its content.
+    inCode = false;
+    flushCode();
     return widgets;
   }
 
-  /// Splits a line on **bold** markers into alternating plain/bold spans.
-  List<InlineSpan> _spans(String text) {
-    final parts = text.split('**');
-    return [
-      for (var i = 0; i < parts.length; i++)
-        TextSpan(
-          text: parts[i],
-          style: i.isOdd ? const TextStyle(fontWeight: FontWeight.bold) : null,
-        ),
-    ];
+  /// Splits a line on **bold** markers and backtick code markers into
+  /// alternating plain/bold/monospace spans.
+  List<InlineSpan> _spans(String text, ThemeData theme) {
+    final boldParts = text.split('**');
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < boldParts.length; i++) {
+      final part = boldParts[i];
+      final codeParts = part.split('`');
+      for (var j = 0; j < codeParts.length; j++) {
+        if (codeParts[j].isEmpty) continue;
+        if (j.isOdd) {
+          // Inline code → monospace, tinted.
+          spans.add(TextSpan(
+            text: codeParts[j],
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 14,
+              color: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            ),
+          ));
+        } else {
+          spans.add(TextSpan(text: codeParts[j], style: i.isOdd ? const TextStyle(fontWeight: FontWeight.bold) : null));
+        }
+      }
+    }
+    return spans;
   }
 }

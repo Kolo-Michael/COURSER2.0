@@ -194,6 +194,7 @@ export function AdminPage() {
         is_published: published,
         is_featured: false,
         is_ai_generated: false,
+        image_url: coverPreview ?? undefined,
         category_id: categoryId || undefined,
         modules: organizedModules,
       })
@@ -302,7 +303,15 @@ export function AdminPage() {
                 accept="image/*"
                 onChange={(event) => {
                   const file = event.target.files?.[0]
-                  setCoverPreview(file ? URL.createObjectURL(file) : null)
+                  if (!file) {
+                    setCoverPreview(null)
+                    return
+                  }
+                  // Read as a data URL so the cover actually persists with the
+                  // course (a blob: object URL dies when the page reloads).
+                  const reader = new FileReader()
+                  reader.onload = () => setCoverPreview(reader.result as string)
+                  reader.readAsDataURL(file)
                 }}
                 className="mt-1 w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
               />

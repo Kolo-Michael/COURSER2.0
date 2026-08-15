@@ -216,43 +216,53 @@ export function DashboardPage() {
           ) : (
             <div className="mt-5 grid gap-4 lg:grid-cols-3">
               {enrollments.map((course) => (
-                <article key={course.id} className="rounded-xl border border-stone-200 bg-white/60 p-4 backdrop-blur-sm dark:border-stone-700 dark:bg-stone-800/40">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold leading-snug text-stone-900 dark:text-stone-50">{course.course_title}</p>
-                    {course.is_completed ? (
-                      <span className="rounded-full bg-green-100 px-2 py-1 text-[11px] font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-300">
-                        Done
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-                    {course.course_category ?? 'General'} · {course.completed_lessons}/{course.total_lessons} lessons
-                  </p>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
-                    <div
-                      className="h-full rounded-full bg-accent transition-all"
-                      style={{ width: `${Math.max(course.progress_percent, 0)}%` }}
+                <article key={course.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white/60 backdrop-blur-sm dark:border-stone-700 dark:bg-stone-800/40">
+                  {course.course_image_url ? (
+                    <img
+                      src={course.course_image_url}
+                      alt={`${course.course_title} cover`}
+                      className="h-24 w-full object-cover"
+                      loading="lazy"
                     />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-2 text-xs font-semibold">
-                    <span className="text-stone-500 dark:text-stone-400">{course.progress_percent}% complete</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleRestart(course.course_slug, course.course_title)}
-                        disabled={restarting === course.course_slug}
-                        className="rounded-lg px-2 py-1 text-stone-500 transition hover:bg-stone-100 hover:text-red-600 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-stone-700"
-                        title="Restart course"
-                        aria-label={`Restart ${course.course_title}`}
-                      >
-                        <i className="fa-solid fa-rotate-left" aria-hidden />
-                      </button>
-                      <Link
-                        to={`/courses/${course.course_slug}`}
-                        className="rounded-lg bg-primary px-3 py-1 text-white transition hover:brightness-110 dark:bg-primary-dark"
-                      >
-                        {course.is_completed ? 'Review' : 'Continue'}
-                      </Link>
+                  ) : null}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold leading-snug text-stone-900 dark:text-stone-50">{course.course_title}</p>
+                      {course.is_completed ? (
+                        <span className="rounded-full bg-green-100 px-2 py-1 text-[11px] font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-300">
+                          Done
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                      {course.course_category ?? 'General'} · {course.completed_lessons}/{course.total_lessons} lessons
+                    </p>
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all"
+                        style={{ width: `${Math.max(course.progress_percent, 0)}%` }}
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2 text-xs font-semibold">
+                      <span className="text-stone-500 dark:text-stone-400">{course.progress_percent}% complete</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRestart(course.course_slug, course.course_title)}
+                          disabled={restarting === course.course_slug}
+                          className="rounded-lg px-2 py-1 text-stone-500 transition hover:bg-stone-100 hover:text-red-600 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-stone-700"
+                          title="Restart course"
+                          aria-label={`Restart ${course.course_title}`}
+                        >
+                          <i className="fa-solid fa-rotate-left" aria-hidden />
+                        </button>
+                        <Link
+                          to={`/courses/${course.course_slug}`}
+                          className="rounded-lg bg-primary px-3 py-1 text-white transition hover:brightness-110 dark:bg-primary-dark"
+                        >
+                          {course.is_completed ? 'Review' : 'Continue'}
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </article>

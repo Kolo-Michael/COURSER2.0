@@ -12,12 +12,31 @@ import {
   type ApiCourse,
   type ApiEnrollmentDetail,
   type ApiLesson,
+  type ApiQuizResult,
 } from '@/api/courses'
 import type { AuthSession } from '@/auth/session'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { CoraChat } from './CoraChat'
-import { LessonNotes } from './lessonNotes'
+import { LessonNotes, parseNotes, type NoteCodeBlock } from './lessonNotes'
+import { ModuleQuiz } from './ModuleQuiz'
+import { TryItPanel } from './TryItPanel'
+import { LESSON_EXAMPLES } from './tryItExamples'
+
+// Plain, markdown-free preview of a lesson's notes for the outline rows:
+// strips fenced code blocks, heading/bullet/number markers, **bold**, and
+// backticks, then returns the first non-empty line, truncated.
+function lessonPreview(content: string | null | undefined): string {
+  if (!content) return ''
+  const clean = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !/^```/.test(line))
+    .map((line) => line.replace(/^#{1,3}\s+/, '').replace(/^[-*]\s+/, '').replace(/^\d+[.)]\s+/, ''))
+    .map((line) => line.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]+)`/g, '$1'))
+    .filter(Boolean)
+  return clean[0] ? (clean[0].length > 90 ? `${clean[0].slice(0, 90)}…` : clean[0]) : ''
+}
 
 // Lesson pane tabs: official study notes, personal notes, further resources.
 type LessonTab = 'Study notes' | 'Notes' | 'Resources'
@@ -105,6 +124,7 @@ export function CourseWorkspacePanel({
   const [notes, setNotes] = useState<string>('')
 
   const [completing, setCompleting] = useState<string | null>(null)
+  const [showTryIt, setShowTryIt] = useState(false)
 
   // Load notes for this course from localStorage when the course changes.
   useEffect(() => {
@@ -140,6 +160,50 @@ export function CourseWorkspacePanel({
 
   const lessonComplete = Boolean(activeLesson?.is_completed)
   const progressPercent = enrollment?.progress_percent ?? 0
+
+  // Runnable example for the "Try it Yourself" editor: prefer a hand-crafted
+  // demo for this lesson, else auto-assemble a document from the lesson's own
+  // fenced HTML/CSS code blocks. Null → no Try-it button for this lesson.
+  const example = useMemo(() => {
+    if (!activeLesson) return null
+    const custom = LESSON_EXAMPLES[activeLesson.title]
+    if (custom) return custom
+    const codeBlocks = parseNotes(activeLesson.content ?? '').filter(
+      (block): block is NoteCodeBlock => block.kind === 'code',
+    )
+    const html = codeBlocks
+      .filter((block) => !block.lang || block.lang === 'html')
+      .map((block) => block.code)
+      .join('\n')
+    if (html) return html
+    const css = codeBlocks.filter((block) => block.lang === 'css').map((block) => block.code).join('\n')
+    if (css) {
+      return `<!DOCTYPE html><html><head><style>${css}</style></head><body><h1>Try it</h1><p>Edit the styles and press Run.</p></body></html>`
+    }
+    return null
+  }, [activeLesson])
+
+  // Close the editor when switching lessons so it always shows fresh content.
+  useEffect(() => {
+    setShowTryIt(false)
+  }, [activeLesson?.id])
+
+  // Latest quiz attempt for the active module (attached by the API when the
+  // user is signed in), kept writable so a fresh submit reflects instantly.
+  const quiz = currentModule?.quiz ?? null
+  const quizResult = currentModule?.quiz_result ?? null
+  function handleQuizResult(result: ApiQuizResult) {
+    setWorkCourse((prev) =>
+      prev
+        ? {
+            ...prev,
+            modules: prev.modules?.map((module) =>
+              module.id === currentModule?.id ? { ...module, quiz_result: result } : module,
+            ),
+          }
+        : prev,
+    )
+  }
 
   // Mark a lesson complete. Patches the lesson's own progress + is_completed
   // on the local course copy, and reconciles the enrollment totals from the
@@ -247,9 +311,9 @@ export function CourseWorkspacePanel({
                           <span className="block font-semibold text-stone-800 dark:text-stone-100">
                             Lesson {currentModule.order}.{item.order}: {item.title}
                           </span>
-                          {item.content ? (
+                          {lessonPreview(item.content) ? (
                             <span className="mt-1 block line-clamp-1 text-xs text-stone-500 dark:text-stone-400">
-                              {item.content}
+                              {lessonPreview(item.content)}
                             </span>
                           ) : null}
                         </span>
@@ -293,14 +357,33 @@ export function CourseWorkspacePanel({
               ) : null}
             </nav>
           ) : null}
-          <div className="p-6">
+          <div className="p-6 lg:p-8">
+            <div className="max-w-3xl">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-primary dark:text-primary-dark">Reading workspace</p>
-                <h2 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-50">{activeLesson?.title ?? 'Lesson workspace'}</h2>
+                <h2 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-50 sm:text-2xl">{activeLesson?.title ?? 'Lesson workspace'}</h2>
               </div>
               {headerAction}
             </div>
+
+            {example ? (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowTryIt((open) => !open)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:brightness-110 dark:bg-accent-dark"
+                >
+                  <i className={`fa-solid ${showTryIt ? 'fa-eye-slash' : 'fa-code'}`} aria-hidden />
+                  {showTryIt ? 'Hide editor' : 'Try it Yourself'}
+                </button>
+                {showTryIt ? (
+                  <div className="mt-4">
+                    <TryItPanel title={activeLesson?.title ?? 'Example'} code={example} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="mt-5">
               {session && activeLesson ? (
@@ -341,7 +424,7 @@ export function CourseWorkspacePanel({
               ))}
             </div>
 
-            <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/40">
+            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50/70 p-5 dark:border-stone-700 dark:bg-stone-800/40 sm:p-6">
               {activeTab === 'Study notes' ? (
                 <div>
                   <div className="mb-4 flex items-center justify-between gap-3 border-b border-stone-200 pb-3 dark:border-stone-700">
@@ -385,13 +468,100 @@ export function CourseWorkspacePanel({
                   <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">Notes are saved in this browser only.</p>
                 </div>
               ) : (
-                <div className="text-sm text-stone-700 dark:text-stone-200">
-                  <p className="font-semibold text-stone-900 dark:text-stone-50">Lesson resources</p>
-                  <p className="mt-1">Official readings, slides, and the practice task sandbox are linked here once the instructor publishes them.</p>
-                  <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">For now, focus on the study notes above to complete this lesson.</p>
+                <div>
+                  <p className="font-semibold text-stone-900 dark:text-stone-50">Best sources for this lesson</p>
+                  <p className="mt-1 text-sm">
+                    Curated links to the best free resources, plus license-compliant articles you can read here without leaving the app.
+                  </p>
+
+                  {activeLesson?.resources?.length ? (
+                    <div className="mt-4 space-y-4">
+                      {activeLesson.resources.map((resource) => (
+                        <article
+                          key={resource.id}
+                          className="rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="flex items-center gap-2 font-semibold text-stone-900 dark:text-stone-50">
+                              <i className="fa-solid fa-newspaper text-primary dark:text-primary-dark" aria-hidden />
+                              {resource.title}
+                            </p>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                              <i className="fa-solid fa-scale-balanced" aria-hidden />
+                              {resource.source} · {resource.license ?? 'open'}
+                            </span>
+                          </div>
+                          {resource.body ? (
+                            <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700 dark:text-stone-300">
+                              {resource.body}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+                              This source could not be imported right now — open it directly below.
+                            </p>
+                          )}
+                          <a
+                            href={resource.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline dark:text-primary-dark"
+                          >
+                            <i className="fa-solid fa-up-right-from-square text-xs" aria-hidden />
+                            Read the original
+                          </a>
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {activeLesson?.resource_links?.length ? (
+                    <ul className="mt-4 space-y-2">
+                      {activeLesson.resource_links.map((link) => (
+                        <li key={link.url}>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm transition hover:border-primary hover:shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:hover:border-primary-dark"
+                          >
+                            <i className="fa-solid fa-book-open mt-0.5 text-accent dark:text-accent-dark" aria-hidden />
+                            <span className="flex-1">
+                              <span className="font-semibold text-stone-800 group-hover:text-primary dark:text-stone-100 dark:group-hover:text-primary-dark">
+                                {link.title}
+                              </span>
+                              {link.license ? (
+                                <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                                  {link.license}
+                                </span>
+                              ) : null}
+                              <span className="mt-0.5 block truncate text-xs text-stone-400">{link.url}</span>
+                            </span>
+                            <i className="fa-solid fa-arrow-up-right-from-square text-xs text-stone-400 group-hover:text-accent dark:group-hover:text-accent-dark" aria-hidden />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {!activeLesson?.resources?.length && !activeLesson?.resource_links?.length ? (
+                    <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                      No external resources have been published for this lesson yet — focus on the study notes above.
+                    </p>
+                  ) : null}
                 </div>
               )}
             </div>
+
+            {quiz && session ? (
+              <ModuleQuiz
+                quiz={quiz}
+                moduleTitle={currentModule?.title ?? 'Module'}
+                moduleNumber={moduleIndex + 1}
+                session={session}
+                previous={quizResult}
+                onResult={handleQuizResult}
+              />
+            ) : null}
 
             <div className="mt-5 flex flex-col gap-3 border-t border-stone-200 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-stone-700">
               <div>
@@ -435,6 +605,7 @@ export function CourseWorkspacePanel({
                   </span>
                 )}
               </div>
+            </div>
             </div>
           </div>
           </div>

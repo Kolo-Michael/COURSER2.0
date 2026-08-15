@@ -2,6 +2,7 @@
 // Minimal vertical shell wrapping page content with the marketing header
 // and footer. Used by landing, auth, and catalog pages.
 import type { ReactNode } from 'react'
+import { FloatingBubbles } from '@/components/landing/FloatingBubbles'
 import { SiteFooter } from './SiteFooter'
 import { SiteHeader } from './SiteHeader'
 
@@ -15,6 +16,7 @@ export function PublicShell({ children }: PublicShellProps) {
   // single solid surface for the whole app.
   return (
     <div className="flex min-h-screen flex-col">
+      <FloatingBubbles />
       <SiteHeader />
       <div className="flex-1">{children}</div>
       <SiteFooter />

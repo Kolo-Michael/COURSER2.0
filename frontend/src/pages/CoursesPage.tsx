@@ -20,32 +20,56 @@ function categoryIcon(category: ApiCategory | null) {
   return category?.icon ? `fa-solid ${category.icon}` : 'fa-solid fa-book-open'
 }
 
-// One catalog card used on the public page: category icon, title, description,
-// level/duration/free badges, and a "View details" link to the course page.
+// Real lesson + module totals from the course tree (never a placeholder).
+function courseStats(course: ApiCourse) {
+  const modules = course.modules?.length ?? 0
+  const lessons = course.modules?.reduce((total, module) => total + (module.lessons?.length ?? 0), 0) ?? 0
+  return { modules, lessons }
+}
+
+// One catalog card used on the public page: cover image, category icon, title,
+// description, level/duration/free badges, real lesson counts, and a "View details" link.
 function CourseCard({ course }: { course: ApiCourse }) {
+  const { lessons } = courseStats(course)
   return (
     <article className="courser-card overflow-hidden">
-      <div className="flex items-start justify-between gap-3 rounded-t-2xl bg-stone-100 p-5 text-stone-900 dark:bg-stone-800 dark:text-stone-100">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-stone-700 ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-700">
-            <i className={`${categoryIcon(course.category)} text-lg`} aria-hidden />
-          </span>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-stone-600 dark:text-stone-300">
-              {course.category?.name ?? 'General'}
-            </p>
-            <h2 className="text-lg font-bold leading-snug">{course.title}</h2>
-          </div>
+      {course.image_url ? (
+        <div className="relative h-40">
+          <img
+            src={course.image_url}
+            alt={`${course.title} cover`}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+          {course.is_featured ? (
+            <span className="absolute right-3 top-3 rounded-full bg-accent px-2 py-1 text-[11px] font-semibold text-white shadow-sm">
+              Featured
+            </span>
+          ) : null}
         </div>
-        {course.is_featured ? (
-          <span className="rounded-full bg-accent px-2 py-1 text-[11px] font-semibold text-white">
-            Featured
-          </span>
-        ) : null}
-      </div>
+      ) : (
+        <div className="flex items-start justify-between gap-3 rounded-t-2xl bg-stone-100 p-5 text-stone-900 dark:bg-stone-800 dark:text-stone-100">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-stone-700 ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-700">
+              <i className={`${categoryIcon(course.category)} text-lg`} aria-hidden />
+            </span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-600 dark:text-stone-300">
+                {course.category?.name ?? 'General'}
+              </p>
+              <h2 className="text-lg font-bold leading-snug">{course.title}</h2>
+            </div>
+          </div>
+          {course.is_featured ? (
+            <span className="rounded-full bg-accent px-2 py-1 text-[11px] font-semibold text-white">
+              Featured
+            </span>
+          ) : null}
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col gap-4 p-5">
-        <p className="flex-1 text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+        <p className="flex-1 text-[15px] leading-7 text-stone-700 dark:text-stone-300">
           {course.short_description ?? course.description ?? 'Open this course to review the full outline.'}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
@@ -56,6 +80,12 @@ function CourseCard({ course }: { course: ApiCourse }) {
             <i className="fa-regular fa-clock mr-1" aria-hidden />
             {course.duration ?? 'Self-paced'}
           </span>
+          {lessons > 0 ? (
+            <span className="rounded-full bg-stone-100 px-3 py-1 text-stone-700 dark:bg-stone-800 dark:text-stone-200">
+              <i className="fa-regular fa-file-lines mr-1" aria-hidden />
+              {lessons} lessons
+            </span>
+          ) : null}
           <span className="rounded-full bg-primary/15 px-3 py-1 text-primary ring-1 ring-primary/25 dark:bg-primary-dark/15 dark:text-primary-dark dark:ring-primary-dark/30">
             Free
           </span>
@@ -250,8 +280,12 @@ function LoggedInCoursesPage({
                     to={`/courses/${course.slug}`}
                     className="group courser-card grid min-h-40 gap-4 p-4 sm:grid-cols-[112px_minmax(0,1fr)]"
                   >
-                    <div className={`flex h-28 items-center justify-center rounded-lg ${index % 2 === 0 ? 'bg-blue-50 text-primary' : 'bg-orange-50 text-accent'}`}>
-                      <i className={`${categoryIcon(course.category)} text-3xl`} aria-hidden />
+                    <div className={`flex h-28 items-center justify-center overflow-hidden rounded-lg ${course.image_url ? '' : index % 2 === 0 ? 'bg-blue-50 text-primary' : 'bg-orange-50 text-accent'}`}>
+                      {course.image_url ? (
+                        <img src={course.image_url} alt={`${course.title} cover`} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        <i className={`${categoryIcon(course.category)} text-3xl`} aria-hidden />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-stone-500">
@@ -264,18 +298,33 @@ function LoggedInCoursesPage({
                         <span className="h-1 w-1 rounded-full bg-stone-300" />
                         <span>{course.duration ?? 'Self-paced'}</span>
                       </div>
-                      <h3 className="mt-2 font-bold leading-snug text-stone-900 group-hover:text-primary">
+                      <h3 className="mt-2 text-[17px] font-bold leading-snug text-stone-900 group-hover:text-primary">
                         {course.title}
                       </h3>
-                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone-600">
+                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
                         {course.short_description ?? course.description ?? 'Open this course to continue learning.'}
                       </p>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-100">
-                        <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(72, 24 + index * 11)}%` }} />
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-stone-500 dark:text-stone-400">
+                        {courseStats(course).lessons > 0 ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <i className="fa-regular fa-file-lines" aria-hidden />
+                            {courseStats(course).lessons} lessons
+                          </span>
+                        ) : null}
+                        {courseStats(course).modules > 0 ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <i className="fa-regular fa-folder-open" aria-hidden />
+                            {courseStats(course).modules} modules
+                          </span>
+                        ) : null}
+                        <span className="inline-flex items-center gap-1.5 text-green-700 dark:text-green-400">
+                          <i className="fa-solid fa-gem" aria-hidden />
+                          Free
+                        </span>
                       </div>
-                      <div className="mt-3 inline-flex items-center text-xs font-bold text-primary">
+                      <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white transition group-hover:brightness-110 dark:bg-primary-dark">
                         Open course
-                        <i className="fa-solid fa-arrow-right ml-2" aria-hidden />
+                        <i className="fa-solid fa-arrow-right" aria-hidden />
                       </div>
                     </div>
                   </Link>
