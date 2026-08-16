@@ -128,8 +128,8 @@ export function SignupForm() {
           <button
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-accent dark:text-stone-400 dark:hover:text-accent-dark"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-stone-400 dark:hover:text-primary-dark dark:focus-visible:outline-primary-dark"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}}
             aria-pressed={showPassword}
           >
             <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
@@ -156,8 +156,8 @@ export function SignupForm() {
           <button
             type="button"
             onClick={() => setShowConfirm((visible) => !visible)}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-accent dark:text-stone-400 dark:hover:text-accent-dark"
-            aria-label={showConfirm ? 'Hide repeat password' : 'Show repeat password'}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-stone-400 dark:hover:text-primary-dark dark:focus-visible:outline-primary-dark"
+            aria-label={showConfirm ? 'Hide repeat password' : 'Show repeat password'}}
             aria-pressed={showConfirm}
           >
             <i className={`fa-solid ${showConfirm ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
@@ -168,7 +168,7 @@ export function SignupForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark"
+        className="w-full rounded-lg bg-accent-btn py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-accent-dark"
       >
         {submitting ? 'Creating account...' : 'Create account'}
       </button>

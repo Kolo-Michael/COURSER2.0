@@ -42,7 +42,7 @@ function CourseCard({ course }: { course: ApiCourse }) {
             loading="lazy"
           />
           {course.is_featured ? (
-            <span className="absolute right-3 top-3 rounded-full bg-accent px-2 py-1 text-[11px] font-semibold text-white shadow-sm">
+            <span className="absolute right-3 top-3 rounded-full bg-accent-btn px-2 py-1 text-[11px] font-semibold text-white shadow-sm dark:bg-accent-dark">
               Featured
             </span>
           ) : null}
@@ -61,7 +61,7 @@ function CourseCard({ course }: { course: ApiCourse }) {
             </div>
           </div>
           {course.is_featured ? (
-            <span className="rounded-full bg-accent px-2 py-1 text-[11px] font-semibold text-white">
+            <span className="rounded-full bg-accent-btn px-2 py-1 text-[11px] font-semibold text-white dark:bg-accent-dark">
               Featured
             </span>
           ) : null}
@@ -115,7 +115,7 @@ function CourseMascot() {
         <span className="absolute left-3 top-4 h-2 w-2 rounded-full bg-white" />
         <span className="absolute right-3 top-4 h-2 w-2 rounded-full bg-white" />
         <span className="absolute bottom-4 left-1/2 h-1.5 w-5 -translate-x-1/2 rounded-full bg-accent" />
-        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-md bg-accent text-[10px] font-bold text-white">
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-md bg-accent-btn text-[10px] font-bold text-white dark:bg-accent-dark">
           AI
         </span>
       </div>
@@ -174,7 +174,7 @@ function LoggedInCoursesPage({
         <section className="courser-card overflow-hidden">
           <div className="courser-bg-dots grid gap-6 border-b border-stone-200 bg-white/50 p-6 text-stone-900 backdrop-blur-md lg:grid-cols-[minmax(0,1fr)_340px] dark:border-stone-700/60 dark:bg-stone-900/60 dark:text-stone-100">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">
+              <p className="text-sm font-semibold uppercase tracking-wide text-stone-800 dark:text-stone-200">
                 {admin ? 'Admin view' : `Welcome back, ${learnerName}`}
               </p>
               <h2 className="mt-2 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
@@ -188,7 +188,7 @@ function LoggedInCoursesPage({
                 {featured ? (
                   <Link
                     to={`/courses/${featured.slug}`}
-                    className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:brightness-110 dark:bg-accent-dark"
+                    className="inline-flex items-center rounded-lg bg-accent-btn px-4 py-2 text-sm font-semibold text-white hover:brightness-110 dark:bg-accent-dark"
                   >
                     <i className="fa-solid fa-play mr-2 text-xs" aria-hidden />
                     Continue course
@@ -280,7 +280,7 @@ function LoggedInCoursesPage({
                     to={`/courses/${course.slug}`}
                     className="group courser-card grid min-h-40 gap-4 p-4 sm:grid-cols-[112px_minmax(0,1fr)]"
                   >
-                    <div className={`flex h-28 items-center justify-center overflow-hidden rounded-lg ${course.image_url ? '' : index % 2 === 0 ? 'bg-blue-50 text-primary' : 'bg-orange-50 text-accent'}`}>
+                    <div className={`flex h-28 items-center justify-center overflow-hidden rounded-lg ${course.image_url ? '' : index % 2 === 0 ? 'bg-blue-50 text-primary' : 'bg-orange-50 text-accent-fg'}`}>
                       {course.image_url ? (
                         <img src={course.image_url} alt={`${course.title} cover`} className="h-full w-full object-cover" loading="lazy" />
                       ) : (
@@ -470,9 +470,9 @@ export function CoursesPage() {
 
   return (
     <PublicShell>
-      <div className="courser-bg-dots border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950">
+      <main className="courser-bg-dots border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Catalog</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-stone-800 dark:text-stone-200">Catalog</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-4xl">
             Browse courses
           </h1>
@@ -491,7 +491,7 @@ export function CoursesPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by title..."
                 aria-label="Search courses"
-                className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-10 pr-3 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+                className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-10 pr-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
               />
             </div>
           </div>
@@ -534,7 +534,7 @@ export function CoursesPage() {
               id="category-select"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+               className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
             >
               {categoryOptions.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -546,7 +546,7 @@ export function CoursesPage() {
 
           {loading ? (
             <div className="rounded-2xl border border-stone-200 bg-white p-10 text-center text-stone-600 shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300">
-              <i className="fa-solid fa-spinner mb-3 text-2xl text-accent dark:text-accent-dark" aria-hidden />
+              <i className="fa-solid fa-spinner mb-3 text-2xl text-primary dark:text-primary-dark" aria-hidden />
               <p className="font-semibold text-stone-800 dark:text-white">Loading courses...</p>
             </div>
           ) : error ? (
@@ -568,7 +568,7 @@ export function CoursesPage() {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </PublicShell>
   )
 }

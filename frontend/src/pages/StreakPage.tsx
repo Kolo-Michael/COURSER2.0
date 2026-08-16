@@ -78,14 +78,14 @@ export function StreakPage() {
       navItems={studentNav()}
     >
       <div className="space-y-6">
-        <section className="courser-card overflow-hidden p-6">
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent shadow-lg shadow-accent/30">
-                <i className="fa-solid fa-fire text-4xl text-white" aria-hidden />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-accent">Current streak</p>
+          <section className="courser-card overflow-hidden p-6">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent-btn shadow-lg shadow-accent/30">
+                  <i className="fa-solid fa-fire text-4xl text-white" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">Current streak</p>
                 <p className="mt-1 text-5xl font-bold text-stone-900 dark:text-stone-50">
                   {loading ? '—' : currentStreak}{' '}
                   <span className="text-xl font-semibold text-stone-500 dark:text-stone-400">
@@ -103,7 +103,7 @@ export function StreakPage() {
             </div>
             <Link
               to="/courses"
-              className="inline-flex items-center rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              className="inline-flex items-center rounded-lg bg-accent-btn px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
             >
               <i className="fa-solid fa-play mr-2" aria-hidden />
               Learn today
@@ -127,16 +127,16 @@ export function StreakPage() {
           <>
             <section className="courser-card p-6">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">This week</h3>
-                <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-                  {streak?.days_this_month ?? 0} days learned this month
-                </span>
+                <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50">This week</h2>
+                 <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-fg dark:text-accent-dark">
+                   {streak?.days_this_month ?? 0} days learned this month
+                 </span>
               </div>
               <div className="mt-5 grid grid-cols-4 gap-3 sm:grid-cols-7">
                 {WEEK.map((item) => (
                   <div
                     key={item.day}
-                    className="flex flex-col items-center gap-2 rounded-xl border border-stone-200 p-3 text-stone-400 dark:border-stone-700 dark:text-stone-500"
+                    className="flex flex-col items-center gap-2 rounded-xl border border-stone-200 p-3 text-stone-500 dark:border-stone-700 dark:text-stone-400"
                   >
                     <span className="text-xs font-semibold uppercase">{item.day}</span>
                     <i className="fa-regular fa-circle text-2xl" aria-hidden />
@@ -160,7 +160,7 @@ export function StreakPage() {
                           <span
                             className={[
                               'flex h-10 w-10 items-center justify-center rounded-lg',
-                              reached ? 'bg-accent/15 text-accent' : 'bg-stone-100 text-stone-400 dark:bg-stone-800',
+                              reached ? 'bg-accent/15 text-accent-fg dark:text-accent-dark' : 'bg-stone-100 text-stone-400 dark:bg-stone-800',
                             ].join(' ')}
                           >
                             <i className="fa-solid fa-medal" aria-hidden />
@@ -200,7 +200,7 @@ export function StreakPage() {
                     type="button"
                     onClick={handleRestore}
                     disabled={restoring}
-                    className="mt-4 w-full rounded-lg border border-accent/40 bg-accent/10 px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/15 disabled:opacity-60"
+                    className="mt-4 w-full rounded-lg border border-accent/40 bg-accent-btn px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
                   >
                     <i className="fa-solid fa-wand-magic-sparkles mr-2" aria-hidden />
                     {restoring ? 'Restoring…' : 'Restore last missed day'}

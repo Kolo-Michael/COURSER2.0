@@ -12,6 +12,10 @@ import { getSession } from '@/auth/session'
 export const NAV_STYLE_KEY = 'courser.nav.style'
 export const NAV_COLLAPSED_KEY = 'courser.nav.collapsed'
 
+/** Custom event name dispatched whenever nav prefs change, so mounted layouts
+ *  (DashboardLayout) can react without a full page reload or router change. */
+export const NAV_EVENT = 'courser.nav.change'
+
 /** Read a localStorage value, falling back when missing or unparsable. */
 function read<T>(key: string, fallback: T, parse: (raw: string) => T): T {
   try {
@@ -49,6 +53,8 @@ export function setNavStyle(style: NavStyle) {
   write(NAV_STYLE_KEY, style)
   // Best-effort persistence to the backend — never block the UI on it.
   updateProfile({ nav_style: style }).catch(() => {})
+  // Notify any mounted DashboardLayout so it switches without a reload.
+  window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: { navStyle: style } }))
 }
 
 export function getNavCollapsed(): boolean {
@@ -62,4 +68,5 @@ export function getNavCollapsed(): boolean {
 export function setNavCollapsed(collapsed: boolean) {
   write(NAV_COLLAPSED_KEY, String(collapsed))
   updateProfile({ nav_collapsed: collapsed }).catch(() => {})
+  window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: { navCollapsed: collapsed } }))
 }

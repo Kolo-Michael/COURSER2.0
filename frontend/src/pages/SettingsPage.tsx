@@ -83,16 +83,27 @@ export function SettingsPage() {
   }, [])
 
   // File picker handler: reject images over 2 MB, otherwise read as a data
-  // URL and show it in the avatar preview.
-  function onAvatarSelected(file: File) {
+  // URL, show it in the avatar preview, and persist it to the server so the
+  // profile picture survives reloads without a separate "Save profile" step.
+  async function onAvatarSelected(file: File) {
     if (file.size > 2 * 1024 * 1024) {
       setProfileStatus('error')
       setProfileError('Image is too large — pick one under 2 MB.')
       return
     }
     const reader = new FileReader()
-    reader.onload = () => {
-      setAvatarPreview(reader.result as string)
+    reader.onload = async () => {
+      const dataUrl = reader.result as string
+      setAvatarPreview(dataUrl)
+      try {
+        setProfileStatus('saving')
+        const updated = await updateProfile({ avatar_url: dataUrl })
+        setProfile(updated)
+        setProfileStatus('saved')
+      } catch (err) {
+        setProfileStatus('error')
+        setProfileError(err instanceof Error ? err.message : 'Could not save your avatar.')
+      }
     }
     reader.readAsDataURL(file)
   }

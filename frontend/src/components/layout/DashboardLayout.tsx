@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { logout } from '@/api/auth'
 import { getSession, clearSession } from '@/auth/session'
-import { getNavCollapsed, getNavStyle, setNavCollapsed, setNavStyle } from '@/auth/preferences'
+import { getNavCollapsed, getNavStyle, setNavCollapsed, setNavStyle, NAV_EVENT } from '@/auth/preferences'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
 // One sidebar / floating-nav entry.
@@ -75,6 +75,17 @@ export function DashboardLayout({
   const displayName = session?.identifier || 'User'
 
   const floatingRef = useRef<HTMLDivElement>(null)
+
+  // Listen for nav-preference changes dispatched from the Settings page so the
+  // layout updates live instead of staying stuck on the mount-time value.
+  useEffect(() => {
+    const onNavChange = (event: CustomEvent) => {
+      if (event.detail?.navStyle) setNavStyleState(event.detail.navStyle)
+      if (typeof event.detail?.navCollapsed === 'boolean') setCollapsedState(event.detail.navCollapsed)
+    }
+    window.addEventListener(NAV_EVENT, onNavChange as EventListener)
+    return () => window.removeEventListener(NAV_EVENT, onNavChange as EventListener)
+  }, [])
 
   // Collapsed only applies to the desktop sidebar — the mobile overlay
   // always shows full labels.

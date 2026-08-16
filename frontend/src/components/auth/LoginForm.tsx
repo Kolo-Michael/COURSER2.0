@@ -87,10 +87,9 @@ export function LoginForm() {
           <button
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-accent dark:text-stone-400 dark:hover:text-accent-dark"
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-stone-400 dark:hover:text-primary-dark dark:focus-visible:outline-primary-dark"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
-            aria-pressed={showPassword}
-          >
+            aria-pressed={showPassword}>
             <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
           </button>
         </div>
@@ -107,7 +106,7 @@ export function LoginForm() {
         </label>
         <Link
           to="/auth?mode=forgot-password"
-          className="text-sm text-accent hover:underline dark:text-accent-dark"
+          className="text-sm text-primary hover:underline dark:text-primary-dark"
         >
           Forgot password?
         </Link>

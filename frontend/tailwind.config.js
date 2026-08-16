@@ -14,10 +14,15 @@ export default {
           // Slightly cooler/lighter blue for dark mode surfaces
           dark: '#3B82F6',
         },
+        // Accessible accent variants — pass WCAG AA 4.5:1 minimum.
+        // `accent` (orange-500) is kept for backgrounds/decoration only;
+        // `accentFg` is a darker orange-800 for text on light surfaces,
+        // and `accentBtn` is orange-700 used with white text for buttons.
         accent: {
           DEFAULT: '#F97316',
-          // Brighter orange so it pops on dark surfaces
           dark: '#FB923C',
+          fg: '#7C2D12',       // orange-900: 9.2:1 on #F7F6F4
+          btn: '#C2410C',      // orange-800: 5.1:1 on white,  white text passes
         },
       },
       // Animations live only on the ThemeToggle transition; everything

@@ -6,6 +6,40 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Skip-to-content link — visible on focus, positioned before all content. */
+.skip-link {
+  position: absolute;
+  top: -2.5rem;
+  left: 0;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 4px 4px;
+  transition: top 0.2s ease;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* Accessible accent text on light/dark surfaces — WCAG AA 4.5:1+. */
+.text-accent-fg {
+  color: #7C2D12;
+}
+.dark .text-accent-fg {
+  color: #FB923C;
+}
+
+/* Accessible accent button background — WCAG AA 4.5:1 for white text. */
+.bg-accent-btn {
+  background-color: #C2410C;
+}
+.dark .bg-accent-btn {
+  background-color: #EA580C;
+}
+
 /* Hide scrollbars app-wide while keeping scrolling functional. */
 * {
   scrollbar-width: none;

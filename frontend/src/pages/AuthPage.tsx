@@ -12,12 +12,11 @@ import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm'
 import { GoogleCallback } from '@/components/auth/GoogleCallback'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Link, useSearchParams } from 'react-router-dom'
-
 // AuthPage: reads ?mode= from the URL and renders the matching auth flow.
 // A ?google=success / ?google=error param (set by the OAuth callback
 // redirect) takes over the form area while the Google session resolves.
 export function AuthPage() {
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const mode = params.get('mode')
   const google = params.get('google')
 
@@ -27,6 +26,13 @@ export function AuthPage() {
   const isSignup = mode === 'signup'
   const isForgot = mode === 'forgot-password'
   const isVerify = mode === 'verify-code'
+
+  // Switch between login/signup tabs via search params (no full navigation),
+  // so form fields stay populated when the user toggles back and forth.
+  function switchMode(newMode: string) {
+    params.set('mode', newMode)
+    setParams(params)
+  }
 
   // Static copy per auth flow, shown in the left hero column.
   const pageConfig = {
@@ -62,6 +68,11 @@ export function AuthPage() {
 
   return (
     <div className="courser-bg-dots relative min-h-screen overflow-hidden bg-stone-50 dark:bg-stone-950">
+      {/* Skip-to-content link for keyboard / screen-reader users (WCAG 2.4.1). */}
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+
       {/* decorative background elements — larger, more spaced out */}
       <div className="pointer-events-none absolute inset-0 select-none" aria-hidden>
         <i className="fa-solid fa-book-open absolute left-[5%] top-[12%] text-[180px] text-stone-200/50 dark:text-stone-800/35" />
@@ -84,11 +95,14 @@ export function AuthPage() {
         </div>
       </header>
 
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-2 lg:items-center lg:px-8">
+      <main
+        id="main-content"
+        className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-2 lg:items-center lg:px-8"
+      >
         <section className="space-y-5">
-          <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">
-            {config.subtitle}
-          </p>
+         <p className="text-sm font-semibold uppercase tracking-wide text-stone-800 dark:text-stone-200">
+             {config.subtitle}
+           </p>
           <h1 className="text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-5xl">
             {config.title}
           </h1>
@@ -98,41 +112,46 @@ export function AuthPage() {
           {(isLogin || isSignup) && (
             <div className="flex flex-wrap gap-6 pt-4">
               <span className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                <i className="fa-solid fa-circle-check text-accent dark:text-accent-dark" /> Free courses
+                <i className="fa-solid fa-circle-check text-primary dark:text-primary-dark" /> Free courses
               </span>
               <span className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                <i className="fa-solid fa-circle-check text-accent dark:text-accent-dark" /> AI tutor
+                <i className="fa-solid fa-circle-check text-primary dark:text-primary-dark" /> AI tutor
               </span>
               <span className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                <i className="fa-solid fa-circle-check text-accent dark:text-accent-dark" /> Learn at your pace
+                <i className="fa-solid fa-circle-check text-primary dark:text-primary-dark" /> Learn at your pace
               </span>
             </div>
           )}
         </section>
 
-        <section className="courser-card relative p-8 shadow-lg ring-1 ring-primary/5 dark:ring-primary-dark/5">          {/* Tab switcher only for login/signup modes; other flows are single-step. */}
+        <section className="courser-card relative p-8 shadow-lg ring-1 ring-primary/5 dark:ring-primary-dark/5">
+          {/* Tab switcher only for login/signup modes; other flows are single-step.
+              Uses buttons (not <Link>) so the forms don't unmount/remount, which
+              preserves user input when toggling back and forth. */}
           {(isLogin || isSignup) && (
             <div className="mb-6 flex rounded-lg bg-stone-100 p-1 text-sm font-semibold dark:bg-stone-800">
-              <Link
-                to="/auth"
+              <button
+                type="button"
+                onClick={() => switchMode('login')}
                 className={`flex-1 rounded-md py-2 text-center transition ${
                   isLogin
-                    ? 'bg-white text-accent shadow-sm dark:bg-stone-900 dark:text-accent-dark'
-                    : 'text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white'
+                    ? 'bg-white text-stone-800 shadow-sm dark:bg-stone-900 dark:text-stone-100'
+                    : 'text-stone-600 hover:text-stone-900 dark:text-stone-300'
                 }`}
               >
                 Log in
-              </Link>
-              <Link
-                to="/auth?mode=signup"
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('signup')}
                 className={`flex-1 rounded-md py-2 text-center transition ${
                   isSignup
-                    ? 'bg-white text-accent shadow-sm dark:bg-stone-900 dark:text-accent-dark'
-                    : 'text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white'
+                    ? 'bg-white text-stone-800 shadow-sm dark:bg-stone-900 dark:text-stone-100'
+                    : 'text-stone-600 hover:text-stone-900 dark:text-stone-300'
                 }`}
               >
                 Sign up
-              </Link>
+              </button>
             </div>
           )}
           {/* Google OAuth handoff takes over the card; otherwise render the form matching the current mode. */}
@@ -140,7 +159,7 @@ export function AuthPage() {
             <GoogleCallback status={google === 'success' ? 'success' : 'error'} reason={params.get('reason')} />
           ) : isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : <ResetPasswordForm />}
         </section>
-      </div>
+      </main>
     </div>
   )
 }

@@ -9,14 +9,12 @@ import { subscribeNewsletter } from '@/api/courses'
 /** Static "Product" column links. */
 const productLinks = [
   { label: 'Courses', to: '/courses' },
-  { label: 'Create account', to: '/auth?mode=signup' },
-  { label: 'Sign in', to: '/auth?mode=login' },
+  { label: 'Learning tracks', to: '/courses' },
+  { label: 'AI tutor', to: '/courses' },
 ]
 
 /** Static "Resources" column links. */
 const resourceLinks = [
-  { label: 'Learning tracks', to: '/courses' },
-  { label: 'AI course builder', to: '/courses' },
   { label: 'Browse catalog', to: '/courses' },
 ]
 
@@ -155,30 +153,30 @@ export function SiteFooter() {
             <h3 className="mt-8 text-xs font-semibold uppercase tracking-wider text-stone-200">
               Contact
             </h3>
-            <ul className="mt-4 space-y-2 text-sm text-stone-400">
+            <ul className="mt-4 space-y-2 text-sm">
               <li className="flex items-center gap-2">
-                <i className="fa-solid fa-envelope text-xs text-accent" aria-hidden />
-                <a href="mailto:hello@courser.app" className="hover:text-white">
+                <i className="fa-solid fa-envelope text-xs text-accent-dark" aria-hidden />
+                <a href="mailto:hello@courser.app" className="text-stone-300 hover:text-white">
                   hello@courser.app
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <i className="fa-solid fa-location-dot text-xs text-accent" aria-hidden />
-                Remote-first team
+                <i className="fa-solid fa-location-dot text-xs text-accent-dark" aria-hidden />
+                <span className="text-stone-300">Remote-first team</span>
               </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-stone-800 pt-6 text-xs text-stone-500 sm:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-stone-800 pt-6 text-xs text-stone-400 sm:flex-row">
           <p>© {year} COURSER. Built for learners who want clear, structured paths to skill up.</p>
           <div className="flex items-center gap-4">
-            <Link to="/auth?mode=login" className="hover:text-white">
+            <Link to="/privacy" className="text-stone-400 hover:text-white">
               Privacy
             </Link>
             <span className="h-1 w-1 rounded-full bg-stone-700" />
-            <Link to="/auth?mode=login" className="hover:text-white">
+            <Link to="/terms" className="text-stone-400 hover:text-white">
               Terms
             </Link>
           </div>

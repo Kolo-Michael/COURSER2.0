@@ -26,7 +26,7 @@ import { navItemsFor } from '@/components/layout/navItems'
 import { PublicShell } from '@/components/layout/PublicShell'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 // Resolve a Font Awesome class for a course's category icon (fallback: book).
 function categoryIcon(course: ApiCourse) {
@@ -61,7 +61,7 @@ function CourseDetailShell({
     )
   }
 
-  return <PublicShell>{children}</PublicShell>
+  return <PublicShell><main id="main-content">{children}</main></PublicShell>
 }
 
 // Course workspace page. Fetches the course once by URL slug and drives the
@@ -74,6 +74,7 @@ export function CourseDetailPage() {
   const [error, setError] = useState(false)
   // Session snapshot read once at mount (the page is short-lived).
   const [session] = useState(() => getSession())
+  const navigate = useNavigate()
 
   // Enrollment-flow state.
   const [enrolling, setEnrolling] = useState(false)
@@ -146,8 +147,9 @@ export function CourseDetailPage() {
   // enrollment record.
   async function handleEnroll() {
     if (!session) {
-      if (slug) window.location.href = `/auth?mode=signup&next=/courses/${slug}`
-      else window.location.href = '/auth?mode=signup'
+      // Use client-side navigation with search-param `next` so the signup
+      // page can redirect back here after registration. No full-page reload.
+      navigate(`/auth?mode=signup&next=/courses/${slug}`)
       return
     }
     if (!course || enrolling || enrolled) return
