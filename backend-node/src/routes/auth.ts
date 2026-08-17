@@ -168,9 +168,10 @@ function clearAuthCookies(res: {
 
 function setSessionCookie(
   res: { cookie: (k: string, v: string, o: Record<string, unknown>) => void },
-  user: UserRow
+  user: UserRow,
+  accessToken?: string
 ): void {
-  const payload = {
+  const payload: Record<string, unknown> = {
     identifier: user.full_name || user.username,
     email: user.email,
     fullName: user.full_name,
@@ -180,6 +181,10 @@ function setSessionCookie(
     navStyle: user.nav_style || "sidebar",
     navCollapsed: Boolean(user.nav_collapsed),
   };
+  // Include the access token so same-origin (or cookie-readable) clients can
+  // use it as a Bearer header — critical for cross-origin Safari/iOS where
+  // ITP blocks third-party HttpOnly cookies.
+  if (accessToken) payload.accessToken = accessToken;
   res.cookie("courser_session", encodeURIComponent(JSON.stringify(payload)), {
     httpOnly: false,
     secure: cookieSecure(),
@@ -283,7 +288,7 @@ router.post(
     const verified = { ...user, is_verified: true };
     const tokens = await authService.issueTokens(verified);
     setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
-    setSessionCookie(res, verified);
+    setSessionCookie(res, verified, tokens.accessToken);
     res.status(201).json(tokenResponse(verified, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
   })
 );
@@ -300,7 +305,7 @@ router.post(
     }
     const tokens = await authService.issueTokens(user, data.remember_me);
     setAuthCookies(res, tokens.accessToken, tokens.refreshToken, data.remember_me);
-    setSessionCookie(res, user);
+    setSessionCookie(res, user, tokens.accessToken);
     res.json(tokenResponse(user, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
   })
 );
@@ -326,7 +331,7 @@ router.post(
     const remainingDays = Math.floor(remainingMs / 86_400_000);
     const rememberMe = remainingDays > config.REFRESH_TOKEN_EXPIRE_DAYS;
     setAuthCookies(res, rotated.accessToken, rotated.refreshToken, rememberMe);
-    setSessionCookie(res, rotated.user);
+    setSessionCookie(res, rotated.user, rotated.accessToken);
     res.json(
       tokenResponse(rotated.user, rotated.accessToken, rotated.refreshToken, rotated.sessionExpiresAt)
     );
@@ -442,11 +447,14 @@ router.get(
 
     const tokens = await authService.issueTokens(user);
     setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
-    setSessionCookie(res, user);
+    setSessionCookie(res, user, tokens.accessToken);
     res.clearCookie(GOOGLE_STATE_COOKIE, { path: "/" });
-    // The SPA's AuthPage handles ?google=success by resolving /auth/me and
-    // routing to the role dashboard.
-    res.redirect(302, `${targetOrigin}/auth?google=success`);
+    // Pass the short-lived access token in the URL fragment (not query string,
+    // so it's never sent to the server) so the SPA can read it client-side on
+    // cross-origin setups where Safari/iOS ITP blocks the HttpOnly cookies.
+    // The SPA stores it in its own origin cookie + Authorization header, making
+    // subsequent API calls work without relying on cross-origin cookie storage.
+    res.redirect(302, `${targetOrigin}/auth?google=success#access_token=${encodeURIComponent(tokens.accessToken)}`);
   })
 );
 

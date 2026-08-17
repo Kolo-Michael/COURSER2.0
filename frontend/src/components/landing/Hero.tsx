@@ -28,7 +28,7 @@ export function Hero() {
       <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-2 pb-12 pt-10 sm:px-3 lg:flex-row lg:items-center lg:gap-14 lg:px-4 lg:pb-16 lg:pt-14">
         <div className="flex-1">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-stone-100 px-4 py-1.5 text-sm font-medium text-stone-800 ring-1 ring-stone-200 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700">
-            <i className="fa-solid fa-rocket text-accent dark:text-accent-dark" aria-hidden="true" />
+            <i className="fa-solid fa-rocket text-accent-fg dark:text-accent-dark" aria-hidden="true" />
             AI-powered courses, built for real progress
           </p>
 
@@ -40,7 +40,7 @@ export function Hero() {
               Learn smarter with
             </span>
             <span className="mt-2 block text-4xl sm:text-5xl lg:text-6xl">
-              <span className="text-accent dark:text-accent-dark">COURSER:</span>{' '}
+              <span className="text-accent-fg dark:text-accent-dark">COURSER:</span>{' '}
               <span className="font-normal text-stone-700 dark:text-stone-300">your intelligent campus</span>
             </span>
           </h1>
@@ -52,14 +52,14 @@ export function Hero() {
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
               to="/auth"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent-btn px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-accent-dark"
             >
               Get started free
               <i className="fa-solid fa-arrow-right text-sm opacity-90" aria-hidden="true" />
             </Link>
             <Link
               to="/courses"
-              className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-stone-800 ring-1 ring-stone-200 transition hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-700 dark:hover:bg-stone-800"
+              className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-stone-800 ring-1 ring-stone-200 transition hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-700 dark:hover:bg-stone-800"
             >
               Explore courses
             </Link>
@@ -67,7 +67,7 @@ export function Hero() {
 
           <dl className="mt-10 grid gap-8 sm:grid-cols-3">
             <div className="flex gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent ring-1 ring-accent/20 dark:bg-accent-dark/15 dark:text-accent-dark dark:ring-accent-dark/30">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary ring-1 ring-primary/20 dark:bg-primary-dark/15 dark:text-primary-dark dark:ring-primary-dark/30">
                 <i className="fa-solid fa-graduation-cap text-lg" aria-hidden="true" />
               </div>
               <div>

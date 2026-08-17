@@ -55,7 +55,7 @@ export function ForgotPasswordForm() {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
         />
       </div>
       {error ? (
@@ -79,7 +79,7 @@ export function ForgotPasswordForm() {
         <button
           type="button"
           onClick={() => navigate('/auth?mode=login', { replace: true })}
-          className="text-accent hover:underline dark:text-accent-dark"
+           className="text-primary hover:underline dark:text-primary-dark"
         >
           Back to login
         </button>

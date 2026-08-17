@@ -33,11 +33,15 @@ export type ProfileUpdatePayload = {
   nav_collapsed?: boolean
 }
 
-// Tokens are stored in HttpOnly cookies by the backend; the JSON body
-// carries only the user identity so the client can render the right
-// dashboard without an extra /auth/me round-trip.
+// Tokens are stored in HttpOnly cookies by the backend, BUT on cross-origin
+// Safari/iOS (ITP) those cookies are blocked. The backend also emits the
+// access_token in the JSON body + the courser_session cookie payload, so the
+// SPA can fall back to storing it in a readable cookie and sending it as a
+// Bearer header. LoginResponse extends the user payload with those tokens.
 export type LoginResponse = {
   user: ApiUser
+  access_token?: string
+  refresh_token?: string
 }
 
 export type SignupPayload = {

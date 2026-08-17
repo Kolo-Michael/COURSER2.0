@@ -81,7 +81,7 @@ export function TypedPhrases({ phrases }: TypedPhrasesProps) {
     <span aria-label={phrases.join(' ')}>
       <span className="block" aria-hidden="true">
         {current.slice(0, step.chars)}
-        <span className="typing-cursor text-accent dark:text-accent-dark">▍</span>
+        <span className="typing-cursor text-primary dark:text-primary-dark">▍</span>
       </span>
     </span>
   )

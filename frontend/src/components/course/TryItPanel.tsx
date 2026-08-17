@@ -26,7 +26,7 @@ export function TryItPanel({ title, code }: { title: string; code: string }) {
     <section className="overflow-hidden rounded-2xl border border-stone-300 shadow-sm dark:border-stone-700" aria-label="Try it yourself">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-300 bg-stone-200/70 px-3 py-2 dark:border-stone-700 dark:bg-stone-800/70">
         <p className="flex items-center gap-2 text-sm font-bold text-stone-900 dark:text-stone-50">
-          <i className="fa-solid fa-code text-accent dark:text-accent-dark" aria-hidden />
+          <i className="fa-solid fa-code text-primary dark:text-primary-dark" aria-hidden />
           Try it Yourself
         </p>
         <div className="flex items-center gap-2">
@@ -56,7 +56,7 @@ export function TryItPanel({ title, code }: { title: string; code: string }) {
             value={value}
             onChange={(event) => setValue(event.target.value)}
             spellCheck={false}
-            className="h-64 w-full resize-y bg-stone-900 p-3 font-mono text-[13px] leading-5 text-stone-100 outline-none focus:ring-2 focus:ring-inset focus:ring-accent/50 md:h-72"
+            className="h-64 w-full resize-y bg-stone-900 p-3 font-mono text-[13px] leading-5 text-stone-100 outline-none focus:ring-2 focus:ring-inset focus:ring-primary/50 md:h-72"
             aria-label={`Editable ${title} example`}
           />
         </label>

@@ -14,6 +14,7 @@ export type AuthSession = {
   avatarUrl?: string | null
   navStyle?: 'sidebar' | 'floating'
   navCollapsed?: boolean
+  accessToken?: string
 }
 
 // Authentication tokens live in HttpOnly cookies set by the backend
@@ -98,8 +99,9 @@ export function getSession(): AuthSession | null {
           typeof parsed.avatarUrl === 'string' || parsed.avatarUrl === null
             ? parsed.avatarUrl
             : undefined,
-        navStyle: parsed.navStyle === 'floating' || parsed.navStyle === 'sidebar' ? parsed.navStyle : undefined,
-        navCollapsed: typeof parsed.navCollapsed === 'boolean' ? parsed.navCollapsed : undefined,
+         navStyle: parsed.navStyle === 'floating' || parsed.navStyle === 'sidebar' ? parsed.navStyle : undefined,
+         navCollapsed: typeof parsed.navCollapsed === 'boolean' ? parsed.navCollapsed : undefined,
+         accessToken: typeof parsed.accessToken === 'string' ? parsed.accessToken : undefined,
       }
     }
   }
@@ -153,17 +155,19 @@ export function getSession(): AuthSession | null {
  */
 export function saveSession(session: AuthSession) {
   if (typeof document === 'undefined') return
+  const { identifier, role, email, fullName, avatarUrl, navStyle, navCollapsed, accessToken } = session
   const payload = {
-    identifier: session.identifier,
-    email: session.email ?? undefined,
-    fullName: session.fullName ?? null,
-    role: session.role,
-    avatarUrl: session.avatarUrl ?? null,
-    navStyle: session.navStyle ?? 'sidebar',
-    navCollapsed: Boolean(session.navCollapsed),
+    identifier,
+    email: email ?? undefined,
+    fullName: fullName ?? null,
+    role,
+    avatarUrl: avatarUrl ?? null,
+    navStyle: navStyle ?? 'sidebar',
+    navCollapsed: Boolean(navCollapsed),
+    accessToken: accessToken ?? undefined,
   }
-  // 60 minutes mirrors the access-token lifetime the backend uses.
-  document.cookie = `${SESSION_COOKIE}=${encodeURIComponent(JSON.stringify(payload))}; Max-Age=3600; Path=/`
+   // 60 minutes mirrors the access-token lifetime the backend uses.
+  document.cookie = `${SESSION_COOKIE}=${encodeURIComponent(JSON.stringify({ ...payload, accessToken }))}; Max-Age=3600; Path=/`
 }
 
 export function clearSession() {

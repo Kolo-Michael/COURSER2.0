@@ -31,16 +31,22 @@ export function LoginForm() {
     try {
       // POST /auth/login — server returns only the user; tokens live in
       // HttpOnly cookies set as part of the same response. `identifier`
-      // accepts an email address or a username.
+      // accepts an email address or a username. The response body also
+      // carries the access_token (used as a Bearer header fallback on
+      // cross-origin Safari/iOS where ITP blocks the HttpOnly cookie).
       const response = await login(identifier, password, rememberMe)
 
-      // Trigger getSession() to read the freshly set courser_session cookie
-      // so the next render sees an authenticated state.
+      // Persist session on the SPA origin so getSession()/ProtectedRoute
+      // work even when the backend's HttpOnly cookies are blocked by ITP.
       saveSession({
         identifier: response.user.full_name || response.user.username,
         email: response.user.email,
         fullName: response.user.full_name,
         role: response.user.role,
+        avatarUrl: response.user.avatar_url ?? undefined,
+        navStyle: response.user.nav_style,
+        navCollapsed: response.user.nav_collapsed,
+        accessToken: response.access_token,
       })
 
       // Role-based redirect: student → /dashboard, admin → /admin,
@@ -68,7 +74,7 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
         />
       </div>
       <div>
@@ -82,7 +88,7 @@ export function LoginForm() {
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             required
-            className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-3 pr-11 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+            className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-3 pr-11 text-stone-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
           />
           <button
             type="button"
@@ -100,7 +106,7 @@ export function LoginForm() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="rounded border-stone-300 text-accent focus:ring-accent h-4 w-4"
+             className="rounded border-stone-300 text-primary focus:ring-primary h-4 w-4"
           />
           Remember me
         </label>

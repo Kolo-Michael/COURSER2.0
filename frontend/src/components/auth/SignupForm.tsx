@@ -52,8 +52,9 @@ export function SignupForm() {
     setSubmitting(true)
 
     try {
-      // POST /auth/signup — creates the account and issues the auth cookies
+       // POST /auth/signup — creates the account and issues the auth cookies
       // in the same response (email format is validated client-side above).
+      // The JSON body also carries the access_token for cross-origin Safari/iOS.
       const response = await signup({
         username,
         email,
@@ -66,6 +67,10 @@ export function SignupForm() {
         email: response.user.email,
         fullName: response.user.full_name,
         role: response.user.role,
+        avatarUrl: response.user.avatar_url ?? undefined,
+        navStyle: response.user.nav_style,
+        navCollapsed: response.user.nav_collapsed,
+        accessToken: response.access_token,
       })
 
       // Role-based redirect — signup always lands as student for now, but
@@ -95,7 +100,7 @@ export function SignupForm() {
           autoComplete="username"
           required
           maxLength={50}
-          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
         />
       </div>
       <div>
@@ -108,7 +113,7 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
         />
       </div>
       <div>
@@ -123,15 +128,14 @@ export function SignupForm() {
             autoComplete="new-password"
             required
             minLength={8}
-            className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-3 pr-11 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+            className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-3 pr-11 text-stone-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
           />
           <button
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
             className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-stone-400 dark:hover:text-primary-dark dark:focus-visible:outline-primary-dark"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}}
-            aria-pressed={showPassword}
-          >
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-pressed={showPassword}>
             <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
           </button>
         </div>
@@ -151,13 +155,13 @@ export function SignupForm() {
             autoComplete="new-password"
             required
             minLength={8}
-            className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-3 pr-11 text-stone-900 shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+            className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-3 pr-11 text-stone-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
           />
           <button
             type="button"
             onClick={() => setShowConfirm((visible) => !visible)}
             className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-stone-500 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-stone-400 dark:hover:text-primary-dark dark:focus-visible:outline-primary-dark"
-            aria-label={showConfirm ? 'Hide repeat password' : 'Show repeat password'}}
+            aria-label={showConfirm ? 'Hide repeat password' : 'Show repeat password'}
             aria-pressed={showConfirm}
           >
             <i className={`fa-solid ${showConfirm ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />

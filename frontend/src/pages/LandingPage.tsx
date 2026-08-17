@@ -17,7 +17,7 @@ import { Link } from 'react-router-dom'
 // lesson_count over the catalog courses in each category slug.
 const tracks = [
   { title: 'Frontend Developer', icon: 'fa-code', categorySlug: 'web-development', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
-  { title: 'Data Analyst', icon: 'fa-chart-simple', categorySlug: 'data-science', color: 'bg-orange-50 text-accent dark:bg-orange-950/40 dark:text-accent-dark' },
+  { title: 'Data Analyst', icon: 'fa-chart-simple', categorySlug: 'data-science', color: 'bg-orange-50 text-accent-fg dark:bg-orange-950/40 dark:text-accent-dark' },
   { title: 'AI Course Builder', icon: 'fa-brain', categorySlug: 'ai-ml', color: 'bg-blue-50 text-primary dark:bg-blue-950/40 dark:text-primary-dark' },
 ]
 
@@ -67,7 +67,7 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-2 py-8 sm:px-3 lg:px-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">Start learning now</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-stone-800 dark:text-stone-200">Start learning now</p>
               <h2 className="mt-2 text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">Career paths built inside COURSER</h2>
               <p className="mt-3 max-w-2xl text-stone-600 dark:text-stone-300">
                 Begin with free, guided courses, follow structured lessons, and keep Cora on hand whenever you need a nudge.

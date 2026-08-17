@@ -4,9 +4,14 @@
 // cookies aren't visible to document.cookie, but are sent with credentials),
 // persists it for getSession(), and routes to the role dashboard. Error
 // statuses render a human-readable banner instead of a raw failure.
+//
+// Cross-origin Safari/iOS fallback: the backend also embeds the short-lived
+// access_token in the URL fragment (#access_token=…). The SPA reads it, saves
+// it in a same-origin cookie, and sends it as a Bearer header so /auth/me and
+// subsequent API calls work even when ITP blocks the backend's HttpOnly cookies.
 import { useEffect, useState } from 'react'
 import { getMe } from '@/api/auth'
-import { dashboardFor, saveSession } from '@/auth/session'
+import { dashboardFor, saveSession, getSession } from '@/auth/session'
 import { Link, useNavigate } from 'react-router-dom'
 
 const reasonMessages: Record<string, string> = {
@@ -40,19 +45,37 @@ export function GoogleCallback({ status, reason }: { status: 'success' | 'error'
   useEffect(() => {
     if (status !== 'success') return
     let active = true
+
+    // The backend may embed the access_token in the URL fragment for
+    // cross-origin Safari/iOS (where HttpOnly cookies are blocked by ITP).
+    // Read it, strip the hash from the URL, and save it in a same-origin
+    // cookie so the Authorization header works for subsequent API calls.
+    const hash = window.location.hash
+    const tokenMatch = hash.match(/access_token=([^&]+)/)
+    if (tokenMatch) {
+      const accessToken = decodeURIComponent(tokenMatch[1])
+      // Clean the URL bar — remove the fragment without triggering navigation.
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      // Save a partial session with the token so getSession().accessToken
+      // is available when getMe() fires below (apiRequest adds the Bearer header).
+      const existing = getSession() ?? { identifier: '', role: 'student' as const }
+      saveSession({ ...existing, accessToken })
+    }
+
     getMe()
       .then((user) => {
         if (!active) return
-        // Persist the session on this origin so ProtectedRoute/getSession()
+        // Persist the full session on this origin so ProtectedRoute/getSession()
         // see it even though the auth cookies live on the API origin.
         saveSession({
           identifier: user.full_name || user.username,
           email: user.email,
           fullName: user.full_name,
           role: user.role,
-          avatarUrl: user.avatar_url,
+          avatarUrl: user.avatar_url ?? undefined,
           navStyle: user.nav_style,
           navCollapsed: user.nav_collapsed,
+          accessToken: tokenMatch ? decodeURIComponent(tokenMatch[1]) : undefined,
         })
         navigate(dashboardFor(user.role), { replace: true })
       })

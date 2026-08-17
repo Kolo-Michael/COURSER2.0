@@ -157,7 +157,7 @@ export function SuperAdminPage() {
                 <button
                   type="submit"
                   disabled={status.kind === 'submitting'}
-                  className="inline-flex items-center rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-accent-dark"
+                  className="inline-flex items-center rounded-lg bg-accent-btn px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-accent-dark"
                 >
                   <i className="fa-solid fa-user-plus mr-2" aria-hidden />
                   {status.kind === 'submitting' ? 'Creating…' : 'Create admin'}

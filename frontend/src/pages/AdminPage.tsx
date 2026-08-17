@@ -16,7 +16,7 @@ import { Link } from 'react-router-dom'
 const environmentStyles = [
   { id: 'focus', label: 'Focus', icon: 'fa-solid fa-bullseye', tone: 'bg-blue-50 text-primary' },
   { id: 'studio', label: 'Studio', icon: 'fa-solid fa-display', tone: 'bg-stone-100 text-stone-700' },
-  { id: 'guided', label: 'Guided', icon: 'fa-solid fa-route', tone: 'bg-orange-50 text-accent' },
+  { id: 'guided', label: 'Guided', icon: 'fa-solid fa-route', tone: 'bg-orange-50 text-accent-fg' },
 ]
 
 // Mascot choices for the default learning environment.

@@ -151,7 +151,7 @@ export function VerifyCodeForm() {
             maxLength={1}
             autoComplete="one-time-code"
             inputMode="numeric"
-            className="w-10 h-12 text-center text-2xl font-semibold rounded-lg border border-stone-200 bg-white text-stone-900 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-accent-dark dark:focus:ring-accent-dark/30"
+            className="w-10 h-12 text-center text-2xl font-semibold rounded-lg border border-stone-200 bg-white text-stone-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-white dark:focus:border-primary-dark dark:focus:ring-primary-dark/25"
             aria-label={`Code digit ${index + 1}`}
           />
         ))}
@@ -179,7 +179,7 @@ export function VerifyCodeForm() {
           type="button"
           onClick={handleResend}
           disabled={resendDisabled}
-          className="text-accent hover:underline dark:text-accent-dark disabled:text-stone-400 dark:disabled:text-stone-500"
+           className="text-primary hover:underline dark:text-primary-dark disabled:text-stone-400 dark:disabled:text-stone-500"
         >
           {resendDisabled ? `Resend in ${resendTimer}s` : 'Resend code'}
         </button>
@@ -191,7 +191,7 @@ export function VerifyCodeForm() {
             sessionStorage.removeItem('reset_email')
             navigate('/auth?mode=forgot-password', { replace: true })
           }}
-          className="text-accent hover:underline dark:text-accent-dark"
+           className="text-primary hover:underline dark:text-primary-dark"
         >
           Change email
         </button>

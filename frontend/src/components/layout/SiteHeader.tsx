@@ -47,9 +47,9 @@ export function SiteHeader() {
           >
             Log in
           </Link>
-          <Link
+           <Link
             to="/auth?mode=signup"
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark"
+            className="rounded-lg bg-accent-btn px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-accent-dark"
           >
             Sign up
           </Link>
@@ -102,7 +102,7 @@ export function SiteHeader() {
             </Link>
             <Link
               to="/auth?mode=signup"
-              className="rounded-lg bg-accent px-3 py-2 text-center text-base font-semibold text-white dark:bg-accent-dark"
+               className="rounded-lg bg-accent-btn px-3 py-2 text-center text-base font-semibold text-white dark:bg-accent-dark"
             >
               Sign up
             </Link>

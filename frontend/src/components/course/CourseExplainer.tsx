@@ -55,7 +55,7 @@ export function CourseExplainer({ course }: { course: ApiCourse }) {
       <section className="courser-card overflow-hidden">
         <div className="courser-bg-dots grid gap-6 border-b border-stone-200 bg-white/50 p-6 backdrop-blur-md lg:grid-cols-[minmax(0,1fr)_300px] lg:p-8 dark:border-stone-700/60 dark:bg-stone-900/60">
           <div>
-            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary dark:text-primary-dark">
               <i className="fa-solid fa-unlock" aria-hidden />
               Free course · sign in to start learning
             </p>

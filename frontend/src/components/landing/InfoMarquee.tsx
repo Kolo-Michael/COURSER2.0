@@ -22,7 +22,7 @@ function TickerRow({ hidden = false }: { hidden?: boolean }) {
       {ITEMS.map((item) => {
         const content = (
           <span className="inline-flex items-center gap-2.5 whitespace-nowrap text-sm font-medium text-stone-600 dark:text-stone-300">
-            <i className={`fa-solid ${item.icon} text-accent dark:text-accent-dark`} aria-hidden="true" />
+            <i className={`fa-solid ${item.icon} text-primary dark:text-primary-dark`} aria-hidden="true" />
             {item.text}
           </span>
         )

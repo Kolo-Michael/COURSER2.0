@@ -62,7 +62,7 @@ export function ThreeDVisual() {
           <div className="rounded-2xl border border-stone-200/80 bg-white/80 p-5 shadow-lg backdrop-blur-md dark:border-stone-600/60 dark:bg-stone-900/70">
             <div className="flex items-center justify-between text-xs font-semibold text-stone-400 dark:text-stone-500">
               <span>CERTIFICATE</span>
-              <i className="fa-solid fa-award text-accent dark:text-accent-dark" aria-hidden="true" />
+              <i className="fa-solid fa-award text-accent-fg dark:text-accent-dark" aria-hidden="true" />
             </div>
             <p className="mt-3 text-sm font-bold text-stone-900 dark:text-stone-100">Course completed</p>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
@@ -101,7 +101,7 @@ export function ThreeDVisual() {
         <FloatCard className="bottom-6 left-1/2 w-80" z={70}>
           <div className="rounded-2xl border border-stone-200/80 bg-white/85 p-5 shadow-lg backdrop-blur-md dark:border-stone-600/60 dark:bg-stone-900/70">
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent/15 text-accent ring-1 ring-accent/25 dark:bg-accent-dark/15 dark:text-accent-dark dark:ring-accent-dark/30">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/20 dark:bg-primary-dark/15 dark:text-primary-dark dark:ring-primary-dark/30">
                 <i className="fa-solid fa-robot" aria-hidden="true" />
               </span>
               <div>

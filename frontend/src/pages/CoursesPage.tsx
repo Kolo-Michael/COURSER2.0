@@ -496,7 +496,7 @@ export function CoursesPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       <div className="mx-auto flex max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <aside className="hidden w-64 shrink-0 lg:block">
@@ -568,7 +568,7 @@ export function CoursesPage() {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </PublicShell>
   )
 }

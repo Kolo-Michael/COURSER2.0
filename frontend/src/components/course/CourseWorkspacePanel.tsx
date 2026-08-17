@@ -569,7 +569,7 @@ export function CourseWorkspacePanel({
                             rel="noopener noreferrer"
                             className="group flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm transition hover:border-primary hover:shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:hover:border-primary-dark"
                           >
-                            <i className="fa-solid fa-book-open mt-0.5 text-accent dark:text-accent-dark" aria-hidden />
+                            <i className="fa-solid fa-book-open mt-0.5 text-primary dark:text-primary-dark" aria-hidden />
                             <span className="flex-1">
                               <span className="font-semibold text-stone-800 group-hover:text-primary dark:text-stone-100 dark:group-hover:text-primary-dark">
                                 {link.title}
@@ -581,7 +581,7 @@ export function CourseWorkspacePanel({
                               ) : null}
                               <span className="mt-0.5 block truncate text-xs text-stone-400">{link.url}</span>
                             </span>
-                            <i className="fa-solid fa-arrow-up-right-from-square text-xs text-stone-400 group-hover:text-accent dark:group-hover:text-accent-dark" aria-hidden />
+                            <i className="fa-solid fa-arrow-up-right-from-square text-xs text-stone-400 group-hover:text-primary dark:group-hover:text-primary-dark" aria-hidden />
                           </a>
                         </li>
                       ))}

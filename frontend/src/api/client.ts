@@ -1,15 +1,19 @@
 // ─── client.ts : shared fetch wrapper for every API call ────────────────
-// Single wrapper that fetches JSON from the backend, sends HttpOnly auth
-// cookies on every request, and turns FastAPI error bodies into one-line
-// messages. All API modules (auth/courses/streak) go through apiRequest().
+// Single wrapper that fetches JSON from the backend, sends auth tokens on
+// every request, and turns backend error bodies into one-line messages.
+// All API modules (auth/courses/streak) go through apiRequest().
 //
-// The SPA and API share one origin: in dev a Vite proxy forwards /api to
-// the local FastAPI server (see vite.config.ts), and in prod (Vercel single
-// project) they're literally the same origin. Keep API_BASE_URL empty so
-// cookies stay same-origin and readable by getSession(). Set
-// VITE_API_BASE_URL to a different origin only if the deployments split.
-// Exposed so components can build absolute links (e.g. the "Sign in with
-// Google" button navigates to {API_BASE_URL}/api/auth/google).
+// Auth strategy: prefer HttpOnly cookies (same-origin / dev). When the
+// access_token is available in the client-readable `courser_session` cookie
+// (set by saveSession after login/signup/OAuth), it's also sent as a Bearer
+// header — this is what makes auth work on cross-origin Safari/iOS where ITP
+// blocks third-party HttpOnly cookies.
+//
+// API_BASE_URL is empty in dev (Vite proxy forwards /api → backend) and set
+// to the backend origin in prod split deployments. Exposed so components
+// can build absolute links (e.g. the "Sign in with Google" button).
+import { getSession } from '@/auth/session'
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 // Endpoints whose 401 is a normal business result (bad credentials), NOT an
@@ -85,11 +89,17 @@ async function apiRequestOnce<T>(path: string, options: RequestInit = {}, retrie
   // multipart uploads set their own Content-Type (with a boundary), so the
   // default JSON content-type must not be applied when the body is FormData.
   const isFormData = typeof FormData !== 'undefined' && rest.body instanceof FormData
+  // On cross-origin Safari/iOS (ITP), HttpOnly auth cookies are blocked. We
+  // read the access_token from the SPP-origin courser_session cookie (which
+  // saveSession writes) and send it as a Bearer header. The backend checks
+  // Authorization first, then falls back to the cookie.
+  const accessToken = getSession()?.accessToken
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    // Include HttpOnly auth cookies on every request.
+    // Include HttpOnly auth cookies on every request (works same-origin).
     credentials: 'include',
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
     ...rest,

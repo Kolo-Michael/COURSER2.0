@@ -287,7 +287,7 @@ export function DashboardLayout({
                     to="/streak"
                     className={({ isActive }) =>
                       [
-                        'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-accent transition hover:bg-accent/10 dark:border-stone-700',
+                        'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-primary transition hover:bg-primary/10 dark:border-stone-700',
                         isActive ? 'bg-accent/10' : '',
                       ].join(' ')
                     }
@@ -344,7 +344,7 @@ export function DashboardLayout({
               {session?.role === 'student' ? (
                 <NavLink
                   to="/streak"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-accent transition hover:bg-accent/10 dark:border-stone-700"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-primary transition hover:bg-primary/10 dark:border-stone-700"
                   aria-label="Learning streak"
                   title="Learning streak"
                 >

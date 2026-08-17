@@ -5,9 +5,8 @@
 // lessons done / average progress), a continue-learning grid with progress
 // bars + restart, and a static weekly-plan/Cora-help side panel.
 
-import { logout } from '@/api/auth'
 import { getCourseBySlug, listMyEnrollments, restartCourse, type ApiCourse, type ApiEnrollmentDetail } from '@/api/courses'
-import { clearSession, getSession } from '@/auth/session'
+import { getSession } from '@/auth/session'
 import { getLastCourseSlug } from '@/auth/course'
 import { CourseWorkspacePanel } from '@/components/course/CourseWorkspacePanel'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
@@ -58,7 +57,7 @@ export function DashboardPage() {
     }
   }
 
-    // Load once on mount.
+   // Load once on mount.
     useEffect(() => {
       load()
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,37 +132,22 @@ export function DashboardPage() {
           <p className="mt-2 max-w-3xl text-stone-600 dark:text-stone-300">
             Pick up where you left off, follow a weekly plan, and use Cora inside every lesson when you need a clearer explanation.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              to="/courses"
-              className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
-            >
-              <i className="fa-solid fa-compass mr-2" aria-hidden />
-              Browse courses
-            </Link>
-            <Link
-              to="/"
-              className="inline-flex items-center rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-800 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800/70"
-            >
-              <i className="fa-solid fa-house mr-2 text-primary" aria-hidden />
-              Home
-            </Link>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await logout()
-                } finally {
-                  clearSession()
-                  window.location.assign('/auth')
-                }
-              }}
-              className="inline-flex items-center rounded-lg px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
-            >
-              <i className="fa-solid fa-right-from-bracket mr-2" aria-hidden />
-              Log out
-            </button>
-          </div>
+           <div className="mt-6 flex flex-wrap gap-3">
+             <Link
+               to="/courses"
+               className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
+             >
+               <i className="fa-solid fa-compass mr-2" aria-hidden />
+               Browse courses
+             </Link>
+             <Link
+               to="/"
+               className="inline-flex items-center rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-800 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800/70"
+             >
+               <i className="fa-solid fa-house mr-2 text-primary dark:text-primary-dark" aria-hidden />
+               Home
+             </Link>
+           </div>
         </section>
 
         {/* Stat cards grid. */}

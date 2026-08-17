@@ -9,7 +9,7 @@ const STEPS = [
   {
     title: 'Create your account',
     icon: 'fa-user-plus',
-    accent: 'text-accent dark:text-accent-dark',
+    accent: 'text-primary dark:text-primary-dark',
     blurb: 'Sign up in seconds and tell us your interests and learning goal. Your onboarding progress is saved, so you can pick up exactly where you left off.',
   },
   {
@@ -21,7 +21,7 @@ const STEPS = [
   {
     title: 'Enroll in a course',
     icon: 'fa-circle-check',
-    accent: 'text-accent dark:text-accent-dark',
+    accent: 'text-primary dark:text-primary-dark',
     blurb: 'One tap enrolls you. Your dashboard shows real progress, streaks, and the lessons that are ready to start today.',
   },
   {
@@ -33,7 +33,7 @@ const STEPS = [
   {
     title: 'Check what you learned',
     icon: 'fa-list-check',
-    accent: 'text-accent dark:text-accent-dark',
+    accent: 'text-primary dark:text-primary-dark',
     blurb: 'Finish each module with a short graded quiz. Pass it and the module is marked complete with your score saved.',
   },
   {
@@ -45,7 +45,7 @@ const STEPS = [
   {
     title: 'Track progress & streak',
     icon: 'fa-fire',
-    accent: 'text-accent dark:text-accent-dark',
+    accent: 'text-primary dark:text-primary-dark',
     blurb: 'Lessons, modules, and courses tick forward automatically. Keep your streak alive and review what you completed whenever you like.',
   },
 ]
@@ -83,7 +83,7 @@ export function HowLearningCarousel() {
     >
       <div className="mx-auto max-w-6xl px-2 py-14 sm:px-3 lg:px-4">
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-accent dark:text-accent-dark">
+          <p className="text-sm font-semibold uppercase tracking-wide text-stone-800 dark:text-stone-200">
             The learning journey
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">

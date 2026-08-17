@@ -239,7 +239,7 @@ function NoteBody({ blocks }: { blocks: NoteBlock[] }) {
           if (kind === 'takeaway') {
             return (
               <div key={index} className="rounded-2xl border border-accent/25 bg-accent/5 p-5 dark:border-accent-dark/30 dark:bg-accent-dark/10">
-                <p className="flex items-center gap-2.5 text-sm font-bold text-accent dark:text-accent-dark">
+                <p className="flex items-center gap-2.5 text-sm font-bold text-primary dark:text-primary-dark">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/10 text-xs dark:bg-accent-dark/20">
                     <i className="fa-solid fa-lightbulb" aria-hidden />
                   </span>
