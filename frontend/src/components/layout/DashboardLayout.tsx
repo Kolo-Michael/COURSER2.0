@@ -10,7 +10,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { logout } from '@/api/auth'
+import { getMe, logout } from '@/api/auth'
 import { getSession, clearSession } from '@/auth/session'
 import { getNavCollapsed, getNavStyle, setNavCollapsed, setNavStyle, NAV_EVENT } from '@/auth/preferences'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -73,6 +73,25 @@ export function DashboardLayout({
   const [floatingOpen, setFloatingOpen] = useState(false)
   const session = getSession()
   const displayName = session?.identifier || 'User'
+
+  // Real avatar URL (the session cookie only carries small avatars — oversized
+  // data-URL avatars are deliberately omitted from the cookie to stay under the
+  // 4KB cookie cap, so we re-read the authoritative value from the profile).
+  const [profileAvatar, setProfileAvatar] = useState<string | null | undefined>(session?.avatarUrl)
+  useEffect(() => {
+    let cancelled = false
+    getMe()
+      .then((user) => {
+        if (!cancelled) setProfileAvatar(user.avatar_url ?? null)
+      })
+      .catch(() => {
+        /* profile fetch is best-effort; fall back to the session avatar */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const avatarSrc = profileAvatar ?? session?.avatarUrl
 
   const floatingRef = useRef<HTMLDivElement>(null)
 
@@ -215,7 +234,7 @@ export function DashboardLayout({
               ].join(' ')}
             >
               <div className={effectiveCollapsed ? '' : 'flex items-center gap-3'}>
-                <Avatar name={displayName} src={session?.avatarUrl} />
+                <Avatar name={displayName} src={avatarSrc} />
                 {!effectiveCollapsed ? (
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-stone-900 dark:text-stone-50">{displayName}</p>
@@ -384,7 +403,7 @@ export function DashboardLayout({
               <div className="courser-glass min-w-56 rounded-2xl p-3 shadow-xl">
                 <div className="mb-2 flex items-center justify-between gap-4 px-2">
                   <div className="flex items-center gap-2">
-                    <Avatar name={displayName} src={session?.avatarUrl} className="h-8 w-8" iconSize="text-xs" />
+                    <Avatar name={displayName} src={avatarSrc} className="h-8 w-8" iconSize="text-xs" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-stone-900 dark:text-stone-50">{displayName}</p>
                       <p className="truncate text-xs text-stone-500 dark:text-stone-400">{session?.role === 'super_admin' ? 'Owner' : session?.role ?? 'Learner'}</p>

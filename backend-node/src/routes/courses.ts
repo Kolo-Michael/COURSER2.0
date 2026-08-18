@@ -78,6 +78,18 @@ const CourseCreateSchema = z.object({
   modules: z.array(ModuleCreateSchema).default([]),
 });
 
+// Body accepted by POST /slug/:slug/enroll — the course onboarding survey.
+const EnrollSchema = z.object({
+  skill_level: z.enum(["beginner", "intermediate", "expert"]).optional().default("beginner"),
+  learning_goal: z.string().optional().nullable(),
+});
+
+// Body accepted by PATCH /enrollments/:id/onboarding.
+const OnboardingUpdateSchema = z.object({
+  skill_level: z.enum(["beginner", "intermediate", "expert"]).optional(),
+  learning_goal: z.string().optional().nullable(),
+});
+
 const CourseUpdateSchema = z
   .object({
     title: z.string().nullish(),
@@ -454,17 +466,17 @@ router.get(
   requireUser,
   wrap(async (req, res) => {
     const userId = (req as AuthedRequest).userId;
-    const rows = await db.query<Row>(
-      `SELECT e.id, e.course_id, e.enrolled_at, e.completed_at, e.progress,
-              c.title AS course_title, c.slug AS course_slug, c.level, c.image_url AS course_image_url,
-              cat.name AS course_category
-         FROM enrollments e
-         JOIN courses c ON c.id = e.course_id
-         LEFT JOIN categories cat ON cat.id = c.category_id
-        WHERE e.user_id = $1
-        ORDER BY e.enrolled_at DESC`,
-      [userId]
-    );
+       const rows = await db.query<Row>(
+       `SELECT e.id, e.course_id, e.skill_level, e.learning_goal, e.enrolled_at, e.completed_at, e.progress,
+               c.title AS course_title, c.slug AS course_slug, c.level, c.image_url AS course_image_url,
+               cat.name AS course_category
+          FROM enrollments e
+          JOIN courses c ON c.id = e.course_id
+          LEFT JOIN categories cat ON cat.id = c.category_id
+         WHERE e.user_id = $1
+         ORDER BY e.enrolled_at DESC`,
+       [userId]
+     );
     const out: Record<string, unknown>[] = [];
     for (const e of rows) {
       const courseId = e.course_id as string;
@@ -485,24 +497,64 @@ router.get(
       }
       const progress = Number(e.progress || 0);
       const progressPercent = Math.round(progress);
-      out.push({
-        id: e.id,
-        course_id: courseId,
-        course_title: e.course_title,
-        course_slug: e.course_slug,
-        course_image_url: (e.course_image_url as string | null) ?? null,
-        course_category: e.course_category ?? null,
-        level: e.level || "beginner",
-        enrolled_at: normalizeDt(e.enrolled_at as string | null),
-        completed_at: normalizeDt(e.completed_at as string | null),
-        progress,
-        total_lessons: total,
-        completed_lessons: completed,
-        progress_percent: progressPercent,
-        is_completed: progressPercent >= 100 || (total > 0 && completed === total),
-      });
+       out.push({
+         id: e.id,
+         course_id: courseId,
+         course_title: e.course_title,
+         course_slug: e.course_slug,
+         course_image_url: (e.course_image_url as string | null) ?? null,
+         course_category: e.course_category ?? null,
+         level: e.level || "beginner",
+         skill_level: e.skill_level || "beginner",
+         learning_goal: (e.learning_goal as string | null) ?? null,
+         enrolled_at: normalizeDt(e.enrolled_at as string | null),
+         completed_at: normalizeDt(e.completed_at as string | null),
+         progress,
+         total_lessons: total,
+         completed_lessons: completed,
+         progress_percent: progressPercent,
+         is_completed: progressPercent >= 100 || (total > 0 && completed === total),
+       });
     }
     res.json(out);
+  })
+);
+
+// PATCH /enrollments/:id/onboarding — save skill level + learning goal for an
+// existing enrollment (called after the onboarding survey is completed).
+router.patch(
+  "/enrollments/:id/onboarding",
+  requireUser,
+  wrap(async (req, res) => {
+    const userId = (req as AuthedRequest).userId;
+    const enrollmentId = req.params.id;
+    const body = validate(OnboardingUpdateSchema, req.body);
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+    if (body.skill_level !== undefined) {
+      fields.push(`skill_level = $${idx++}`);
+      values.push(body.skill_level);
+    }
+    if (body.learning_goal !== undefined) {
+      fields.push(`learning_goal = $${idx++}`);
+      values.push(body.learning_goal);
+    }
+    if (fields.length === 0) {
+      res.json(await enrollmentJson(enrollmentId));
+      return;
+    }
+    // Verify the enrollment belongs to this user before updating.
+    const ownership = await db.get<Row>(
+      `SELECT 1 FROM enrollments WHERE id = $1 AND user_id = $2`,
+      [enrollmentId, userId]
+    );
+    if (!ownership) throw notFound("Enrollment not found");
+    await db.query(
+      `UPDATE enrollments SET ${fields.join(", ")} WHERE id = $${idx}`,
+      [...values, enrollmentId]
+    );
+    res.json(await enrollmentJson(enrollmentId));
   })
 );
 
@@ -675,7 +727,7 @@ router.delete(
 
 async function enrollmentJson(enrollmentId: string): Promise<Record<string, unknown>> {
   const row = await db.get<Row>(
-    `SELECT id, user_id, course_id, enrolled_at, completed_at, progress FROM enrollments WHERE id = $1`,
+    `SELECT id, user_id, course_id, enrolled_at, completed_at, progress, skill_level, learning_goal FROM enrollments WHERE id = $1`,
     [enrollmentId]
   );
   if (!row) throw notFound("Enrollment not found");
@@ -686,6 +738,8 @@ async function enrollmentJson(enrollmentId: string): Promise<Record<string, unkn
     enrolled_at: normalizeDt(row.enrolled_at as string | null),
     completed_at: normalizeDt(row.completed_at as string | null),
     progress: Number(row.progress || 0),
+    skill_level: row.skill_level ?? "beginner",
+    learning_goal: row.learning_goal ?? null,
   };
 }
 
@@ -724,6 +778,7 @@ router.post(
   requireUser,
   wrap(async (req, res) => {
     const userId = (req as AuthedRequest).userId;
+    const data = validate(EnrollSchema, req.body);
     const course = await db.get<CourseRow>(`SELECT * FROM courses WHERE slug = $1`, [req.params.slug]);
     if (!course) throw notFound("Course not found");
     const existing = await db.get<Row>(
@@ -736,9 +791,9 @@ router.post(
     }
     const id = randomUUID();
     await db.query(
-      `INSERT INTO enrollments (id, user_id, course_id, enrolled_at, completed_at, progress)
-       VALUES ($1,$2,$3,$4,NULL,0)`,
-      [id, userId, course.id, new Date().toISOString()]
+      `INSERT INTO enrollments (id, user_id, course_id, enrolled_at, completed_at, progress, skill_level, learning_goal)
+       VALUES ($1,$2,$3,$4,NULL,0,$5,$6)`,
+      [id, userId, course.id, new Date().toISOString(), data.skill_level ?? "beginner", data.learning_goal ?? null]
     );
     res.status(201).json(await enrollmentJson(id));
   })

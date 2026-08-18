@@ -66,6 +66,7 @@ const AdminCreateSchema = z.object({
 });
 
 const ProfileUpdateSchema = z.object({
+  username: z.string().min(3).max(50).optional(),
   full_name: z.string().max(100).nullish(),
   avatar_url: z.string().max(20000).nullish(),
   nav_style: z.enum(["sidebar", "floating"]).nullish(),
@@ -177,10 +178,16 @@ function setSessionCookie(
     fullName: user.full_name,
     role: user.role,
     id: user.id,
-    avatarUrl: user.avatar_url,
     navStyle: user.nav_style || "sidebar",
     navCollapsed: Boolean(user.nav_collapsed),
   };
+  // Only embed the avatar when it is small enough to stay inside the ~4KB
+  // browser cookie limit. Oversized data-URL avatars would make res.cookie
+  // throw (4096-byte cap), which surfaced as a 500 on PATCH /auth/me. The SPA
+  // re-reads the real avatar from GET /auth/me for display.
+  if (user.avatar_url && user.avatar_url.length <= 2000) {
+    payload.avatarUrl = user.avatar_url;
+  }
   // Include the access token so same-origin (or cookie-readable) clients can
   // use it as a Bearer header — critical for cross-origin Safari/iOS where
   // ITP blocks third-party HttpOnly cookies.
@@ -477,6 +484,14 @@ router.patch(
     const data = validate(ProfileUpdateSchema, req.body);
     const user = await authService.getUserById(userId);
     if (!user) throw notFound("User not found");
+
+    if (data.username && data.username !== user.username) {
+      const existing = await db.get<{ id: string }>(
+        `SELECT id FROM users WHERE username = $1 AND id != $2`,
+        [data.username, userId]
+      );
+      if (existing) throw badRequest("That username is already taken.");
+    }
 
     const sets: string[] = [];
     const params: unknown[] = [userId];

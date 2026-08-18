@@ -113,6 +113,11 @@ export function CourseWorkspacePanel({
   const [workCourse, setWorkCourse] = useState(course)
   useEffect(() => setWorkCourse(course), [course])
 
+  // A signed-in learner who isn't enrolled yet may browse the course outline
+  // (module + lesson topics) but the study notes / Cora / quiz stay locked
+  // until they start the course. `session && !enrollment` ⇒ locked preview.
+  const isLocked = Boolean(session && !enrollment)
+
   const allLessons = useMemo(() => workCourse?.modules?.flatMap((module) => module.lessons) ?? [], [workCourse])
   const [activeLessonId, setActiveLessonId] = useState<string | null>(() => defaultLessonId ?? allLessons[0]?.id ?? null)
 
@@ -301,7 +306,7 @@ export function CourseWorkspacePanel({
           <div className="flex flex-col">
           {showOutline ? (
             <nav
-              className="sticky top-20 z-20 border-b bg-stone-50/60 dark:border-stone-700/60 dark:bg-stone-800/40"
+              className="sticky top-20 z-20 border-b bg-stone-50/95 backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/95"
               aria-label="Course modules"
             >
               <div className="p-4">
@@ -356,7 +361,7 @@ export function CourseWorkspacePanel({
                           <span className="block font-semibold text-stone-800 dark:text-stone-100">
                             Lesson {currentModule.order}.{item.order}: {item.title}
                           </span>
-                          {lessonPreview(item.content) ? (
+                          {!isLocked && lessonPreview(item.content) ? (
                             <span className="mt-1 block line-clamp-1 text-xs text-stone-500 dark:text-stone-400">
                               {lessonPreview(item.content)}
                             </span>
@@ -412,6 +417,21 @@ export function CourseWorkspacePanel({
               {headerAction}
             </div>
 
+            {isLocked ? (
+              <div className="mt-5 rounded-xl border border-dashed border-stone-300 bg-stone-50/60 p-8 text-center dark:border-stone-700 dark:bg-stone-800/30">
+                <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary-dark/20 dark:text-primary-dark">
+                  <i className="fa-solid fa-lock text-xl" aria-hidden />
+                </span>
+                <h3 className="mt-4 text-lg font-bold text-stone-900 dark:text-stone-50">
+                  Start this course to read
+                </h3>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+                  Study notes, resources, quizzes, and the Cora tutor unlock once you start this free course. You can
+                  still browse the full module outline and lesson list above.
+                </p>
+              </div>
+            ) : (
+              <>
             {example ? (
               <div className="mt-4">
                 <button
@@ -651,6 +671,8 @@ export function CourseWorkspacePanel({
                 )}
               </div>
             </div>
+            </>
+            )}
             </div>
           </div>
           </div>
@@ -670,6 +692,12 @@ export function CourseWorkspacePanel({
                 <p className="text-sm text-stone-600 dark:text-stone-300">Available by default in every free course.</p>
               </div>
             </div>
+            {isLocked ? (
+              <p className="mt-6 rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-600 dark:border-stone-700 dark:text-stone-300">
+                <i className="fa-solid fa-lock mr-2 text-primary dark:text-primary-dark" aria-hidden />
+                Enroll to unlock Cora, your in-course study helper.
+              </p>
+            ) : (
             <CoraChat
               courseSlug={course.slug}
               courseTitle={course.title}
@@ -681,6 +709,7 @@ export function CourseWorkspacePanel({
                 if (lesson) selectLesson(lesson)
               }}
             />
+            )}
           </aside>
         </div>
       </section>

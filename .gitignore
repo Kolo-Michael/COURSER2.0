@@ -37,6 +37,7 @@ docs/dissertation/
 # Local dev artifacts
 *.db
 server.log
+session-ses_*.md
 
 # OS
 .DS_Store

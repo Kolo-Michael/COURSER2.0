@@ -27,6 +27,7 @@ export type NavStyle = 'sidebar' | 'floating'
 
 /** Fields the user can edit about themselves via PATCH /auth/me. */
 export type ProfileUpdatePayload = {
+  username?: string
   full_name?: string
   avatar_url?: string | null
   nav_style?: NavStyle

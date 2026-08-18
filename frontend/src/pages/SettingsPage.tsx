@@ -48,6 +48,7 @@ export function SettingsPage() {
   const [profile, setProfile] = useState<ApiUser | null>(null)
 
   // Profile form
+  const [username, setUsername] = useState('')
   const [fullName, setFullName] = useState('')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>('idle')
@@ -71,6 +72,7 @@ export function SettingsPage() {
     getMe()
       .then((user) => {
         setProfile(user)
+        setUsername(user.username ?? '')
         setFullName(user.full_name ?? '')
         setAvatarPreview(user.avatar_url ?? null)
         setNavStyleState(user.nav_style ?? getNavStyle())
@@ -108,18 +110,20 @@ export function SettingsPage() {
     reader.readAsDataURL(file)
   }
 
-  // Persist display name + avatar via updateProfile(), then keep the returned
-  // user as the source of truth.
+  // Persist username + display name + avatar via updateProfile(), then keep
+  // the returned user as the source of truth.
   async function handleSaveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setProfileStatus('saving')
     setProfileError(null)
     try {
       const updated = await updateProfile({
+        username: username.trim() || undefined,
         full_name: fullName.trim() || undefined,
         avatar_url: avatarPreview,
       })
       setProfile(updated)
+      setUsername(updated.username ?? '')
       setProfileStatus('saved')
     } catch (err) {
       setProfileStatus('error')
@@ -234,6 +238,19 @@ export function SettingsPage() {
                 />
               </div>
             </div>
+
+            <label className="block">
+              <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">Username</span>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                minLength={3}
+                maxLength={50}
+                required
+                autoComplete="username"
+                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              />
+            </label>
 
             <label className="block">
               <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">Display name</span>

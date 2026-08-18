@@ -16,10 +16,12 @@ import {
   restartCourse,
   type ApiCourse,
   type ApiEnrollmentDetail,
+  type CourseOnboardingPayload,
 } from '@/api/courses'
 import { getSession, type AuthSession } from '@/auth/session'
 import { rememberCourseSlug } from '@/auth/course'
 import { CourseExplainer } from '@/components/course/CourseExplainer'
+import { CourseOnboarding } from '@/components/course/CourseOnboarding'
 import { CourseWorkspacePanel } from '@/components/course/CourseWorkspacePanel'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { navItemsFor } from '@/components/layout/navItems'
@@ -82,6 +84,9 @@ export function CourseDetailPage() {
   const [enrollError, setEnrollError] = useState<string | null>(null)
   const [enrollment, setEnrollment] = useState<ApiEnrollmentDetail | null>(null)
   const [restarting, setRestarting] = useState(false)
+  // Onboarding modal visibility while a signed-in user starts a course.
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingError, setOnboardingError] = useState<string | null>(null)
 
   // Remember the last-opened course so the dashboard sidebar keeps a
   // persistent "Course workspace" entry that points back here.
@@ -143,20 +148,30 @@ export function CourseDetailPage() {
   }, [slug])
 
   // Enroll the current user (redirects to signup when logged out, carrying a
-  // `next` param so we can bounce back here after auth), then refresh the
-  // enrollment record.
-  async function handleEnroll() {
+  // `next` param so we can bounce back here after auth). Signed-in learners
+  // first see the onboarding survey, which collects their skill level +
+  // learning goal and then enrolls with those answers attached.
+  function handleEnroll() {
     if (!session) {
       // Use client-side navigation with search-param `next` so the signup
       // page can redirect back here after registration. No full-page reload.
       navigate(`/auth?mode=signup&next=/courses/${slug}`)
       return
     }
-    if (!course || enrolling || enrolled) return
-    setEnrolling(true)
+    if (!course || enrolled) return
     setEnrollError(null)
+    setOnboardingError(null)
+    setShowOnboarding(true)
+  }
+
+  // Perform the actual enrollment once the learner submits (or skips) the
+  // onboarding survey. `onboarding` carries the collected answers.
+  async function enrollWithOnboarding(onboarding?: CourseOnboardingPayload) {
+    if (!course || enrolled) return
+    setEnrolling(true)
+    setShowOnboarding(false)
     try {
-      await enrollInCourse(course.slug)
+      await enrollInCourse(course.slug, onboarding)
       setEnrolled(true)
       await loadEnrollment()
     } catch (err) {
@@ -405,6 +420,21 @@ export function CourseDetailPage() {
           <CourseExplainer course={course} />
         )}
       </div>
+
+      {/* Pre-enrollment onboarding survey: shown for signed-in learners who
+          click "Start course". Submitting (or skipping) enrolls them. */}
+      {showOnboarding ? (
+        <CourseOnboarding
+          courseTitle={course.title}
+          submitting={enrolling}
+          error={onboardingError}
+          onSubmit={(payload) => {
+            setOnboardingError(null)
+            enrollWithOnboarding(payload)
+          }}
+          onSkip={() => enrollWithOnboarding()}
+        />
+      ) : null}
     </CourseDetailShell>
   )
 }

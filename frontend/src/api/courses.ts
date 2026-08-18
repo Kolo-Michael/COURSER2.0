@@ -165,6 +165,16 @@ export type ApiEnrollment = {
   course_id: string
   progress: number
   created_at: string
+  /** Self-assessed starting level from the enrollment onboarding survey. */
+  skill_level?: 'beginner' | 'intermediate' | 'expert'
+  /** Free-text learning goal captured during onboarding. */
+  learning_goal?: string | null
+}
+
+/** Onboarding answers collected before/at enrollment time. */
+export type CourseOnboardingPayload = {
+  skill_level?: 'beginner' | 'intermediate' | 'expert'
+  learning_goal?: string | null
 }
 
 export type ApiEnrollmentDetail = {
@@ -175,6 +185,8 @@ export type ApiEnrollmentDetail = {
   course_image_url: string | null
   course_category: string | null
   level: string
+  skill_level?: 'beginner' | 'intermediate' | 'expert'
+  learning_goal?: string | null
   enrolled_at: string
   completed_at: string | null
   progress: number
@@ -198,10 +210,22 @@ export type AskResponse = {
   conversation_id: string
 }
 
-/** POST /api/courses/slug/:slug/enroll — enroll in a course by slug. */
-export function enrollInCourse(slug: string) {
+/** POST /api/courses/slug/:slug/enroll — enroll in a course by slug.
+ * Optional onboarding answers (skill level + learning goal) are stored on the
+ * enrollment so the learning experience can be tailored to the learner. */
+export function enrollInCourse(slug: string, onboarding?: CourseOnboardingPayload) {
   return apiRequest<ApiEnrollment>(`/api/courses/slug/${slug}/enroll`, {
     method: 'POST',
+    body: JSON.stringify(onboarding ?? {}),
+  })
+}
+
+/** PATCH /api/enrollments/:id/onboarding — update a course's onboarding
+ * answers after enrollment (e.g. the learner revises their level/goal). */
+export function updateEnrollmentOnboarding(enrollmentId: string, onboarding: CourseOnboardingPayload) {
+  return apiRequest<ApiEnrollmentDetail>(`/api/enrollments/${enrollmentId}/onboarding`, {
+    method: 'PATCH',
+    body: JSON.stringify(onboarding),
   })
 }
 

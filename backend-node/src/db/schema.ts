@@ -122,13 +122,15 @@ export const CREATE_TABLES: string[] = [
 
   // --- progress / engagement ----------------------------------------------
   `CREATE TABLE IF NOT EXISTS enrollments (
-     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-     course_id uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-     enrolled_at timestamp DEFAULT now(),
-     completed_at timestamp,
-     progress double precision DEFAULT 0
-   )`,
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      course_id uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+      enrolled_at timestamp DEFAULT now(),
+      completed_at timestamp,
+      progress double precision DEFAULT 0,
+      skill_level varchar(20) DEFAULT 'beginner',
+      learning_goal text
+    )`,
 
 `CREATE TABLE IF NOT EXISTS lesson_progress (
      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -194,6 +196,8 @@ export const MIGRATIONS: string[] = [
   "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS resource_links jsonb",
   "ALTER TABLE modules ADD COLUMN IF NOT EXISTS quiz jsonb",
   "ALTER TABLE courses ADD COLUMN IF NOT EXISTS image_url text",
+  "ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS skill_level varchar(20) DEFAULT 'beginner'",
+  "ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS learning_goal text",
   // Self-referential created_by FK (was shipped in migrate_created_by_fk.py).
   `DO $$
    BEGIN
