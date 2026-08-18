@@ -168,10 +168,10 @@ function Heading({ level, children }: { level: number; children: ReactNode }) {
   const Tag = (level <= 2 ? 'h3' : level === 3 ? 'h4' : 'h5') as 'h3' | 'h4' | 'h5'
   const sizing =
     level <= 2
-      ? 'text-[15px]'
+      ? 'text-base lg:text-sm'
       : level === 3
-        ? 'text-sm'
-        : 'text-[13px] uppercase tracking-wide text-stone-500 dark:text-stone-400'
+        ? 'text-sm lg:text-xs'
+        : 'text-[13px] lg:text-[11px] uppercase tracking-wide text-stone-500 dark:text-stone-400'
   return (
     <Tag className={`flex items-center gap-2.5 font-bold text-stone-900 dark:text-stone-50 ${sizing}`}>
       <span className="h-1.5 w-7 shrink-0 rounded-full bg-primary/70 dark:bg-primary-dark/70" aria-hidden />
@@ -186,18 +186,18 @@ function NoteBody({ blocks }: { blocks: NoteBlock[] }) {
   return (
     <>
       {blocks.map((block, index) => {
-        if (block.kind === 'para') {
-          return (
-            <p key={index} className="text-[15px] leading-7 text-stone-700 dark:text-stone-200">
-              {renderInline(block.text, `p-${index}`)}
-            </p>
-          )
-        }
+if (block.kind === 'para') {
+            return (
+              <p key={index} className="text-base lg:text-sm leading-relaxed text-stone-700 dark:text-stone-200">
+                {renderInline(block.text, `p-${index}`)}
+              </p>
+            )
+          }
         if (block.kind === 'code') {
           return (
             <pre
               key={index}
-              className="overflow-x-auto rounded-xl border border-stone-800 bg-stone-900 p-4 font-mono text-sm leading-6 text-stone-100 dark:border-stone-700 dark:bg-black/60"
+              className="overflow-x-auto rounded-xl border border-stone-800 bg-stone-900 p-4 font-mono text-base lg:text-sm leading-6 text-stone-100 dark:border-stone-700 dark:bg-black/60"
             >
               <code>{block.code}</code>
             </pre>
@@ -205,7 +205,7 @@ function NoteBody({ blocks }: { blocks: NoteBlock[] }) {
         }
         if (block.kind === 'list') {
           const items = block.items.map((item, itemIndex) => (
-            <li key={itemIndex} className="flex gap-3 text-[15px] leading-7 text-stone-700 dark:text-stone-200">
+            <li key={itemIndex} className="flex gap-3 text-base lg:text-sm leading-relaxed text-stone-700 dark:text-stone-200">
               <span
                 className={`mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full ${block.ordered ? 'bg-accent' : 'bg-primary/60 dark:bg-primary-dark/60'}`}
                 aria-hidden
@@ -273,11 +273,11 @@ function NoteBody({ blocks }: { blocks: NoteBlock[] }) {
 export function LessonNotes({ content }: { content: string }) {
   const blocks = useMemo(() => parseNotes(content), [content])
   if (!blocks.length) {
-    return <p className="text-sm text-stone-500 dark:text-stone-400">This lesson has no written notes yet — check back soon.</p>
+    return <p className="text-base lg:text-sm text-stone-500 dark:text-stone-400">This lesson has no written notes yet — check back soon.</p>
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8 lg:pb-4">
       <NoteBody blocks={blocks} />
     </div>
   )
