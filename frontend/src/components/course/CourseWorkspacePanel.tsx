@@ -237,6 +237,23 @@ export function CourseWorkspacePanel({
   // user is signed in), kept writable so a fresh submit reflects instantly.
   const quiz = currentModule?.quiz ?? null
   const quizResult = currentModule?.quiz_result ?? null
+
+  // Latest quiz attempt for the active lesson (fetched from the API).
+  const [lessonQuizResult, setLessonQuizResult] = useState<ApiQuizResult | null>(null)
+  useEffect(() => {
+    if (!session || !activeLesson?.id) return
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/lessons/${activeLesson.id}/quiz/result`, {
+          credentials: 'include',
+        })
+        const data = await r.json()
+        setLessonQuizResult(data)
+      } catch {
+        // ignore — keep current state
+      }
+    })()
+  }, [activeLesson?.id, session])
   function handleQuizResult(result: ApiQuizResult) {
     setWorkCourse((prev) =>
       prev
@@ -649,6 +666,7 @@ export function CourseWorkspacePanel({
                   <button
                     type="button"
                     onClick={() => selectLesson(nextLesson)}
+                    disabled={!!lessonQuizResult && !lessonQuizResult.passed}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
                   >
                     Next lesson
@@ -658,6 +676,7 @@ export function CourseWorkspacePanel({
                   <button
                     type="button"
                     onClick={handleNextModule}
+                    disabled={!!quizResult && !quizResult.passed}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
                   >
                     <i className="fa-solid fa-book-open text-xs" aria-hidden />

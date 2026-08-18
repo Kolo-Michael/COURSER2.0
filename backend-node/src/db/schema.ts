@@ -195,6 +195,7 @@ export const MIGRATIONS: string[] = [
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until timestamp",
   "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS resource_links jsonb",
   "ALTER TABLE modules ADD COLUMN IF NOT EXISTS quiz jsonb",
+  "ALTER TABLE quiz_results ADD COLUMN IF NOT EXISTS lesson_id uuid REFERENCES lessons(id)",
   "ALTER TABLE courses ADD COLUMN IF NOT EXISTS image_url text",
   "ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS skill_level varchar(20) DEFAULT 'beginner'",
   "ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS learning_goal text",
