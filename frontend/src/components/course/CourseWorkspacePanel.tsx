@@ -118,7 +118,7 @@ export function CourseWorkspacePanel({
   // until they start the course. `session && !enrollment` ⇒ locked preview.
   const isLocked = Boolean(session && !enrollment)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
-  const [showModulePanel, setShowModulePanel] = useState<boolean>(true)
+  const [showSyllabus, setShowSyllabus] = useState<boolean>(true)
 
   const allLessons = useMemo(() => workCourse?.modules?.flatMap((module) => module.lessons) ?? [], [workCourse])
   const [activeLessonId, setActiveLessonId] = useState<string | null>(() => defaultLessonId ?? allLessons[0]?.id ?? null)
@@ -426,8 +426,80 @@ export function CourseWorkspacePanel({
               ) : null}
             </nav>
           ) : null}
+
+          {/* Syllabus: every module and lesson in the course, so the learner
+             can see the full set of topics they'll learn and jump anywhere. */}
+          <div className="border-b border-stone-200/70 bg-stone-50/95 backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/95">
+            <button
+              type="button"
+              onClick={() => setShowSyllabus((open) => !open)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-stone-100/70 dark:hover:bg-stone-800/50"
+              aria-expanded={showSyllabus}
+            >
+              <span className="flex items-center gap-2 text-sm font-bold text-stone-900 dark:text-stone-50">
+                <i className="fa-solid fa-list-check text-primary dark:text-primary-dark" aria-hidden />
+                Topics you'll learn
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-dark">
+                  {totalModules} modules · {allLessons.length} lessons
+                </span>
+              </span>
+              <i
+                className={`fa-solid ${showSyllabus ? 'fa-chevron-up' : 'fa-chevron-down'} text-xs text-stone-400 transition`}
+                aria-hidden
+              />
+            </button>
+            {showSyllabus ? (
+              <div className="grid grid-cols-1 gap-4 px-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
+                {workCourse?.modules?.map((module, mIdx) => (
+                  <div
+                    key={module.id}
+                    className={[
+                      'rounded-xl border p-3 transition',
+                      module.id === currentModule?.id
+                        ? 'border-primary/40 bg-primary/5 dark:border-primary-dark/40 dark:bg-primary-dark/10'
+                        : 'border-stone-200 bg-white/70 dark:border-stone-700 dark:bg-stone-900/60',
+                    ].join(' ')}
+                  >
+                    <p className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                      <span>Module {mIdx + 1}</span>
+                      <span>{module.lessons?.length ?? 0} lessons</span>
+                    </p>
+                    <h4 className="mt-1 text-sm font-semibold text-stone-900 dark:text-stone-100">{module.title}</h4>
+                    <ul className="mt-2 space-y-1">
+                      {module.lessons?.map((lesson, lIdx) => (
+                        <li key={lesson.id}>
+                          <button
+                            type="button"
+                            onClick={() => selectLesson(lesson)}
+                            className={[
+                              'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs transition',
+                              activeLesson?.id === lesson.id
+                                ? 'bg-primary/10 font-semibold text-primary dark:bg-primary-dark/20 dark:text-primary-dark'
+                                : 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800',
+                            ].join(' ')}
+                          >
+                            <i
+                              className={`fa-solid ${lesson.is_completed ? 'fa-check text-green-600' : 'fa-circle-dot'} mt-0.5 text-[9px] ${lesson.is_completed ? '' : 'text-stone-400'}`}
+                              aria-hidden
+                            />
+                            <span>
+                              {mIdx + 1}.{lIdx + 1} {lesson.title}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                {!workCourse?.modules?.length ? (
+                  <p className="text-sm text-stone-500 dark:text-stone-400">No modules published yet.</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
           <div className="p-6 lg:p-8">
-            <div className="max-w-3xl">
+            <div className="max-w-4xl">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-primary dark:text-primary-dark">Reading workspace</p>
@@ -713,7 +785,10 @@ export function CourseWorkspacePanel({
                 <p className="text-sm text-stone-600 dark:text-stone-300">Available by default in every free course.</p>
                 {enrollment && (
                   <p className="text-xs mt-1 text-stone-500 dark:text-stone-400">
-                    {enrollment.skill_level?.charAt(0).toUpperCase() + enrollment.skill_level?.slice(1) || 'Beginner'} — {enrollment.learning_goal || 'No goal set'}
+                    {enrollment.skill_level
+                      ? enrollment.skill_level.charAt(0).toUpperCase() + enrollment.skill_level.slice(1)
+                      : 'Beginner'}{' '}
+                    — {enrollment.learning_goal || 'No goal set'}
                   </p>
                 )}
               </div>
@@ -724,61 +799,21 @@ export function CourseWorkspacePanel({
                 Enroll to unlock Cora, your in-course study helper.
               </p>
             ) : (
-            <>
-            <CoraChat
-              courseSlug={course.slug}
-              courseTitle={course.title}
-              session={session}
-              modules={workCourse?.modules}
-              activeLessonId={activeLesson?.id}
-              onSelectLesson={(lessonId) => {
-                const lesson = allLessons.find((item) => item.id === lessonId)
-                if (lesson) selectLesson(lesson)
-              }}
-              expanded={isExpanded}
-              onExpandChange={(expanded) => setIsExpanded(expanded)}
-            />
-            <div className="lg:col-span-2">
-              <div className="mt-4 rounded-xl border border-stone-200/70 bg-white/70 p-4 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/90">
-                <div className="flex items-center justify-between gap-3 border-b border-stone-200/70 pb-3 dark:border-stone-700">
-                  <h3 className="font-bold text-stone-900 dark:text-stone-50">Course Modules</h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowModulePanel((prev) => !prev)}
-                    className="text-sm text-primary dark:text-primary-dark transition hover:bg-stone-100 hover:text-stone-800 dark:hover:bg-stone-900/70 dark:hover:text-stone-300 rounded px-2 py-1"
-                    aria-label="Toggle module panel"
-                  >
-                    <i className="fa-solid fa-list" aria-hidden /> Module Panel
-                  </button>
-                </div>
-                <div className="h-[calc(100vh-20rem)] overflow-y-auto">
-                  {workCourse?.modules?.map((module, mIdx) => (
-                    <div key={module.id} className="border-b border-stone-200/60 pb-4 last:border-0">
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <h4 className="font-semibold text-stone-800 dark:text-stone-200">{module.title}</h4>
-                        <span className="text-xs text-stone-500 dark:text-stone-400">{module.lessons?.length || 0} lessons</span>
-                      </div>
-                      <ul className="space-y-1">
-                        {module.lessons?.map((lesson, lIdx) => (
-                          <li key={lesson.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-stone-100 dark:hover:bg-stone-900/50 dark:hover:text-stone-300">
-                            <span className="flex-1 truncate font-medium text-stone-800 dark:text-stone-200">
-                              {lesson.title}
-                            </span>
-                            <span className="text-xs text-stone-400 dark:text-stone-300">
-                              {lesson.order}.{lesson.order}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                  {workCourse?.modules?.length === 0 && (
-                    <p className="p-2 text-sm text-stone-500 dark:text-stone-400">No modules published yet.</p>
-                  )}
-                </div>
-              </div>
-            </div>
+              <CoraChat
+                courseSlug={course.slug}
+                courseTitle={course.title}
+                session={session}
+                modules={workCourse?.modules}
+                activeLessonId={activeLesson?.id}
+                onSelectLesson={(lessonId) => {
+                  const lesson = allLessons.find((item) => item.id === lessonId)
+                  if (lesson) selectLesson(lesson)
+                }}
+                expanded={isExpanded}
+                onExpandChange={(expanded) => setIsExpanded(expanded)}
+              />
             )}
+          </aside>
         </div>
       </section>
     </>
