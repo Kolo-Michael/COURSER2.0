@@ -55,12 +55,20 @@ export function SignupForm() {
        // POST /auth/signup — creates the account and issues the auth cookies
       // in the same response (email format is validated client-side above).
       // The JSON body also carries the access_token for cross-origin Safari/iOS.
+      // Non-test emails return requires_verification → route to the verify-email
+      // screen where the 6-digit code completes the signup.
       const response = await signup({
         username,
         email,
         password,
         role: 'student',
       })
+
+      if (response.requires_verification) {
+        sessionStorage.setItem('verify_email', response.user.email)
+        navigate('/auth?mode=verify-email', { replace: true })
+        return
+      }
 
       saveSession({
         identifier: response.user.full_name || response.user.username,

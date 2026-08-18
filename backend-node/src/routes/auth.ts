@@ -94,6 +94,7 @@ const LoginSchema = z
 
 const ForgotSchema = z.object({ email: emailSchema });
 const VerifyCodeSchema = z.object({ email: emailSchema, code: z.string().length(6) });
+const VerifyEmailSchema = z.object({ email: emailSchema, code: z.string().length(6) });
 const ResetPasswordSchema = z.object({
   email: emailSchema,
   code: z.string().length(6),
@@ -290,13 +291,51 @@ router.post(
       role: data.role,
     });
 
-    // Accounts are verified instantly (email format is validated above);
-    // the session cookies are issued in the same response.
-    const verified = { ...user, is_verified: true };
-    const tokens = await authService.issueTokens(verified);
+    // Test accounts (VERIFY_BYPASS_EMAILS) skip the email-verification step so
+    // seeded logins keep working: verified instantly + cookies issued here.
+    // Every other address is created unverified and emailed a 6-digit code the
+    // SPA collects on the verify-email screen (cookies are issued there).
+    const bypass = config.VERIFY_BYPASS_EMAILS.includes(email.toLowerCase());
+    if (bypass) {
+      await db.query(`UPDATE users SET is_verified = TRUE WHERE id = $1`, [user.id]);
+      const verified = { ...user, is_verified: true };
+      const tokens = await authService.issueTokens(verified);
+      setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+      setSessionCookie(res, verified, tokens.accessToken);
+      res.status(201).json(tokenResponse(verified, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
+      return;
+    }
+
+    await authService.requestEmailVerification(email);
+    res.status(201).json({ user: userJson(user), requires_verification: true });
+  })
+);
+
+router.post(
+  "/verify-email",
+  verifyLimiter,
+  wrap(async (req, res) => {
+    const data = validate(VerifyEmailSchema, req.body);
+    const email = normalizeEmail(data.email);
+    const [ok, message, user] = await authService.verifyEmailCode(email, data.code);
+    if (!ok || !user) throw badRequest(message);
+    // Verified ⇒ issue the session cookies in the same response so the SPA can
+    // route straight to the dashboard (same shape as a successful login).
+    const tokens = await authService.issueTokens(user);
     setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
-    setSessionCookie(res, verified, tokens.accessToken);
-    res.status(201).json(tokenResponse(verified, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
+    setSessionCookie(res, user, tokens.accessToken);
+    res.json(tokenResponse(user, tokens.accessToken, tokens.refreshToken, tokens.sessionExpiresAt));
+  })
+);
+
+router.post(
+  "/resend-verification",
+  verifyLimiter,
+  wrap(async (req, res) => {
+    const data = validate(VerifyEmailSchema.omit({ code: true }), req.body);
+    await authService.requestEmailVerification(normalizeEmail(data.email));
+    // Always a generic message — never reveal whether the email exists.
+    res.json({ message: "If your account needs verification, a new code has been sent." });
   })
 );
 

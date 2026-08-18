@@ -45,6 +45,12 @@ export type LoginResponse = {
   refresh_token?: string
 }
 
+/** Signup returns either a full token response (bypass/test emails) or a
+ *  requires_verification marker when a 6-digit code was emailed instead. */
+export type SignupResponse = LoginResponse & {
+  requires_verification?: boolean
+}
+
 export type SignupPayload = {
   username: string
   email: string
@@ -104,12 +110,37 @@ export function logout() {
 
 /**
  * POST /api/auth/signup
- * Registers a new user and returns access + (optional) refresh tokens plus the new user.
+ * Registers a new user. Non-bypass emails get a `requires_verification` marker
+ * (a 6-digit code is emailed; no auth cookies yet). Test emails return a full
+ * token response with cookies issued immediately.
  */
 export function signup(payload: SignupPayload) {
-  return apiRequest<LoginResponse>('/api/auth/signup', {
+  return apiRequest<SignupResponse>('/api/auth/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/verify-email
+ * Confirms a signup's emailed 6-digit code; on success issues the session
+ * cookies and returns a token response like login.
+ */
+export function verifyEmail(payload: VerifyCodePayload) {
+  return apiRequest<LoginResponse>('/api/auth/verify-email', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * POST /api/auth/resend-verification
+ * Re-emails the signup verification code (generic success response).
+ */
+export function resendVerification(email: string) {
+  return apiRequest<{ message: string }>('/api/auth/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
   })
 }
 

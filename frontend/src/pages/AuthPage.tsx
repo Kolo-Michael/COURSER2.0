@@ -8,6 +8,7 @@ import { LoginForm } from '@/components/auth/LoginForm'
 import { SignupForm } from '@/components/auth/SignupForm'
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm'
 import { VerifyCodeForm } from '@/components/auth/VerifyCodeForm'
+import { VerifyEmailForm } from '@/components/auth/VerifyEmailForm'
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm'
 import { GoogleCallback } from '@/components/auth/GoogleCallback'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -26,6 +27,7 @@ export function AuthPage() {
   const isSignup = mode === 'signup'
   const isForgot = mode === 'forgot-password'
   const isVerify = mode === 'verify-code'
+  const isVerifyEmail = mode === 'verify-email'
 
   // Switch between login/signup tabs via search params (no full navigation),
   // so form fields stay populated when the user toggles back and forth.
@@ -56,6 +58,11 @@ export function AuthPage() {
       subtitle: 'Check your email',
       description: 'Enter the 6-digit code sent to your email address.',
     },
+    'verify-email': {
+      title: 'Confirm your email',
+      subtitle: 'Almost there',
+      description: 'We emailed you a 6-digit code to activate your account. Enter it below to finish signing up.',
+    },
     'reset-password': {
       title: 'Set new password',
       subtitle: 'Reset password',
@@ -64,7 +71,7 @@ export function AuthPage() {
   }
 
   // Resolve the flags above to the matching hero-copy entry.
-  const config = pageConfig[isLogin ? 'login' : isSignup ? 'signup' : isForgot ? 'forgot-password' : isVerify ? 'verify-code' : 'reset-password']
+  const config = pageConfig[isLogin ? 'login' : isSignup ? 'signup' : isForgot ? 'forgot-password' : isVerify ? 'verify-code' : isVerifyEmail ? 'verify-email' : 'reset-password']
 
   return (
     <div className="courser-bg-dots relative min-h-screen overflow-hidden bg-stone-50 dark:bg-stone-950">
@@ -157,7 +164,7 @@ export function AuthPage() {
           {/* Google OAuth handoff takes over the card; otherwise render the form matching the current mode. */}
           {google ? (
             <GoogleCallback status={google === 'success' ? 'success' : 'error'} reason={params.get('reason')} />
-          ) : isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : <ResetPasswordForm />}
+          ) : isLogin ? <LoginForm /> : isSignup ? <SignupForm /> : isForgot ? <ForgotPasswordForm /> : isVerify ? <VerifyCodeForm /> : isVerifyEmail ? <VerifyEmailForm /> : <ResetPasswordForm />}
         </section>
       </main>
     </div>

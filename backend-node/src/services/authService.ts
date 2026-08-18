@@ -11,7 +11,7 @@ import { config } from "../config.js";
 import { db } from "../db.js";
 import { createAccessToken, createRefreshToken, decodeToken, hashPassword, verifyPassword } from "../security.js";
 import { epochUtc, nowIso, nowNaive } from "../serialize.js";
-import { generateResetCode, sendPasswordResetEmail } from "./emailService.js";
+import { generateResetCode, sendPasswordResetEmail, sendVerificationEmail } from "./emailService.js";
 
 export interface UserRow {
   id: string;
@@ -341,3 +341,71 @@ export async function resetPassword(
 }
 
 // --- email verification ---------------------------------------------------
+
+/**
+ * Create (or replace) an email-verification code for a user and email it.
+ * Returns true when a code was stored+emailed, false when the address is
+ * already verified or no such user exists (never reveals existence).
+ */
+export async function requestEmailVerification(
+  email: string
+): Promise<boolean> {
+  const user = await getUserByEmail(email);
+  if (!user) return false;
+  if (user.is_verified) return false;
+
+  await db.query(`DELETE FROM email_verifications WHERE user_id = $1`, [user.id]);
+  const code = generateResetCode();
+  const expiresAt = new Date(
+    Date.now() + config.VERIFICATION_CODE_EXPIRE_MINUTES * 60_000
+  ).toISOString();
+  await db.query(
+    `INSERT INTO email_verifications (id, user_id, code, attempts, expires_at, created_at)
+     VALUES ($1,$2,$3,0,$4,$5)`,
+    [randomUUID(), user.id, code, expiresAt, nowIso()]
+  );
+  await sendVerificationEmail(email, code);
+  return true;
+}
+
+/**
+ * Check a 6-digit email-verification code. On success marks the user verified,
+ * deletes the code row, and returns the refreshed user. Returns
+ * [ok, message, user].
+ */
+export async function verifyEmailCode(
+  email: string,
+  code: string
+): Promise<[boolean, string, UserRow | null]> {
+  const user = await getUserByEmail(email);
+  if (!user) return [false, "Invalid verification code.", null];
+  if (user.is_verified) return [true, "Email already verified.", user];
+
+  const row = await db.get<VerificationRow>(
+    `SELECT * FROM email_verifications
+      WHERE user_id = $1 AND expires_at > $2
+      ORDER BY created_at DESC LIMIT 1`,
+    [user.id, nowNaive()]
+  );
+  if (!row) {
+    return [false, "Verification code expired or not found. Please request a new one.", null];
+  }
+
+  if (row.code !== code) {
+    const attempts = (row.attempts || 0) + 1;
+    if (attempts >= config.VERIFICATION_MAX_ATTEMPTS) {
+      await db.query(`DELETE FROM email_verifications WHERE id = $1`, [row.id]);
+      return [false, "Too many failed attempts. Please request a new code.", null];
+    }
+    await db.query(`UPDATE email_verifications SET attempts = $2 WHERE id = $1`, [
+      row.id,
+      attempts,
+    ]);
+    return [false, `Invalid code. ${config.VERIFICATION_MAX_ATTEMPTS - attempts} attempts remaining.`, null];
+  }
+
+  await db.query(`UPDATE users SET is_verified = TRUE WHERE id = $1`, [user.id]);
+  await db.query(`DELETE FROM email_verifications WHERE id = $1`, [row.id]);
+  const updated = await getUserById(user.id);
+  return [true, "Email verified successfully.", updated];
+}

@@ -90,3 +90,14 @@ export async function sendPasswordResetEmail(email: string, code: string): Promi
     "PASSWORD RESET EMAIL"
   );
 }
+
+export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
+  return send(
+    email,
+    code,
+    "COURSER Email Verification Code",
+    "Confirm your email address to activate your COURSER account.",
+    "EMAIL VERIFICATION CODE",
+    "60 minutes"
+  );
+}

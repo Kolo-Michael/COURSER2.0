@@ -119,6 +119,10 @@ export function CourseWorkspacePanel({
   const isLocked = Boolean(session && !enrollment)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const [showSyllabus, setShowSyllabus] = useState<boolean>(true)
+  // Enlarged reading mode: when the learner clicks a lesson the outline,
+  // syllabus, and Cora rail step aside so the study notes get the full width
+  // for comfortable reading on both desktop and phone-sized screens.
+  const [readingExpanded, setReadingExpanded] = useState<boolean>(false)
 
   const allLessons = useMemo(() => workCourse?.modules?.flatMap((module) => module.lessons) ?? [], [workCourse])
   const [activeLessonId, setActiveLessonId] = useState<string | null>(() => defaultLessonId ?? allLessons[0]?.id ?? null)
@@ -313,17 +317,24 @@ export function CourseWorkspacePanel({
     }
   }
 
-  // Select a lesson (used by the outline rows + prev/next buttons).
+  // Select a lesson (used by the outline rows + prev/next buttons). Opening a
+  // lesson enlarges the reading space for focused, readable notes.
   function selectLesson(lesson: ApiLesson) {
     setActiveLessonId(lesson.id)
+    setReadingExpanded(true)
+  }
+
+  // Collapse back to the full course view (outline + syllabus + Cora).
+  function collapseReading() {
+    setReadingExpanded(false)
   }
 
   return (
     <>
       <section className="mt-8 courser-card overflow-clip">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px]">
+        <div className={`grid grid-cols-1 ${readingExpanded ? '' : 'lg:grid-cols-[1fr_320px]'}`}>
           <div className="flex flex-col">
-          {showOutline ? (
+          {showOutline && !readingExpanded ? (
             <nav
               className="sticky top-20 z-20 border-b bg-stone-50/95 backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/95"
               aria-label="Course modules"
@@ -428,7 +439,9 @@ export function CourseWorkspacePanel({
           ) : null}
 
           {/* Syllabus: every module and lesson in the course, so the learner
-             can see the full set of topics they'll learn and jump anywhere. */}
+             can see the full set of topics they'll learn and jump anywhere.
+             Hidden while the reading space is enlarged. */}
+          {!readingExpanded ? (
           <div className="border-b border-stone-200/70 bg-stone-50/95 backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/95">
             <button
               type="button"
@@ -497,15 +510,28 @@ export function CourseWorkspacePanel({
               </div>
             ) : null}
           </div>
+          ) : null}
 
           <div className="p-6 lg:p-8">
-            <div className="max-w-4xl">
+            <div className={readingExpanded ? 'mx-auto max-w-3xl' : 'max-w-4xl'}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-primary dark:text-primary-dark">Reading workspace</p>
                 <h2 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-50 sm:text-2xl">{activeLesson?.title ?? 'Lesson workspace'}</h2>
               </div>
-              {headerAction}
+              <div className="flex flex-wrap items-center gap-2">
+                {readingExpanded ? (
+                  <button
+                    type="button"
+                    onClick={collapseReading}
+                    className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
+                  >
+                    <i className="fa-solid fa-arrow-left text-xs" aria-hidden />
+                    Back to course
+                  </button>
+                ) : null}
+                {headerAction}
+              </div>
             </div>
 
             {isLocked ? (
@@ -770,6 +796,7 @@ export function CourseWorkspacePanel({
           </div>
           </div>
 
+          {!readingExpanded ? (
           <aside className="courser-bg-dots-dense lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:flex lg:flex-col border-t border-stone-200 bg-stone-50 p-6 dark:border-stone-700 dark:bg-stone-900 lg:border-l lg:border-t-0">
             <div className="flex items-center gap-3">
               <div className="relative h-16 w-16 rounded-full bg-primary">
@@ -814,6 +841,7 @@ export function CourseWorkspacePanel({
               />
             )}
           </aside>
+          ) : null}
         </div>
       </section>
     </>

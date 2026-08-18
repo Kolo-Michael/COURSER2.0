@@ -110,6 +110,25 @@ export const config = {
   ABSTRACT_API_URL:
     process.env.ABSTRACT_API_URL || "https://emailreputation.abstractapi.com/v1",
   ABSTRACT_API_KEY: process.env.ABSTRACT_API_KEY || "",
+  // Emails that skip the verify-your-email step at signup (test accounts).
+  // Comma-separated; compared case-insensitively. These are also treated as
+  // verified when found via Google OAuth. Mirrors backend/app/core/config.py.
+  VERIFY_BYPASS_EMAILS: (
+    process.env.VERIFY_BYPASS_EMAILS ||
+    "student@courser.com,admin@courser.com,superadmin@smarttutor.com"
+  )
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
+  // Email-verification codes: lifetime in minutes + max wrong attempts.
+  VERIFICATION_CODE_EXPIRE_MINUTES: parseInt(
+    process.env.VERIFICATION_CODE_EXPIRE_MINUTES || "60",
+    10
+  ),
+  VERIFICATION_MAX_ATTEMPTS: parseInt(
+    process.env.VERIFICATION_MAX_ATTEMPTS || "5",
+    10
+  ),
 } as const;
 
 /** True when running in development (disables Secure cookie flag + real SMTP). */
