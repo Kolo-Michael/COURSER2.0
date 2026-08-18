@@ -13,7 +13,7 @@
  * `quiz_results` so learners can retake and the workspace can show "passed ✓".
  */
 import { Router } from "express";
-import { z } from "zord";
+import { z } from "zod";
 
 import { db } from "../db.js";
 import type { Row } from "../db.js";
@@ -56,6 +56,8 @@ function lessonQuizJson(lesson: Row): Record<string, unknown> | null {
   };
 }
 
+export const router = Router();
+
 router.get(
   "/:lesson_id/quiz",
   requireUser,
@@ -74,7 +76,16 @@ router.get(
   wrap(async (req, res) => {
     const userId = (req as AuthedRequest).userId;
     const lesson = await loadLesson(req.params.lesson_id);
-    if (!lesson) throw notFound("Lesson not found");
+    if (!lesson) {
+      res.json(null);
+      return;
+    }
+    const quiz = lessonQuiz(lesson);
+    if (!quiz) {
+      // No quiz authored for this lesson yet — treat as "no gate"
+      res.json(null);
+      return;
+    }
     const row = await db.get<Row>(
       `SELECT id, score, passed, total_questions, created_at FROM quiz_results
         WHERE user_id = $1 AND lesson_id = $2
@@ -106,7 +117,6 @@ router.post(
     if (!lesson) throw notFound("Lesson not found");
     const quiz = lessonQuiz(lesson);
     if (!quiz) throw notFound("This lesson has no quiz");
-    // Clamp so a client can't self-certify a passing score for nothing.
     const total = data.total_questions || quiz.questions.length;
     const score = Math.max(0, Math.min(data.score, 100));
     const passed = score >= quiz.pass_percent;

@@ -117,6 +117,7 @@ export function CourseWorkspacePanel({
   // (module + lesson topics) but the study notes / Cora / quiz stay locked
   // until they start the course. `session && !enrollment` ⇒ locked preview.
   const isLocked = Boolean(session && !enrollment)
+  const [isExpanded, setIsExpanded] = useState<boolean>(false)
 
   const allLessons = useMemo(() => workCourse?.modules?.flatMap((module) => module.lessons) ?? [], [workCourse])
   const [activeLessonId, setActiveLessonId] = useState<string | null>(() => defaultLessonId ?? allLessons[0]?.id ?? null)
@@ -711,7 +712,7 @@ export function CourseWorkspacePanel({
                 <p className="text-sm text-stone-600 dark:text-stone-300">Available by default in every free course.</p>
               </div>
             </div>
-            {isLocked ? (
+{isLocked ? (
               <p className="mt-6 rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-600 dark:border-stone-700 dark:text-stone-300">
                 <i className="fa-solid fa-lock mr-2 text-primary dark:text-primary-dark" aria-hidden />
                 Enroll to unlock Cora, your in-course study helper.
@@ -727,8 +728,21 @@ export function CourseWorkspacePanel({
                 const lesson = allLessons.find((item) => item.id === lessonId)
                 if (lesson) selectLesson(lesson)
               }}
+              expanded={isExpanded}
+              onExpandChange={(expanded) => setIsExpanded(expanded)}
             />
             )}
+            {/* Floating Cora button on mobile: hidden on lg+ (desktop), visible on mobile */}
+            {typeof window !== 'undefined' ? (
+              <button
+                type="button"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                className="fixed bottom-6 right-6 z-50 rounded-full bg-primary p-2 shadow-lg hover:opacity-90 transition opacity dark:bg-primary-dark dark:hover:opacity-80 lg:hidden"
+                aria-label="Open Cora tutor"
+              >
+                <i className="fa-solid fa-robot text-primary text-lg" aria-hidden />
+              </button>
+            ) : null}
           </aside>
         </div>
       </section>

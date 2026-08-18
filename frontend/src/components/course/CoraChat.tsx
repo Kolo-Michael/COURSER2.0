@@ -40,6 +40,13 @@ type CoraChatProps = {
   activeLessonId?: string | null
   /** Navigate to a lesson from inside the expanded chat. */
   onSelectLesson?: (lessonId: string) => void
+  /** Control whether the chat is shown in expanded (full-screen portal) mode.
+   *  When true, renders a portal on document.body instead of the compact aside.
+   *  Controlled from the parent (e.g. CourseWorkspacePanel) to enable a
+   *  floating-button-on-mobile pattern. */
+  expanded?: boolean
+  /** Fired when the expanded state changes. */
+  onExpandChange?: (expanded: boolean) => void
 }
 
 export function CoraChat({
@@ -49,13 +56,19 @@ export function CoraChat({
   modules = [],
   activeLessonId = null,
   onSelectLesson,
+  expanded: propsExpanded,
+  onExpandChange,
 }: CoraChatProps) {
   const [conversations, setConversations] = useState<ApiConversationSummary[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [chat, setChat] = useState<ChatMessage[]>([GREETING])
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
-  const [expanded, setExpanded] = useState(false)
+  // Controlled/uncontrolled expanded state: use prop if provided, else local state.
+  const [expanded, setExpanded] = useState(() => propsExpanded ?? false)
+  useEffect(() => {
+    if (onExpandChange) onExpandChange(expanded)
+  }, [expanded, onExpandChange])
   const [loading, setLoading] = useState(false)
   const transcriptRef = useRef<HTMLDivElement>(null)
 

@@ -196,6 +196,11 @@ router.patch(
 /** ---------- Lesson quiz routes (end-of-lesson mastery self-check) ---------- */
 import crypto from "crypto";
 
+interface LessonQuiz {
+  pass_percent: number;
+  questions: { question: string; options: string[]; correct_index: number; explanation?: string }[];
+}
+
 const LessonResultSchema = z.object({
   score: z.number(),
   passed: z.boolean(),
