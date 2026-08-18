@@ -12,7 +12,6 @@ import { db } from "../db.js";
 import { createAccessToken, createRefreshToken, decodeToken, hashPassword, verifyPassword } from "../security.js";
 import { epochUtc, nowIso, nowNaive } from "../serialize.js";
 import { generateResetCode, sendPasswordResetEmail } from "./emailService.js";
-import { verifyEmailDeliverability } from "./verifaliaService.js";
 
 export interface UserRow {
   id: string;
@@ -249,15 +248,35 @@ export async function requestPasswordReset(email: string): Promise<boolean> {
   const user = await getUserByEmail(email);
   if (!user) return true; // never reveal whether the email exists
 
-  // Check deliverability via Verifalia before spending a reset code on a dead
-  // mailbox. `null` (unconfigured / API failure) means "unknown" → proceed, so
-  // a Verifalia outage can never block a legitimate reset.
-  const verifalia = await verifyEmailDeliverability(email);
-  if (verifalia && verifalia.classification === "Undeliverable") {
-    console.warn(`Verifalia: skipping reset for undeliverable address ${email}`);
+  // Check deliverability via your abstract API before spending a reset code on a dead
+  // mailbox. If the API is unavailable, returns "Unknown" → proceed normally,
+  // so an upstream outage can never block a legitimate reset.
+  let classification: "Deliverable" | "Undeliverable" | "Unknown" = "Unknown";
+  try {
+    const resp = await fetch(`${process.env.ABSTRACT_API_URL}/validate-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Authorization: `Bearer ${process.env.ABSTRACT_API_KEY}`, // uncomment if needed
+      },
+      body: JSON.stringify({ email }),
+    });
+    if (resp.ok) {
+      const data = await resp.json() as { classification: string } | null;
+      if (data?.classification) {
+        classification = data.classification as "Deliverable" | "Undeliverable" | "Unknown";
+      }
+    }
+  } catch {
+    // API error → Unknown → proceed
+  }
+
+  if (classification === "Undeliverable") {
+    console.warn(`Abstract API: skipping reset for undeliverable address ${email}`);
     return true; // same generic response — don't leak the classification
   }
 
+  // "Deliverable" or "Unknown" → proceed to send reset code
   await db.query(`DELETE FROM password_reset_tokens WHERE user_id = $1`, [user.id]);
   const code = generateResetCode();
   const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
