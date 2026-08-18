@@ -12,6 +12,7 @@ import { db } from "../db.js";
 import { createAccessToken, createRefreshToken, decodeToken, hashPassword, verifyPassword } from "../security.js";
 import { epochUtc, nowIso, nowNaive } from "../serialize.js";
 import { generateResetCode, sendPasswordResetEmail } from "./emailService.js";
+import { verifyEmailDeliverability } from "./verifaliaService.js";
 
 export interface UserRow {
   id: string;
@@ -247,6 +248,15 @@ export async function revokeSession(refreshToken: string): Promise<boolean> {
 export async function requestPasswordReset(email: string): Promise<boolean> {
   const user = await getUserByEmail(email);
   if (!user) return true; // never reveal whether the email exists
+
+  // Check deliverability via Verifalia before spending a reset code on a dead
+  // mailbox. `null` (unconfigured / API failure) means "unknown" → proceed, so
+  // a Verifalia outage can never block a legitimate reset.
+  const verifalia = await verifyEmailDeliverability(email);
+  if (verifalia && verifalia.classification === "Undeliverable") {
+    console.warn(`Verifalia: skipping reset for undeliverable address ${email}`);
+    return true; // same generic response — don't leak the classification
+  }
 
   await db.query(`DELETE FROM password_reset_tokens WHERE user_id = $1`, [user.id]);
   const code = generateResetCode();

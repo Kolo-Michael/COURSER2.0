@@ -685,25 +685,25 @@ linked with `vercel link --yes --project <name>`:
    subquery joining lessons?modules per course; pg bigint coerced via
    `Number()`; fallback computes it from `modules[].lessons.length`).
    `courseListJson` gained a `lessonCount` arg.
- - `frontend/src/api/courses.ts` — `ApiCourse.lesson_count?: number`.
- - `frontend/src/pages/LandingPage.tsx` — no longer fully static: fetches the
+ - `frontend/src/api/courses.ts` ï¿½ `ApiCourse.lesson_count?: number`.
+ - `frontend/src/pages/LandingPage.tsx` ï¿½ no longer fully static: fetches the
    published catalog once on mount, derives the stats strip ("Free courses
    prepared" = course count, "Guided lessons" = summed lesson_count) and the
    career-path cards (lesson counts summed per category slug:
-   web-development / data-science / ai-ml). Shows `…` while loading; demo
+   web-development / data-science / ai-ml). Shows `ï¿½` while loading; demo
    numbers 18/16/14 and 12/86 removed.
  - Verified: backend `tsc` + 12/12 vitest green; frontend `tsc -b` + `vite
    build` green; live `GET /api/courses` returns 13 courses / 47 total
    lessons with `lesson_count` present; bundle contains `lesson_count`.
 
-## Sign in with Google — server-side OAuth redirect (16 Aug 2026)
+## Sign in with Google ï¿½ server-side OAuth redirect (16 Aug 2026)
 
 - **Flow:** SPA links to `GET /api/auth/google?origin=<frontend origin>`; the
   backend 302s to Google''s consent screen (a short-lived HttpOnly
   `google_oauth_state` cookie carries a random CSRF `state` + the origin to
   return to). The callback `GET /api/auth/google/callback` verifies the state,
   exchanges the `code` at `https://oauth2.googleapis.com/token` (client_secret
-  auth), validates the id_token claims (aud/iss/exp/email_verified — trusted
+  auth), validates the id_token claims (aud/iss/exp/email_verified ï¿½ trusted
   because it came straight from Google over TLS, so no JWKS round-trip), then
   find-or-creates the user and issues the normal session cookies before
   redirecting to `${origin}/auth?google=success`.
@@ -720,12 +720,12 @@ linked with `vercel link --yes --project <name>`:
   LoginForm and SignupForm with an "or" divider; `GoogleCallback.tsx` handles
   `/auth?google=success` by calling `GET /auth/me` (cross-origin cookies are
   sent but not readable via document.cookie) then routing to the role
-  dashboard; `/auth?google=error&reason=…` shows a human-readable banner
+  dashboard; `/auth?google=error&reason=ï¿½` shows a human-readable banner
   (config/denied/state/email).
 - **Session mirror fix:** `session.ts` `saveSession()` now WRITES a
   `courser_session` cookie on the current origin (60-min, same payload shape
   as the backend). This unbreaks getSession()/ProtectedRoute for the
-  split-origin Vercel deployment (API origin ? SPA origin) — the backend
+  split-origin Vercel deployment (API origin ? SPA origin) ï¿½ the backend
   cookie is invisible to `document.cookie` on the SPA origin, so login/Google/
   verify-email persist the session client-side too. Harmless same-origin.
 - **Env to set (Vercel backend project `courser-backend-node` + dev
@@ -740,3 +740,25 @@ linked with `vercel link --yes --project <name>`:
 - Verified: backend `tsc` + 12/12 vitest; frontend `tsc -b` + `vite build`;
   live `/api/auth/google` ? 302 config-error redirect; bundle contains
   "Sign in with Google" + `api/auth/google` + "Signing you in with Google".
+
+## Verifalia email verification in the forgot-password flow (18 Aug 2026)
+
+ - `backend-node/src/services/verifaliaService.ts` â€” NEW. `verifyEmailDeliverability(email)`
+   POSTs to `https://api.verifalia.com/v2.7/email-validations?waitTime=30000` with
+   HTTP Basic auth (username = sub-account SID, password = auth token) and a
+   single-entry body. Returns `{ classification, status }` from the completed
+   job, or `null` when unconfigured / auth failed / API errored / job didn't
+   finish in the wait window.
+ - `backend-node/src/services/authService.ts` â€” `requestPasswordReset()` now calls
+   Verifalia first; when the classification is `Undeliverable` it logs + skips
+   issuing the code but STILL returns the generic message (never leaks whether
+   the email exists or its classification). `null` (unknown) â†’ proceed as before,
+   so a Verifalia outage can't block legitimate resets. **Fail-soft by design.**
+ - Env (optional): `VERIFALIA_SID` + `VERIFALIA_TOKEN` added to
+   `backend-node/src/config.ts`, `backend-node/.env.example`, and
+   `backend/.env.local` (paste the placeholders from the Verifalia client area
+   â†’ "API and sub-accounts" â†’ sub-account SID / auth token). If unset, the
+   reset flow behaves exactly as before.
+ - Verified: backend `tsc --noEmit` + 12/12 vitest green.
+ - Note: Verifalia is verification only (never sends email); the reset code is
+   still delivered via the existing SMTP/nodemailer path.
