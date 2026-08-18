@@ -118,6 +118,7 @@ export function CourseWorkspacePanel({
   // until they start the course. `session && !enrollment` ⇒ locked preview.
   const isLocked = Boolean(session && !enrollment)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
+  const [showModulePanel, setShowModulePanel] = useState<boolean>(true)
 
   const allLessons = useMemo(() => workCourse?.modules?.flatMap((module) => module.lessons) ?? [], [workCourse])
   const [activeLessonId, setActiveLessonId] = useState<string | null>(() => defaultLessonId ?? allLessons[0]?.id ?? null)
@@ -710,6 +711,11 @@ export function CourseWorkspacePanel({
               <div>
                 <p className="font-bold text-stone-900 dark:text-stone-50">Cora answers questions</p>
                 <p className="text-sm text-stone-600 dark:text-stone-300">Available by default in every free course.</p>
+                {enrollment && (
+                  <p className="text-xs mt-1 text-stone-500 dark:text-stone-400">
+                    {enrollment.skill_level?.charAt(0).toUpperCase() + enrollment.skill_level?.slice(1) || 'Beginner'} — {enrollment.learning_goal || 'No goal set'}
+                  </p>
+                )}
               </div>
             </div>
 {isLocked ? (
@@ -718,6 +724,7 @@ export function CourseWorkspacePanel({
                 Enroll to unlock Cora, your in-course study helper.
               </p>
             ) : (
+            <>
             <CoraChat
               courseSlug={course.slug}
               courseTitle={course.title}
@@ -731,19 +738,47 @@ export function CourseWorkspacePanel({
               expanded={isExpanded}
               onExpandChange={(expanded) => setIsExpanded(expanded)}
             />
+            <div className="lg:col-span-2">
+              <div className="mt-4 rounded-xl border border-stone-200/70 bg-white/70 p-4 shadow-sm backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/90">
+                <div className="flex items-center justify-between gap-3 border-b border-stone-200/70 pb-3 dark:border-stone-700">
+                  <h3 className="font-bold text-stone-900 dark:text-stone-50">Course Modules</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowModulePanel((prev) => !prev)}
+                    className="text-sm text-primary dark:text-primary-dark transition hover:bg-stone-100 hover:text-stone-800 dark:hover:bg-stone-900/70 dark:hover:text-stone-300 rounded px-2 py-1"
+                    aria-label="Toggle module panel"
+                  >
+                    <i className="fa-solid fa-list" aria-hidden /> Module Panel
+                  </button>
+                </div>
+                <div className="h-[calc(100vh-20rem)] overflow-y-auto">
+                  {workCourse?.modules?.map((module, mIdx) => (
+                    <div key={module.id} className="border-b border-stone-200/60 pb-4 last:border-0">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <h4 className="font-semibold text-stone-800 dark:text-stone-200">{module.title}</h4>
+                        <span className="text-xs text-stone-500 dark:text-stone-400">{module.lessons?.length || 0} lessons</span>
+                      </div>
+                      <ul className="space-y-1">
+                        {module.lessons?.map((lesson, lIdx) => (
+                          <li key={lesson.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-stone-100 dark:hover:bg-stone-900/50 dark:hover:text-stone-300">
+                            <span className="flex-1 truncate font-medium text-stone-800 dark:text-stone-200">
+                              {lesson.title}
+                            </span>
+                            <span className="text-xs text-stone-400 dark:text-stone-300">
+                              {lesson.order}.{lesson.order}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                  {workCourse?.modules?.length === 0 && (
+                    <p className="p-2 text-sm text-stone-500 dark:text-stone-400">No modules published yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
             )}
-            {/* Floating Cora button on mobile: hidden on lg+ (desktop), visible on mobile */}
-            {typeof window !== 'undefined' ? (
-              <button
-                type="button"
-                onClick={() => setIsExpanded((prev) => !prev)}
-                className="fixed bottom-6 right-6 z-50 rounded-full bg-primary p-2 shadow-lg hover:opacity-90 transition opacity dark:bg-primary-dark dark:hover:opacity-80 lg:hidden"
-                aria-label="Open Cora tutor"
-              >
-                <i className="fa-solid fa-robot text-primary text-lg" aria-hidden />
-              </button>
-            ) : null}
-          </aside>
         </div>
       </section>
     </>
