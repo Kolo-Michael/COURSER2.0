@@ -103,10 +103,13 @@ export const config = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
   GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || "",
-  // Verifalia email verification (forgot-password deliverability check).
-  // Optional: when unset the reset flow skips verification and proceeds.
-  VERIFALIA_SID: process.env.VERIFALIA_SID || "",
-  VERIFALIA_TOKEN: process.env.VERIFALIA_TOKEN || "",
+  // Abstract Email Reputation API (forgot-password deliverability check).
+  // GET {ABSTRACT_API_URL}?api_key=KEY&email=EMAIL →
+  // { email_deliverability: { status: "deliverable"|"undeliverable"|"unknown" } }.
+  // When ABSTRACT_API_KEY is unset the reset flow skips verification.
+  ABSTRACT_API_URL:
+    process.env.ABSTRACT_API_URL || "https://emailreputation.abstractapi.com/v1",
+  ABSTRACT_API_KEY: process.env.ABSTRACT_API_KEY || "",
 } as const;
 
 /** True when running in development (disables Secure cookie flag + real SMTP). */
