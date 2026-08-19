@@ -792,10 +792,17 @@ router.post(
     const id = randomUUID();
     await db.query(
       `INSERT INTO enrollments (id, user_id, course_id, enrolled_at, completed_at, progress, skill_level, learning_goal)
-       VALUES ($1,$2,$3,$4,NULL,0,$5,$6)`,
+       VALUES ($1,$2,$3,$4,NULL,0,$5,$6)
+       ON CONFLICT (user_id, course_id) DO NOTHING`,
       [id, userId, course.id, new Date().toISOString(), data.skill_level ?? "beginner", data.learning_goal ?? null]
     );
-    res.status(201).json(await enrollmentJson(id));
+    // The conflict path (race between two concurrent enrolls) leaves the
+    // original row intact — fetch whichever one exists now.
+    const final = await db.get<Row>(
+      `SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2`,
+      [userId, course.id]
+    );
+    res.status(201).json(await enrollmentJson(final ? (final.id as string) : id));
   })
 );
 

@@ -130,7 +130,8 @@ export const CREATE_TABLES: string[] = [
       completed_at timestamp,
       progress double precision DEFAULT 0,
       skill_level varchar(20) DEFAULT 'beginner',
-      learning_goal text
+      learning_goal text,
+      CONSTRAINT uq_user_course_enrollment UNIQUE (user_id, course_id)
     )`,
 
 `CREATE TABLE IF NOT EXISTS lesson_progress (
@@ -164,6 +165,15 @@ export const CREATE_TABLES: string[] = [
      restored_at timestamp,
      created_at timestamp NOT NULL DEFAULT now(),
      CONSTRAINT uq_user_learning_day UNIQUE (user_id, day)
+   )`,
+
+  // --- newsletter ----------------------------------------------------------
+  `CREATE TABLE IF NOT EXISTS newsletters (
+     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     email varchar(320) NOT NULL,
+     source varchar(40) DEFAULT 'site_footer',
+     subscribed_at timestamp NOT NULL DEFAULT now(),
+     CONSTRAINT uq_newsletter_email UNIQUE (email)
    )`,
 
   // --- Cora chat -----------------------------------------------------------
@@ -214,6 +224,23 @@ export const MIGRATIONS: string[] = [
          FOREIGN KEY (created_by) REFERENCES users(id);
      END IF;
    END $$;`,
+  // Unique (user_id, course_id) on enrollments: drop pre-existing duplicates
+  // (keep the earliest row) then add the constraint idempotently.
+  `DO $$
+   BEGIN
+     DELETE FROM enrollments e
+       USING enrollments dup
+       WHERE dup.user_id = e.user_id
+         AND dup.course_id = e.course_id
+         AND dup.id <> e.id
+         AND dup.enrolled_at > e.enrolled_at;
+     IF NOT EXISTS (
+       SELECT 1 FROM pg_constraint WHERE conname = 'uq_user_course_enrollment'
+     ) THEN
+       ALTER TABLE enrollments ADD CONSTRAINT uq_user_course_enrollment
+         UNIQUE (user_id, course_id);
+     END IF;
+   END $$;`,
 ];
 
 /** Drop order matters — children before parents (only used with --reset). */
@@ -225,6 +252,7 @@ export const DROP_TABLES: string[] = [
   "learning_days",
   "lesson_progress",
   "enrollments",
+  "newsletters",
   "lessons",
   "modules",
   "courses",

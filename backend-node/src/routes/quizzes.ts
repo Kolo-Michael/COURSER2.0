@@ -111,9 +111,10 @@ router.post(
     const score = Math.max(0, Math.min(data.score, 100));
     const passed = score >= quiz.pass_percent;
 
-    await db.query(
+    const rows = await db.query<{ created_at: string }>(
       `INSERT INTO quiz_results (id, user_id, module_id, score, passed, total_questions, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING created_at`,
       [crypto.randomUUID(), userId, module.id, score, passed, total, new Date().toISOString()]
     );
     res.status(201).json({
@@ -122,7 +123,7 @@ router.post(
       passed,
       total_questions: total,
       pass_percent: quiz.pass_percent,
-      created_at: new Date().toISOString(),
+      created_at: normalizeDt(rows[0]?.created_at ?? new Date().toISOString()),
     });
   })
 );

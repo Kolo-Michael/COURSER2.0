@@ -5,12 +5,15 @@
  * is sent over SMTP via nodemailer. Missing SMTP credentials fail soft (the
  * reset flow still returns success so email addresses can't be enumerated).
  */
+import crypto from "node:crypto";
 import nodemailer from "nodemailer";
 
 import { isDev } from "../config.js";
 
 export function generateResetCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  // crypto.randomInt is cryptographically strong (Math.random is predictable
+  // and unsuitable for security codes).
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 function devLog(title: string, email: string, code: string): void {
