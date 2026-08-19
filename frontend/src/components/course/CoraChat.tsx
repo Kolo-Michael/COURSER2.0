@@ -64,11 +64,17 @@ export function CoraChat({
   const [chat, setChat] = useState<ChatMessage[]>([GREETING])
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
-  // Controlled/uncontrolled expanded state: use prop if provided, else local state.
-  const [expanded, setExpanded] = useState(() => propsExpanded ?? false)
-  useEffect(() => {
-    if (onExpandChange) onExpandChange(expanded)
-  }, [expanded, onExpandChange])
+  // Controlled/uncontrolled expanded state: when the parent passes the
+  // `expanded` prop it owns the state (mobile FAB / desktop collapse) and we
+  // mirror it exactly; otherwise we fall back to local state. This makes the
+  // floating button actually open the full-screen chat — without this, the
+  // prop is only read once at mount and external changes are ignored.
+  const [localExpanded, setLocalExpanded] = useState(() => propsExpanded ?? false)
+  const expanded = propsExpanded ?? localExpanded
+  function changeExpanded(next: boolean) {
+    if (onExpandChange) onExpandChange(next)
+    else setLocalExpanded(next)
+  }
   const [loading, setLoading] = useState(false)
   const transcriptRef = useRef<HTMLDivElement>(null)
 
@@ -344,7 +350,7 @@ export function CoraChat({
             </button>
             <button
               type="button"
-              onClick={() => setExpanded(true)}
+              onClick={() => changeExpanded(true)}
               aria-label="Expand Cora chat"
               className="rounded-md p-1.5 text-stone-500 transition hover:bg-stone-200 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-stone-100"
             >
@@ -414,7 +420,7 @@ export function CoraChat({
           </button>
           <button
             type="button"
-            onClick={() => setExpanded(false)}
+            onClick={() => changeExpanded(false)}
             aria-label="Close expanded chat"
             className="rounded-md p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
           >
