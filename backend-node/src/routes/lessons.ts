@@ -76,9 +76,9 @@ async function upsertLessonProgress(
   if (existing) {
     await db.query(
       `UPDATE lesson_progress
-          SET progress = $3, is_completed = $4, quiz_score = $5, completed_at = $6, updated_at = $7
+          SET progress = $2, is_completed = $3, quiz_score = $4, completed_at = $5, updated_at = $6
         WHERE id = $1`,
-      [existing.id, null, progress, isCompleted, quizScore ?? null, completedAt, nowIso()]
+      [existing.id, progress, isCompleted, quizScore ?? null, completedAt, nowIso()]
     );
   } else {
     await db.query(
