@@ -11,7 +11,7 @@
 import type { PoolClient } from "pg";
 import { randomUUID } from "node:crypto";
 
-import { CATEGORIES } from "../seed/courseSeedData.js";
+import { CATEGORIES, LESSON_QUIZZES } from "../seed/courseSeedData.js";
 import type { SeedCourse } from "../seed/courseSeedData.js";
 
 interface Row {
@@ -42,6 +42,9 @@ async function upsertCategory(client: PoolClient, slug: string): Promise<string>
 
 async function upsertLesson(client: PoolClient, moduleId: string, lesson: SeedCourse["modules"][number]["lessons"][number]): Promise<void> {
   const resources = lesson.resources ? JSON.stringify(lesson.resources) : null;
+  // Every lesson ships a per-lesson self-check quiz (keyed by title in
+  // LESSON_QUIZZES) so learners can verify understanding after each lesson.
+  const quiz = lesson.quiz ? JSON.stringify(lesson.quiz) : LESSON_QUIZZES[lesson.title] ? JSON.stringify(LESSON_QUIZZES[lesson.title]) : null;
   const existing = await q<Row>(client, `SELECT id FROM lessons WHERE module_id = $1 AND "order" = $2`, [
     moduleId,
     lesson.order,
@@ -49,15 +52,15 @@ async function upsertLesson(client: PoolClient, moduleId: string, lesson: SeedCo
   if (existing[0]) {
     await q(
       client,
-      `UPDATE lessons SET title = $2, content = $3, duration = $4, is_published = $5, resource_links = $6 WHERE id = $1`,
-      [existing[0].id, lesson.title, lesson.content, lesson.duration, lesson.is_published, resources]
+      `UPDATE lessons SET title = $2, content = $3, duration = $4, is_published = $5, resource_links = $6, quiz = $7 WHERE id = $1`,
+      [existing[0].id, lesson.title, lesson.content, lesson.duration, lesson.is_published, resources, quiz]
     );
   } else {
     await q(
       client,
-      `INSERT INTO lessons (id, module_id, title, content, duration, "order", is_published, resource_links)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [randomUUID(), moduleId, lesson.title, lesson.content, lesson.duration, lesson.order, lesson.is_published, resources]
+      `INSERT INTO lessons (id, module_id, title, content, duration, "order", is_published, resource_links, quiz)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [randomUUID(), moduleId, lesson.title, lesson.content, lesson.duration, lesson.order, lesson.is_published, resources, quiz]
     );
   }
 }

@@ -13,13 +13,16 @@ import {
   type ApiCourse,
   type ApiEnrollmentDetail,
   type ApiLesson,
+  type ApiLessonQuizResult,
   type ApiQuizResult,
 } from '@/api/courses'
 import type { AuthSession } from '@/auth/session'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CoraChat } from './CoraChat'
 import { LessonNotes, parseNotes, type NoteCodeBlock } from './lessonNotes'
+import { LessonQuiz } from './LessonQuiz'
 import { ModuleQuiz } from './ModuleQuiz'
 import { TryItPanel } from './TryItPanel'
 import { LESSON_EXAMPLES } from './tryItExamples'
@@ -118,9 +121,8 @@ export function CourseWorkspacePanel({
   // until they start the course. `session && !enrollment` ⇒ locked preview.
   const isLocked = Boolean(session && !enrollment)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
-  const [showSyllabus, setShowSyllabus] = useState<boolean>(true)
-  // Enlarged reading mode: when the learner clicks a lesson the outline,
-  // syllabus, and Cora rail step aside so the study notes get the full width
+  // Enlarged reading mode: when the learner clicks a lesson the outline
+  // and Cora rail step aside so the study notes get the full width
   // for comfortable reading on both desktop and phone-sized screens.
   const [readingExpanded, setReadingExpanded] = useState<boolean>(false)
 
@@ -245,9 +247,14 @@ export function CourseWorkspacePanel({
   const quizResult = currentModule?.quiz_result ?? null
 
   // Latest quiz attempt for the active lesson (fetched from the API).
-  const [lessonQuizResult, setLessonQuizResult] = useState<ApiQuizResult | null>(null)
+  const [lessonQuizResult, setLessonQuizResult] = useState<ApiLessonQuizResult | null>(null)
+  // Whether the active lesson actually ships a per-lesson quiz (reported by
+  // LessonQuiz). When a quiz exists and isn't passed, the "next" step locks.
+  const [lessonHasQuiz, setLessonHasQuiz] = useState<boolean>(false)
   useEffect(() => {
     if (!session || !activeLesson?.id) return
+    setLessonHasQuiz(false)
+    setLessonQuizResult(null)
     ;(async () => {
       try {
         const r = await fetch(`/api/lessons/${activeLesson.id}/quiz/result`, {
@@ -260,6 +267,9 @@ export function CourseWorkspacePanel({
       }
     })()
   }, [activeLesson?.id, session])
+  function handleLessonQuizResult(result: ApiLessonQuizResult) {
+    setLessonQuizResult(result)
+  }
   function handleQuizResult(result: ApiQuizResult) {
     setWorkCourse((prev) =>
       prev
@@ -438,82 +448,8 @@ export function CourseWorkspacePanel({
             </nav>
           ) : null}
 
-          {/* Syllabus: every module and lesson in the course, so the learner
-             can see the full set of topics they'll learn and jump anywhere.
-             Hidden while the reading space is enlarged. */}
-          {!readingExpanded ? (
-          <div className="border-b border-stone-200/70 bg-stone-50/95 backdrop-blur-md dark:border-stone-700/60 dark:bg-stone-900/95">
-            <button
-              type="button"
-              onClick={() => setShowSyllabus((open) => !open)}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-stone-100/70 dark:hover:bg-stone-800/50"
-              aria-expanded={showSyllabus}
-            >
-              <span className="flex items-center gap-2 text-sm font-bold text-stone-900 dark:text-stone-50">
-                <i className="fa-solid fa-list-check text-primary dark:text-primary-dark" aria-hidden />
-                Topics you'll learn
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-dark">
-                  {totalModules} modules · {allLessons.length} lessons
-                </span>
-              </span>
-              <i
-                className={`fa-solid ${showSyllabus ? 'fa-chevron-up' : 'fa-chevron-down'} text-xs text-stone-400 transition`}
-                aria-hidden
-              />
-            </button>
-            {showSyllabus ? (
-              <div className="grid grid-cols-1 gap-4 px-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
-                {workCourse?.modules?.map((module, mIdx) => (
-                  <div
-                    key={module.id}
-                    className={[
-                      'rounded-xl border p-3 transition',
-                      module.id === currentModule?.id
-                        ? 'border-primary/40 bg-primary/5 dark:border-primary-dark/40 dark:bg-primary-dark/10'
-                        : 'border-stone-200 bg-white/70 dark:border-stone-700 dark:bg-stone-900/60',
-                    ].join(' ')}
-                  >
-                    <p className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                      <span>Module {mIdx + 1}</span>
-                      <span>{module.lessons?.length ?? 0} lessons</span>
-                    </p>
-                    <h4 className="mt-1 text-sm font-semibold text-stone-900 dark:text-stone-100">{module.title}</h4>
-                    <ul className="mt-2 space-y-1">
-                      {module.lessons?.map((lesson, lIdx) => (
-                        <li key={lesson.id}>
-                          <button
-                            type="button"
-                            onClick={() => selectLesson(lesson)}
-                            className={[
-                              'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs transition',
-                              activeLesson?.id === lesson.id
-                                ? 'bg-primary/10 font-semibold text-primary dark:bg-primary-dark/20 dark:text-primary-dark'
-                                : 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800',
-                            ].join(' ')}
-                          >
-                            <i
-                              className={`fa-solid ${lesson.is_completed ? 'fa-check text-green-600' : 'fa-circle-dot'} mt-0.5 text-[9px] ${lesson.is_completed ? '' : 'text-stone-400'}`}
-                              aria-hidden
-                            />
-                            <span>
-                              {mIdx + 1}.{lIdx + 1} {lesson.title}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-                {!workCourse?.modules?.length ? (
-                  <p className="text-sm text-stone-500 dark:text-stone-400">No modules published yet.</p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          ) : null}
-
-          <div className="p-6 lg:p-8">
-            <div className={readingExpanded ? 'mx-auto max-w-3xl' : 'max-w-4xl'}>
+          <div className="p-4 lg:p-8">
+            <div className={readingExpanded ? 'mx-auto max-w-5xl' : 'max-w-4xl'}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-primary dark:text-primary-dark">Reading workspace</p>
@@ -734,6 +670,17 @@ export function CourseWorkspacePanel({
               )}
             </div>
 
+            {session && activeLesson ? (
+              <LessonQuiz
+                lessonId={activeLesson.id}
+                lessonTitle={activeLesson.title}
+                session={session}
+                previous={lessonQuizResult}
+                onResult={handleLessonQuizResult}
+                onQuizAvailable={setLessonHasQuiz}
+              />
+            ) : null}
+
             {quiz && session ? (
               <ModuleQuiz
                 quiz={quiz}
@@ -766,18 +713,34 @@ export function CourseWorkspacePanel({
                   <button
                     type="button"
                     onClick={() => selectLesson(nextLesson)}
-                    disabled={!!lessonQuizResult && !lessonQuizResult.passed}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
+                    disabled={lessonHasQuiz && !(lessonQuizResult?.passed ?? false)}
+                    title={
+                      lessonHasQuiz && !(lessonQuizResult?.passed ?? false)
+                        ? 'Pass the lesson quiz to unlock the next lesson.'
+                        : undefined
+                    }
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-dark"
                   >
                     Next lesson
-                    <i className="fa-solid fa-arrow-right text-xs" aria-hidden />
+                    <i
+                      className={`fa-solid ${lessonHasQuiz && !(lessonQuizResult?.passed ?? false) ? 'fa-lock' : 'fa-arrow-right'} text-xs`}
+                      aria-hidden
+                    />
                   </button>
                 ) : hasNextModule ? (
                   <button
                     type="button"
                     onClick={handleNextModule}
-                    disabled={!!quizResult && !quizResult.passed}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-primary-dark"
+                    disabled={
+                      (lessonHasQuiz && !(lessonQuizResult?.passed ?? false)) ||
+                      (!!quizResult && !quizResult.passed)
+                    }
+                    title={
+                      lessonHasQuiz && !(lessonQuizResult?.passed ?? false)
+                        ? 'Pass the lesson quiz to unlock the next module.'
+                        : undefined
+                    }
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-dark"
                   >
                     <i className="fa-solid fa-book-open text-xs" aria-hidden />
                     Next module
@@ -796,8 +759,15 @@ export function CourseWorkspacePanel({
           </div>
           </div>
 
-          {!readingExpanded ? (
-          <aside className="courser-bg-dots-dense lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:flex lg:flex-col border-t border-stone-200 bg-stone-50 p-6 dark:border-stone-700 dark:bg-stone-900 lg:border-l lg:border-t-0">
+          <aside
+            className={[
+              'courser-bg-dots-dense hidden border-t border-stone-200 bg-stone-50 p-6 dark:border-stone-700 dark:bg-stone-900 lg:border-l lg:border-t-0 lg:flex lg:flex-col lg:max-h-[calc(100vh-6rem)] lg:self-start lg:sticky lg:top-24',
+              // Keep Cora mounted so the mobile floating button can open the
+              // expanded (full-screen) chat; hide the compact column on
+              // desktop while the reading space is enlarged.
+              readingExpanded ? 'lg:hidden' : '',
+            ].join(' ')}
+          >
             <div className="flex items-center gap-3">
               <div className="relative h-16 w-16 rounded-full bg-primary">
                 <span className="absolute left-4 top-5 h-2 w-2 rounded-full bg-white" />
@@ -841,9 +811,26 @@ export function CourseWorkspacePanel({
               />
             )}
           </aside>
-          ) : null}
         </div>
       </section>
+
+      {/* Mobile-only floating Cora button: on phones the compact Cora column
+         is hidden (see the aside) so a bottom-right FAB opens the full-screen
+         chat instead. Hidden whenever the expanded overlay is already open. */}
+      {session && !isLocked && !isExpanded
+        ? createPortal(
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              aria-label="Open Cora tutor"
+              title="Ask Cora a question"
+              className="fixed bottom-6 right-6 z-[90] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-stone-900/20 transition hover:brightness-110 active:scale-95 dark:bg-primary-dark lg:hidden"
+            >
+              <i className="fa-solid fa-robot text-xl" aria-hidden />
+            </button>,
+            document.body,
+          )
+        : null}
     </>
   )
 }

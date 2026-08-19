@@ -74,6 +74,24 @@ export type ApiQuizResult = {
   created_at: string
 }
 
+/** A per-lesson self-check quiz (locks the "next" step when failed). */
+export type ApiLessonQuiz = {
+  lesson_id: string
+  title: string
+  pass_percent: number
+  questions: ApiQuizQuestion[]
+}
+
+/** Latest result of a per-lesson quiz attempt (module_id absent on lessons). */
+export type ApiLessonQuizResult = {
+  id: string
+  lesson_id: string
+  score: number
+  passed: boolean
+  total_questions: number
+  created_at: string
+}
+
 export type ApiModule = {
   id: string
   course_id: string
@@ -275,6 +293,24 @@ export function submitQuizResult(
   totalQuestions: number,
 ) {
   return apiRequest<ApiQuizResult>(`/api/modules/${moduleId}/quiz/result`, {
+    method: 'POST',
+    body: JSON.stringify({ score, passed, total_questions: totalQuestions }),
+  })
+}
+
+/** GET /api/lessons/:id/quiz — per-lesson mastery self-check questions. */
+export function getLessonQuiz(lessonId: string) {
+  return apiRequest<ApiLessonQuiz>(`/api/lessons/${lessonId}/quiz`)
+}
+
+/** POST /api/lessons/:id/quiz/result — record a scored lesson attempt. */
+export function submitLessonQuizResult(
+  lessonId: string,
+  score: number,
+  passed: boolean,
+  totalQuestions: number,
+) {
+  return apiRequest<ApiLessonQuizResult>(`/api/lessons/${lessonId}/quiz/result`, {
     method: 'POST',
     body: JSON.stringify({ score, passed, total_questions: totalQuestions }),
   })

@@ -38,6 +38,8 @@ export interface SeedLesson {
   is_published: boolean;
   /** Curated links to the best free resources for this lesson. */
   resources?: SeedLink[];
+  /** Per-lesson mastery self-check quiz (locks the "next" step when failed). */
+  quiz?: SeedQuiz;
 }
 
 export interface SeedModule {
@@ -1343,6 +1345,1444 @@ Familiarity is what turns a feature into a trusted helper.
 - Why should support messages carry one idea and one next step?
 - How does escalation work from hint to full walkthrough?
 - Why ask before the helper acts on the page?`,
+};
+
+/** Per-lesson mastery quizzes, keyed by lesson title (same lookup pattern as
+ *  LESSON_NOTES). writeCourse.ts attaches these to every lesson at write time
+ *  when the lesson doesn't already carry its own `quiz`, so both the seeded
+ *  catalog and the markdown-imported courses get a self-check per lesson. */
+export const LESSON_QUIZZES: Record<string, SeedQuiz> = {
+  "How the web page is assembled": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which language defines the structure and content of a web page?",
+        options: ["HTML", "CSS", "JavaScript", "Python"],
+        correct_index: 0,
+        explanation: "HTML marks up headings, paragraphs, links, images, and forms — the skeleton of the page.",
+      },
+      {
+        question: "What does the browser build from a page's HTML so it can paint it?",
+        options: ["A spreadsheet", "An in-memory tree of elements (the DOM)", "A ZIP file", "A server log"],
+        correct_index: 1,
+        explanation: "After parsing HTML, the browser builds the DOM — a tree of element nodes it can render and script.",
+      },
+      {
+        question: "Which browser tool lets you inspect any page's live structure?",
+        options: ["The address bar", "DevTools (right-click → Inspect)", "The print dialog", "Bookmark manager"],
+        correct_index: 1,
+        explanation: "DevTools' Elements panel shows the DOM tree, styles, and lets you try changes live.",
+      },
+    ],
+  },
+  "Responsive layout with flex and grid": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which flex rule makes items drop to a new line on narrow screens?",
+        options: ["flex-wrap: wrap", "display: none", "overflow: hidden", "position: fixed"],
+        correct_index: 0,
+        explanation: "flex-wrap: wrap lets flex items wrap onto additional lines when they run out of room.",
+      },
+      {
+        question: "Which grid snippet creates a fluid set of columns that collapse on small screens?",
+        options: ["repeat(auto-fit, minmax(200px, 1fr))", "grid-template-columns: 200px 200px", "display: block", "grid-gap: none"],
+        correct_index: 0,
+        explanation: "auto-fit with minmax() lets the browser place as many fixed-minimum columns as fit, wrapping naturally.",
+      },
+      {
+        question: "What is the main difference between flexbox and grid?",
+        options: ["Flexbox is one-dimensional, grid is two-dimensional", "Grid is only for text", "Flexbox cannot wrap", "They are identical"],
+        correct_index: 0,
+        explanation: "Flexbox lays out along one axis (row or column); grid controls rows and columns together.",
+      },
+    ],
+  },
+  "Props, state, and reusable cards": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "How does a parent component pass data to a child?",
+        options: ["Through props", "Through the DOM", "Through cookies", "Through global CSS"],
+        correct_index: 0,
+        explanation: "Props flow downward from parent to child as JSX attributes.",
+      },
+      {
+        question: "What does useState return?",
+        options: ["A DOM node", "A pair: the current value and a setter", "The component's props", "An array of styles"],
+        correct_index: 1,
+        explanation: "useState returns [value, setValue]; calling the setter re-renders the component.",
+      },
+      {
+        question: "Which pattern renders one card per course from an array?",
+        options: ["courses.map(c => <CourseCard ... />)", "courses.push(<Card />)", "document.write(courses)", "for (c of courses) print(c)"],
+        correct_index: 0,
+        explanation: "Mapping the array into JSX is the idiomatic React way to render lists.",
+      },
+    ],
+  },
+  "Forms and local state": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is a controlled input?",
+        options: [
+          "Its value is stored only on the server",
+          "Its value comes from React state and updates via onChange",
+          "An input that is disabled",
+          "An input that posts a form",
+        ],
+        correct_index: 1,
+        explanation: "value + onChange bind the input to React state so the UI and data stay in sync.",
+      },
+      {
+        question: "How do you filter a course list as the user types?",
+        options: ["courses.filter(c => c.title.toLowerCase().includes(query))", "courses.splice(0)", "document.querySelectorAll", "alert(query)"],
+        correct_index: 0,
+        explanation: "filter() returns matching items; combined with state it gives live search-as-you-type.",
+      },
+      {
+        question: "Why call e.preventDefault() in a form's submit handler?",
+        options: [
+          "To stop the full-page reload",
+          "To make the form faster",
+          "To clear the input",
+          "To hide the button",
+        ],
+        correct_index: 0,
+        explanation: "Preventing the default keeps the page from reloading so React can handle the submit in-place.",
+      },
+    ],
+  },
+  "Variables, lists, and dictionaries": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which Python structure maps keys to values?",
+        options: ["list", "dictionary", "tuple", "set"],
+        correct_index: 1,
+        explanation: "A dict stores key→value pairs, e.g. {'student': 'Ada', 'score': 92}.",
+      },
+      {
+        question: "How do you get the second item of a list named scores?",
+        options: ["scores[1]", "scores[2]", "scores.get(2)", "scores.last"],
+        correct_index: 0,
+        explanation: "Python lists are 0-indexed, so the second element is scores[1].",
+      },
+      {
+        question: "What does len(students) return?",
+        options: ["The number of items in the list", "The longest name", "The total score", "An error"],
+        correct_index: 0,
+        explanation: "len() returns the number of elements in a list or other sequence.",
+      },
+    ],
+  },
+  "Cleaning a messy table": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "How do you rename a column in pandas?",
+        options: ["df.rename(columns={'old': 'new'})", "df.columns = 'new'", "df.drop('old')", "pd.new_column('old')"],
+        correct_index: 0,
+        explanation: "rename() with a columns mapping is the standard way to relabel columns.",
+      },
+      {
+        question: "What does df.isna().sum() tell you?",
+        options: ["The number of missing values per column", "The total of all numbers", "The row count", "The column count"],
+        correct_index: 0,
+        explanation: "isna() flags missing values; summing the flags counts them per column.",
+      },
+      {
+        question: "Which call fills missing numeric values with each column's average?",
+        options: ["df.fillna(df.mean())", "df.dropna()", "df.ffill()", "df.replace(0)"],
+        correct_index: 0,
+        explanation: "fillna(df.mean()) imputes NaNs using the column means — a common cleaning step.",
+      },
+    ],
+  },
+  "Group, summarize, and compare": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which pandas call groups a DataFrame by a column?",
+        options: ["df.groupby('category')", "df.sort_values('category')", "df.filter('category')", "df.pivot('category')"],
+        correct_index: 0,
+        explanation: "groupby() splits the data into groups you can then summarize with agg() or mean().",
+      },
+      {
+        question: "What does df.groupby('category')['completion'].mean() return?",
+        options: [
+          "One average completion rate per category",
+          "Every row with a mean column",
+          "A single number",
+          "The row count",
+        ],
+        correct_index: 0,
+        explanation: "It computes the mean of 'completion' within each category — perfect for comparisons.",
+      },
+      {
+        question: "When comparing completion rates across categories, what is clearest?",
+        options: ["A bar chart", "A 50-column table", "A single total", "A raw dump"],
+        correct_index: 0,
+        explanation: "Bars make category-to-category differences immediately visible.",
+      },
+    ],
+  },
+  "Build a simple chart": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which matplotlib call draws a bar chart?",
+        options: ["plt.bar(x, height)", "plt.plot(x, y)", "plt.scatter(x, y)", "plt.hist(x)"],
+        correct_index: 0,
+        explanation: "plt.bar() renders vertical bars from category positions and heights.",
+      },
+      {
+        question: "How do you show the chart in a notebook?",
+        options: ["plt.show()", "print(plt)", "chart.display()", "plt.save()"],
+        correct_index: 0,
+        explanation: "plt.show() renders the current figure to the screen/notebook.",
+      },
+      {
+        question: "What must labels on a chart include?",
+        options: [
+          "Clear axis titles and a descriptive title",
+          "Only colors",
+          "A random seed",
+          "The file path",
+        ],
+        correct_index: 0,
+        explanation: "Labels make the chart legible so readers know what the bars represent.",
+      },
+    ],
+  },
+  "Define learner level and outcome": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which prompt is most specific about the audience?",
+        options: [
+          "'Write a 10-minute beginner lesson on flexbox for adults new to coding'",
+          "'Write a lesson'",
+          "'Write about flexbox'",
+          "'Make it good'",
+        ],
+        correct_index: 0,
+        explanation: "Level, length, and audience give the model constraints that produce usable material.",
+      },
+      {
+        question: "What is a learning objective for?",
+        options: [
+          "To define what a learner can do after the lesson",
+          "To name the module",
+          "To fill a footer",
+          "To count words",
+        ],
+        correct_index: 0,
+        explanation: "An objective states the measurable outcome, e.g. 'learners can center a card with flexbox'.",
+      },
+      {
+        question: "Which verb best starts a measurable objective?",
+        options: ["Build", "Understand", "Feel", "Appreciate"],
+        correct_index: 0,
+        explanation: "Observable verbs like 'build' or 'explain' are verifiable; 'understand' is vague.",
+      },
+    ],
+  },
+  "Generate examples and exercises": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "After AI drafts an exercise, what should you do first?",
+        options: [
+          "Check it against your objective and audience level",
+          "Publish it immediately",
+          "Delete the draft",
+          "Add random numbers",
+        ],
+        correct_index: 0,
+        explanation: "Drafts are starting points — review accuracy, tone, and fit before publishing.",
+      },
+      {
+        question: "Why include an example of the expected output in a prompt?",
+        options: [
+          "It anchors the model to the right format and style",
+          "It wastes tokens",
+          "It hides the instructions",
+          "It disables the model",
+        ],
+        correct_index: 0,
+        explanation: "Few-shot examples steer the model toward the exact structure you want.",
+      },
+      {
+        question: "Which constraint makes a generated example more useful?",
+        options: [
+          "A concrete scenario plus a length limit",
+          "No constraints at all",
+          "Only a topic name",
+          "A single keyword",
+        ],
+        correct_index: 0,
+        explanation: "Constraints like context, length, and audience turn generic output into usable material.",
+      },
+    ],
+  },
+  "Check accuracy and tone": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "AI drafts can sound confident and be wrong. What should you do?",
+        options: [
+          "Verify facts against a reliable source",
+          "Trust them blindly",
+          "Never use AI text",
+          "Only check spelling",
+        ],
+        correct_index: 0,
+        explanation: "Verify accuracy, tone, and alignment with the objective before publishing.",
+      },
+      {
+        question: "Which tone is best for lesson text aimed at beginners?",
+        options: [
+          "Plain, warm, and direct",
+          "Dense academic jargon",
+          "Legalese",
+          "Abrupt commands",
+        ],
+        correct_index: 0,
+        explanation: "Plain language reduces cognitive load and keeps learners engaged.",
+      },
+      {
+        question: "What is the point of a review checklist?",
+        options: [
+          "To catch errors the AI missed before publishing",
+          "To make publishing slower",
+          "To hide the content",
+          "To delete examples",
+        ],
+        correct_index: 0,
+        explanation: "A checklist forces consistent checks for facts, tone, and fit on every lesson.",
+      },
+    ],
+  },
+  "Create Cora-style hints": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is instructional scaffolding?",
+        options: [
+          "Support that fades as the learner gains skill",
+          "Removing all help",
+          "Making lessons longer",
+          "Randomizing answers",
+        ],
+        correct_index: 0,
+        explanation: "Scaffolding gives structure early, then withdraws it as the learner becomes independent.",
+      },
+      {
+        question: "A good hint should…",
+        options: [
+          "Guide one step at a time and leave a next action",
+          "Give the answer immediately",
+          "List every error at once",
+          "Never mention the lesson",
+        ],
+        correct_index: 0,
+        explanation: "One idea + one next step keeps attention on the current problem.",
+      },
+      {
+        question: "Which escalation order supports a stuck learner best?",
+        options: [
+          "Hint → explanation → example → walkthrough",
+          "Walkthrough → hint → example",
+          "Answer → walkthrough → hint",
+          "No help at all",
+        ],
+        correct_index: 0,
+        explanation: "Start with the smallest nudge and escalate only when the learner is still stuck.",
+      },
+    ],
+  },
+  "Native components and layout": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which React Native component renders plain text?",
+        options: ["<Text>", "<View>", "<Image>", "<ScrollView>"],
+        correct_index: 0,
+        explanation: "<Text> is the only component that renders text content in React Native.",
+      },
+      {
+        question: "Which component should wrap a long scrolling list of lessons?",
+        options: ["<ScrollView>", "<Modal>", "<Pressable>", "<StatusBar>"],
+        correct_index: 0,
+        explanation: "ScrollView scrolls its children; FlatList is better for large data-driven lists.",
+      },
+      {
+        question: "Why use <Pressable> instead of a plain <View> for touch targets?",
+        options: [
+          "It adds accessibility and press states",
+          "It is faster than anything",
+          "It renders HTML",
+          "It disables touch",
+        ],
+        correct_index: 0,
+        explanation: "Pressable gives pressed/disabled/accessible states out of the box.",
+      },
+    ],
+  },
+  "Navigation and screens": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is the recommended way to move between screens in React Native?",
+        options: [
+          "A navigation library such as React Navigation",
+          "window.location",
+          "document.write",
+          "alert()",
+        ],
+        correct_index: 0,
+        explanation: "React Navigation (or Expo Router) is the standard; there is no URL bar on native.",
+      },
+      {
+        question: "How do you pass data to a detail screen?",
+        options: [
+          "As route parameters",
+          "Via the global window object",
+          "Through CSS",
+          "You can't",
+        ],
+        correct_index: 0,
+        explanation: "Navigation params carry the id/data the next screen needs to render.",
+      },
+      {
+        question: "What should the back behavior do on a detail screen?",
+        options: [
+          "Return to the previous screen preserving state",
+          "Restart the app",
+          "Log the user out",
+          "Close the whole app",
+        ],
+        correct_index: 0,
+        explanation: "Stack navigation keeps the previous screen mounted so back returns to it.",
+      },
+    ],
+  },
+  "Environment variables and secrets": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Where should secrets live in production?",
+        options: [
+          "In platform secret managers / env vars, never in code",
+          "Committed to the repo",
+          "In the README",
+          "In client-side JS",
+        ],
+        correct_index: 0,
+        explanation: "Secrets come from the platform at runtime; anything in git is compromised.",
+      },
+      {
+        question: "What is the 12-Factor rule about configuration?",
+        options: [
+          "Store config in environment variables",
+          "Hard-code config",
+          "Put config in the database",
+          "Ship config files in the image",
+        ],
+        correct_index: 0,
+        explanation: "Env vars keep config out of code so the same build runs in any environment.",
+      },
+      {
+        question: "Which value is safe to put in a frontend bundle?",
+        options: [
+          "The public API base URL",
+          "A database password",
+          "An SMTP secret",
+          "A private signing key",
+        ],
+        correct_index: 0,
+        explanation: "Public values like an API URL are fine; secrets must stay server-side.",
+      },
+    ],
+  },
+  "Build and health checks": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is the purpose of a health check?",
+        options: [
+          "To let the platform know the app is alive and ready",
+          "To make the app slower",
+          "To delete data",
+          "To log secrets",
+        ],
+        correct_index: 0,
+        explanation: "Health endpoints (e.g. /api/health) feed load balancers and alerts.",
+      },
+      {
+        question: "Before shipping, a good pipeline runs…",
+        options: [
+          "Typecheck + tests + build + smoke test",
+          "Nothing",
+          "Only git commit",
+          "Only a favicon update",
+        ],
+        correct_index: 0,
+        explanation: "Automated checks catch regressions before users do.",
+      },
+      {
+        question: "Why keep dev, staging, and production environments similar?",
+        options: [
+          "So what works locally behaves the same in production",
+          "So the code can differ per environment",
+          "So secrets can be skipped",
+          "So tests never run",
+        ],
+        correct_index: 0,
+        explanation: "Dev/prod parity reduces 'works on my machine' surprises.",
+      },
+    ],
+  },
+  "Catalog decisions": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Why do clear level labels matter on course cards?",
+        options: [
+          "They help learners pick content that matches their skill",
+          "They add decoration",
+          "They hide courses",
+          "They replace titles",
+        ],
+        correct_index: 0,
+        explanation: "Levels set expectations and reduce abandonment from too-hard or too-easy content.",
+      },
+      {
+        question: "A progress signal on a course card helps students…",
+        options: [
+          "Decide what to continue next",
+          "Get lost",
+          "Skip the catalog",
+          "Hide completion",
+        ],
+        correct_index: 0,
+        explanation: "Seeing '60% complete' motivates continuation and orientates return visits.",
+      },
+      {
+        question: "What is Hick's law about catalogs?",
+        options: [
+          "More choices slow decisions",
+          "More choices speed decisions",
+          "Color decides everything",
+          "Filters are always bad",
+        ],
+        correct_index: 0,
+        explanation: "Limiting visible options and offering filters helps learners choose confidently.",
+      },
+    ],
+  },
+  "Mascot support patterns": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "A helper hint should appear…",
+        options: [
+          "In-context, near the task, without blocking reading",
+          "Over the entire lesson",
+          "Only in emails",
+          "Never",
+        ],
+        correct_index: 0,
+        explanation: "Context-aware, non-blocking help (like Cora's rail) supports without distracting.",
+      },
+      {
+        question: "Why ask before a helper acts on the page?",
+        options: [
+          "It respects user control and avoids surprise changes",
+          "It is slower",
+          "It is cheaper",
+          "It hides features",
+        ],
+        correct_index: 0,
+        explanation: "Consent keeps learners in control of their own page and progress.",
+      },
+      {
+        question: "What makes a mascot's help feel familiar?",
+        options: [
+          "A consistent identity and tone across every message",
+          "A different look each time",
+          "Random emoji everywhere",
+          "Long paragraphs",
+        ],
+        correct_index: 0,
+        explanation: "Consistent identity and one-idea messages make support predictable and trustworthy.",
+      },
+    ],
+  },
+  "Tables, rows, and keys": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What uniquely identifies each row in a table?",
+        options: ["Primary key", "Foreign key", "Column count", "Table name"],
+        correct_index: 0,
+        explanation: "A primary key gives each row a unique identifier.",
+      },
+      {
+        question: "A foreign key is used to…",
+        options: [
+          "Reference a row in another table",
+          "Replace the primary key",
+          "Rename a column",
+          "Delete a row",
+        ],
+        correct_index: 0,
+        explanation: "Foreign keys link tables so related data can be joined.",
+      },
+      {
+        question: "In a students table, which column is usually the primary key?",
+        options: ["id", "first_name", "city", "age"],
+        correct_index: 0,
+        explanation: "An id column is the typical stable, unique key for each student.",
+      },
+    ],
+  },
+  "Selecting data with SELECT": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which query returns only the name and score columns?",
+        options: ["SELECT name, score FROM students", "SELECT * FROM students", "DELETE name, score", "INSERT INTO students"],
+        correct_index: 0,
+        explanation: "Listing columns after SELECT returns just those columns.",
+      },
+      {
+        question: "How do you filter rows where score is above 80?",
+        options: ["WHERE score > 80", "LIMIT score 80", "ORDER BY score 80", "HAVING score = 80"],
+        correct_index: 0,
+        explanation: "WHERE filters rows before they are returned.",
+      },
+      {
+        question: "How do you sort results by score descending?",
+        options: ["ORDER BY score DESC", "SORT score ASC", "GROUP BY score", "LIMIT score DESC"],
+        correct_index: 0,
+        explanation: "ORDER BY score DESC returns the highest scores first.",
+      },
+    ],
+  },
+  "Joins that make sense": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which join returns only matching rows from both tables?",
+        options: ["INNER JOIN", "LEFT JOIN", "FULL JOIN", "CROSS JOIN"],
+        correct_index: 0,
+        explanation: "INNER JOIN keeps only rows that match on the join condition.",
+      },
+      {
+        question: "A LEFT JOIN keeps…",
+        options: [
+          "All rows from the left table plus matches from the right",
+          "Only exact matches",
+          "Only the right table",
+          "Duplicate rows",
+        ],
+        correct_index: 0,
+        explanation: "Left rows without a match appear with NULLs for the right columns.",
+      },
+      {
+        question: "What goes in the ON clause of a join?",
+        options: [
+          "The condition linking the two tables (e.g. students.id = enrollments.student_id)",
+          "A random column name",
+          "An ORDER BY",
+          "A LIMIT",
+        ],
+        correct_index: 0,
+        explanation: "ON states how rows in the two tables correspond.",
+      },
+    ],
+  },
+  "Grouping and counting": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which clause groups rows for aggregation?",
+        options: ["GROUP BY", "WHERE", "ORDER BY", "LIMIT"],
+        correct_index: 0,
+        explanation: "GROUP BY collapses rows into groups so COUNT/SUM can run per group.",
+      },
+      {
+        question: "SELECT category, COUNT(*) FROM courses GROUP BY category counts…",
+        options: [
+          "How many courses are in each category",
+          "All courses combined",
+          "The categories list",
+          "Nothing",
+        ],
+        correct_index: 0,
+        explanation: "COUNT(*) counts rows within each category group.",
+      },
+      {
+        question: "How do you filter groups (not rows) after grouping?",
+        options: ["HAVING", "WHERE", "DISTINCT", "OFFSET"],
+        correct_index: 0,
+        explanation: "HAVING filters aggregated groups; WHERE filters rows before grouping.",
+      },
+    ],
+  },
+  "Commits — saving checkpoints": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What does a commit do?",
+        options: [
+          "Saves a named checkpoint of your changes",
+          "Deletes your files",
+          "Uploads to the cloud",
+          "Merges branches",
+        ],
+        correct_index: 0,
+        explanation: "A commit captures the project state with a message you can return to.",
+      },
+      {
+        question: "Which command stages changes before committing?",
+        options: ["git add", "git commit --direct", "git fetch", "git clone"],
+        correct_index: 0,
+        explanation: "git add moves changes into the staging area; git commit records them.",
+      },
+      {
+        question: "What makes a commit message most useful?",
+        options: [
+          "A short description of what and why",
+          "Random numbers",
+          "An empty message",
+          "Your password",
+        ],
+        correct_index: 0,
+        explanation: "Clear messages make history searchable and understandable.",
+      },
+    ],
+  },
+  "Undoing work safely": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which command discards uncommitted changes to a file?",
+        options: ["git restore <file>", "git push", "git clone", "git stash list"],
+        correct_index: 0,
+        explanation: "git restore reverts a working-tree file to the last committed state.",
+      },
+      {
+        question: "How do you undo the last commit while keeping the changes?",
+        options: ["git reset --soft HEAD~1", "git rm -rf .", "git branch -d main", "git fetch origin"],
+        correct_index: 0,
+        explanation: "--soft moves HEAD back but keeps the changes staged for editing.",
+      },
+      {
+        question: "What is the safest way to revisit an old commit's code?",
+        options: [
+          "Check out a branch at that commit",
+          "Delete the repository",
+          "Edit history by force",
+          "Ignore it",
+        ],
+        correct_index: 0,
+        explanation: "Working on a branch avoids rewriting shared history.",
+      },
+    ],
+  },
+  "Branches — parallel work": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is a branch?",
+        options: [
+          "A separate line of development from the main code",
+          "A copy of your computer",
+          "A database",
+          "A commit message",
+        ],
+        correct_index: 0,
+        explanation: "Branches let you work in parallel without affecting the main line.",
+      },
+      {
+        question: "Which command creates a new branch?",
+        options: ["git branch <name>", "git commit", "git clone", "git push"],
+        correct_index: 0,
+        explanation: "git branch creates a branch; git checkout/switch moves onto it.",
+      },
+      {
+        question: "What happens when you merge a branch into main?",
+        options: [
+          "Its changes are combined into main",
+          "The branch deletes main",
+          "Everything is lost",
+          "A new repo is created",
+        ],
+        correct_index: 0,
+        explanation: "Merging brings the branch's commits into the target branch.",
+      },
+    ],
+  },
+  "Working with a remote": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which command uploads your commits to the remote?",
+        options: ["git push", "git pull", "git clone", "git status"],
+        correct_index: 0,
+        explanation: "push sends your local commits to the remote repository.",
+      },
+      {
+        question: "Which command downloads and merges the remote's changes?",
+        options: ["git pull", "git push", "git add", "git log"],
+        correct_index: 0,
+        explanation: "pull fetches remote changes and merges them into your branch.",
+      },
+      {
+        question: "What does git clone do?",
+        options: [
+          "Copies a remote repo to your machine",
+          "Deletes a repo",
+          "Renames a branch",
+          "Starts a server",
+        ],
+        correct_index: 0,
+        explanation: "clone downloads the whole repository so you can work locally.",
+      },
+    ],
+  },
+  "Setting up and your first class": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which method must every Java program's main class have?",
+        options: ["public static void main(String[] args)", "public void run()", "public String toString()", "static void boot()"],
+        correct_index: 0,
+        explanation: "The JVM starts execution at main(String[] args).",
+      },
+      {
+        question: "What is the file name rule for a public class named App?",
+        options: ["App.java", "app.java", "main.java", "class.java"],
+        correct_index: 0,
+        explanation: "A public class must live in a file named after it.",
+      },
+      {
+        question: "Which command compiles App.java?",
+        options: ["javac App.java", "java App.java", "compile App", "run App"],
+        correct_index: 0,
+        explanation: "javac produces the .class bytecode; java runs it.",
+      },
+    ],
+  },
+  "Variables and typed data": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which type holds a whole number?",
+        options: ["int", "String", "boolean", "double"],
+        correct_index: 0,
+        explanation: "int stores integers; double stores decimals.",
+      },
+      {
+        question: "How do you declare an integer variable named age set to 18?",
+        options: ["int age = 18;", "var age = '18';", "age int = 18", "integer age 18"],
+        correct_index: 0,
+        explanation: "Java requires a type before the variable name.",
+      },
+      {
+        question: "What does the compiler check before your code runs?",
+        options: [
+          "That types and references are correct",
+          "Nothing",
+          "Only comments",
+          "Only line numbers",
+        ],
+        correct_index: 0,
+        explanation: "Type-checking catches many bugs at compile time.",
+      },
+    ],
+  },
+  "If, loops, and arrays": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which syntax runs code when a condition is true?",
+        options: ["if (score > 60) { ... }", "when score > 60", "do score > 60", "loop score"],
+        correct_index: 0,
+        explanation: "if statements branch on a boolean condition.",
+      },
+      {
+        question: "Which loop runs a fixed number of times?",
+        options: ["for (int i = 0; i < 5; i++)", "if (i < 5)", "boolean b = true", "return i"],
+        correct_index: 0,
+        explanation: "The classic for loop iterates a counted range.",
+      },
+      {
+        question: "What is the index of the first element in an array?",
+        options: ["0", "1", "-1", "length"],
+        correct_index: 0,
+        explanation: "Arrays are 0-indexed in Java.",
+      },
+    ],
+  },
+  "Methods — reusable behavior": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is a method?",
+        options: [
+          "A named block of reusable behavior",
+          "A variable",
+          "A file",
+          "A loop",
+        ],
+        correct_index: 0,
+        explanation: "Methods package behavior that can be called with parameters.",
+      },
+      {
+        question: "How do you return a value from a method?",
+        options: [
+          "Use the return keyword with a value",
+          "Print it",
+          "Set a global",
+          "Assign null",
+        ],
+        correct_index: 0,
+        explanation: "return hands a value back to the caller.",
+      },
+      {
+        question: "What does a method's signature include?",
+        options: [
+          "Return type, name, and parameters",
+          "Only its name",
+          "Only comments",
+          "The file path",
+        ],
+        correct_index: 0,
+        explanation: "The signature defines how the method is called.",
+      },
+    ],
+  },
+  "Semantic page structure": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which element marks the main navigation of a page?",
+        options: ["<nav>", "<div>", "<span>", "<b>"],
+        correct_index: 0,
+        explanation: "<nav> conveys that its links are navigation, helping both users and SEO.",
+      },
+      {
+        question: "Which heading should be used once for the page title?",
+        options: ["<h1>", "<h6>", "<p>", "<img>"],
+        correct_index: 0,
+        explanation: "One <h1> per page states the page's main topic.",
+      },
+      {
+        question: "Why prefer semantic elements over generic <div>s?",
+        options: [
+          "They give meaning to assistive tech and search engines",
+          "They are faster",
+          "They hide content",
+          "They disable CSS",
+        ],
+        correct_index: 0,
+        explanation: "Semantic tags communicate structure to screen readers and crawlers.",
+      },
+    ],
+  },
+  "Text, links, and images": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which attribute sets the destination of a link?",
+        options: ["href", "src", "alt", "class"],
+        correct_index: 0,
+        explanation: "<a href=\"...\"> points the link to its target URL.",
+      },
+      {
+        question: "What does alt text on an image do?",
+        options: [
+          "Describes the image for screen readers and when it fails to load",
+          "Changes the image size",
+          "Adds a border",
+          "Stores the URL",
+        ],
+        correct_index: 0,
+        explanation: "alt is essential accessibility and a fallback description.",
+      },
+      {
+        question: "Which element wraps a paragraph of text?",
+        options: ["<p>", "<h1>", "<img>", "<a>"],
+        correct_index: 0,
+        explanation: "<p> marks a paragraph block of text.",
+      },
+    ],
+  },
+  "Selectors, colors, and the box model": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which selector targets elements with class=\"card\"?",
+        options: [".card", "#card", "card", "*card"],
+        correct_index: 0,
+        explanation: "A leading dot selects by class; a hash selects by id.",
+      },
+      {
+        question: "What are the three parts of the box model?",
+        options: [
+          "Content, padding/border, margin",
+          "Header, footer, body",
+          "Color, font, size",
+          "Top, middle, bottom",
+        ],
+        correct_index: 0,
+        explanation: "Every element is a box: content plus padding/border inside margin.",
+      },
+      {
+        question: "Which property changes the text color?",
+        options: ["color", "background-color", "font-size", "padding"],
+        correct_index: 0,
+        explanation: "color sets foreground text color; background-color sets the box fill.",
+      },
+    ],
+  },
+  "Responsive layouts with flex and grid": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which rule centers flex children along the main axis?",
+        options: ["justify-content: center", "align-items: center", "position: center", "margin: auto 0"],
+        correct_index: 0,
+        explanation: "justify-content aligns along the main (row/column) axis.",
+      },
+      {
+        question: "What do media queries do?",
+        options: [
+          "Apply CSS conditionally based on screen size",
+          "Load images",
+          "Add animations",
+          "Rename classes",
+        ],
+        correct_index: 0,
+        explanation: "Media queries let layouts adapt to phones, tablets, and desktops.",
+      },
+      {
+        question: "Which grid value creates flexible repeating columns?",
+        options: [
+          "repeat(auto-fit, minmax(200px, 1fr))",
+          "200px 200px 200px",
+          "none",
+          "auto auto",
+        ],
+        correct_index: 0,
+        explanation: "auto-fit + minmax makes columns flow and wrap responsively.",
+      },
+    ],
+  },
+  "Values, variables, and types": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which keyword declares a block-scoped variable that can change?",
+        options: ["let", "const", "var x = 5 (always)", "type"],
+        correct_index: 0,
+        explanation: "let declares mutable block-scoped variables; const is for fixed values.",
+      },
+      {
+        question: "What is the type of the value \"hello\"?",
+        options: ["string", "number", "boolean", "object"],
+        correct_index: 0,
+        explanation: "Text in quotes is a string.",
+      },
+      {
+        question: "How do you log a value to the browser console?",
+        options: ["console.log(value)", "print(value)", "alert.print(value)", "log(value)"],
+        correct_index: 0,
+        explanation: "console.log prints values for debugging.",
+      },
+    ],
+  },
+  "Functions and arrow functions": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is a function?",
+        options: [
+          "A reusable block of code you can call",
+          "A variable",
+          "A DOM element",
+          "A style rule",
+        ],
+        correct_index: 0,
+        explanation: "Functions package behavior that can run with different inputs.",
+      },
+      {
+        question: "Which is a valid arrow function?",
+        options: ["const add = (a, b) => a + b", "function => add", "add(a, b) arrow", "const add = a + b"],
+        correct_index: 0,
+        explanation: "Arrow syntax: const fn = (params) => expression.",
+      },
+      {
+        question: "What do parameters do?",
+        options: [
+          "Receive inputs so the function can work with them",
+          "Hide the function",
+          "Style the function",
+          "Return nothing",
+        ],
+        correct_index: 0,
+        explanation: "Parameters are the function's declared inputs.",
+      },
+    ],
+  },
+  "The DOM and selecting elements": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is the DOM?",
+        options: [
+          "The browser's tree of page elements you can script",
+          "A CSS framework",
+          "A database",
+          "A build tool",
+        ],
+        correct_index: 0,
+        explanation: "The DOM is the structured representation of the page JavaScript can read and change.",
+      },
+      {
+        question: "Which call finds the first element matching a CSS selector?",
+        options: ["document.querySelector('.card')", "window.fetch('.card')", "document.createElement('.card')", "query.all('.card')"],
+        correct_index: 0,
+        explanation: "querySelector accepts CSS selectors and returns the first match.",
+      },
+      {
+        question: "How do you change a selected element's text?",
+        options: ["el.textContent = 'New text'", "el.href = 'text'", "print(el)", "el.src = 'text'"],
+        correct_index: 0,
+        explanation: "Setting textContent updates the element's visible text.",
+      },
+    ],
+  },
+  "Events and interactivity": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which method listens for a click on a button?",
+        options: [
+          "button.addEventListener('click', handler)",
+          "button.click(handler)",
+          "window.onclick(button)",
+          "button.listen(click)",
+        ],
+        correct_index: 0,
+        explanation: "addEventListener attaches a handler for the named event.",
+      },
+      {
+        question: "What argument does an event handler receive?",
+        options: [
+          "An event object with details like target",
+          "The full page HTML",
+          "A random number",
+          "Nothing",
+        ],
+        correct_index: 0,
+        explanation: "The event object lets you read the target, key, or value.",
+      },
+      {
+        question: "Why use addEventListener instead of inline onclick attributes?",
+        options: [
+          "It keeps markup clean and allows multiple handlers",
+          "It is slower",
+          "It disables the button",
+          "It requires a server",
+        ],
+        correct_index: 0,
+        explanation: "Separating behavior from markup and supporting multiple handlers is cleaner.",
+      },
+    ],
+  },
+  "Running your first Python program": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which function prints text to the console?",
+        options: ["print()", "echo()", "write()", "log()"],
+        correct_index: 0,
+        explanation: "print() outputs its arguments to standard output.",
+      },
+      {
+        question: "What extension do Python source files use?",
+        options: [".py", ".js", ".java", ".txt"],
+        correct_index: 0,
+        explanation: "Python files conventionally end in .py.",
+      },
+      {
+        question: "Which tool runs a Python file?",
+        options: [
+          "python filename.py",
+          "run filename",
+          "node filename",
+          "compile filename",
+        ],
+        correct_index: 0,
+        explanation: "The python interpreter executes .py files.",
+      },
+    ],
+  },
+  "Variables, strings, and numbers": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What does name = 'Ada' do?",
+        options: [
+          "Stores the string 'Ada' in the variable name",
+          "Prints Ada",
+          "Deletes name",
+          "Errors out",
+        ],
+        correct_index: 0,
+        explanation: "Assignment stores a value in a variable.",
+      },
+      {
+        question: "How do you combine a variable into a string cleanly?",
+        options: [
+          "Use an f-string: f'Hello {name}'",
+          "Just write the variable name",
+          "Multiply strings",
+          "Convert with int()",
+        ],
+        correct_index: 0,
+        explanation: "f-strings interpolate variables into text.",
+      },
+      {
+        question: "What type is 3.14?",
+        options: ["float", "int", "string", "bool"],
+        correct_index: 0,
+        explanation: "Decimals are floats; whole numbers are ints.",
+      },
+    ],
+  },
+  "Conditionals with if and else": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which comparison checks if score is at least 70?",
+        options: ["score >= 70", "score => 70", "score = 70", "score >< 70"],
+        correct_index: 0,
+        explanation: ">= means greater than or equal to.",
+      },
+      {
+        question: "What follows the condition in an if statement?",
+        options: ["A colon and an indented block", "A semicolon", "A brace", "Nothing"],
+        correct_index: 0,
+        explanation: "Python uses a colon plus indentation to mark the block.",
+      },
+      {
+        question: "What does elif do?",
+        options: [
+          "Checks another condition when the previous one was false",
+          "Ends the program",
+          "Loops forever",
+          "Prints the condition",
+        ],
+        correct_index: 0,
+        explanation: "elif chains additional checks after if/else.",
+      },
+    ],
+  },
+  "Loops with for and while": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which loop runs a block for each item in a list?",
+        options: ["for item in items:", "while item in items", "loop items", "each item"],
+        correct_index: 0,
+        explanation: "for x in xs iterates over each element of a sequence.",
+      },
+      {
+        question: "Which loop repeats while a condition stays true?",
+        options: ["while count < 5:", "for count < 5", "if count < 5", "do count"],
+        correct_index: 0,
+        explanation: "while re-checks its condition before every iteration.",
+      },
+      {
+        question: "What does range(5) produce?",
+        options: [
+          "The numbers 0 through 4",
+          "The number 5",
+          "A list of five 5s",
+          "Nothing",
+        ],
+        correct_index: 0,
+        explanation: "range(5) yields 0,1,2,3,4 — five values.",
+      },
+    ],
+  },
+  "The box model and flow": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "What is inside the box model?",
+        options: [
+          "Content, padding, border, margin",
+          "Width, height, color, font",
+          "Header, footer, sidebar",
+          "Rows, columns, cells",
+        ],
+        correct_index: 0,
+        explanation: "Every element is a content box wrapped in padding, border, and margin.",
+      },
+      {
+        question: "Which property controls space inside an element's border?",
+        options: ["padding", "margin", "border", "gap"],
+        correct_index: 0,
+        explanation: "Padding is inside the border; margin is outside it.",
+      },
+      {
+        question: "What does box-sizing: border-box do?",
+        options: [
+          "Makes width/height include padding and border",
+          "Removes all borders",
+          "Centers content",
+          "Hides margins",
+        ],
+        correct_index: 0,
+        explanation: "border-box keeps the declared size stable regardless of padding.",
+      },
+    ],
+  },
+  "Flexbox essentials": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which property makes an element a flex container?",
+        options: ["display: flex", "position: flex", "flex: auto", "align: flex"],
+        correct_index: 0,
+        explanation: "display: flex turns the element into a flex container.",
+      },
+      {
+        question: "Which property centers flex items on the cross axis?",
+        options: ["align-items: center", "justify-content: center", "flex-wrap: center", "order: center"],
+        correct_index: 0,
+        explanation: "align-items works on the cross axis; justify-content on the main axis.",
+      },
+      {
+        question: "What does flex: 1 mean on a child?",
+        options: [
+          "It grows to fill available space",
+          "It shrinks to nothing",
+          "It is hidden",
+          "It never wraps",
+        ],
+        correct_index: 0,
+        explanation: "flex: 1 lets the item grow proportionally to share leftover space.",
+      },
+    ],
+  },
+  "Grid for whole-page layout": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which property defines the grid's columns?",
+        options: ["grid-template-columns", "grid-column", "display: grid (only)", "grid-flow"],
+        correct_index: 0,
+        explanation: "grid-template-columns declares the column track sizes.",
+      },
+      {
+        question: "What does grid-area let you do?",
+        options: [
+          "Place an item in a named template area",
+          "Delete a grid",
+          "Rotate cells",
+          "Hide rows",
+        ],
+        correct_index: 0,
+        explanation: "Named areas make whole-page layouts readable in CSS.",
+      },
+      {
+        question: "Which value makes a column take all remaining space?",
+        options: ["1fr", "auto", "100% always", "minmax 0"],
+        correct_index: 0,
+        explanation: "fr units distribute the remaining space between tracks.",
+      },
+    ],
+  },
+  "A page layout that adapts": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "How do you make a sidebar disappear on phones?",
+        options: [
+          "Hide it under a media query for small widths",
+          "Use display: table",
+          "Add more columns",
+          "Increase the font size",
+        ],
+        correct_index: 0,
+        explanation: "Media queries re-arrange or hide elements below a breakpoint.",
+      },
+      {
+        question: "What does 1rem scale with?",
+        options: ["The root font size", "The viewport width", "The image size", "Nothing"],
+        correct_index: 0,
+        explanation: "rem units track the root font-size, aiding proportional scaling.",
+      },
+      {
+        question: "Why start a layout mobile-first?",
+        options: [
+          "Simple mobile rules are easier to enhance for larger screens",
+          "Desktop is irrelevant",
+          "It is impossible",
+          "CSS only works on mobile",
+        ],
+        correct_index: 0,
+        explanation: "Mobile-first adds complexity only when the screen can afford it.",
+      },
+    ],
+  },
+  "Put it together — a card gallery": {
+    pass_percent: 70,
+    questions: [
+      {
+        question: "Which single rule makes a card grid fluid?",
+        options: [
+          "grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))",
+          "position: absolute for each card",
+          "float: left for each card",
+          "display: none",
+        ],
+        correct_index: 0,
+        explanation: "auto-fit + minmax packs as many cards as fit at each width.",
+      },
+      {
+        question: "A card gallery should keep cards…",
+        options: [
+          "Equal height with consistent internal spacing",
+          "Random sizes",
+          "Overlapping",
+          "Unreadable",
+        ],
+        correct_index: 0,
+        explanation: "Consistent sizing and spacing make the gallery scannable.",
+      },
+      {
+        question: "Where should hover feedback go on a card?",
+        options: [
+          "On the whole card so it reads as interactive",
+          "Nowhere",
+          "Only on the footer",
+          "Only in print",
+        ],
+        correct_index: 0,
+        explanation: "Whole-card hover states communicate that the card is clickable.",
+      },
+    ],
+  },
 };
 
 export const COURSES: SeedCourse[] = [

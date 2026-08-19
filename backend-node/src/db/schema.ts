@@ -106,6 +106,7 @@ export const CREATE_TABLES: string[] = [
      "order" integer NOT NULL DEFAULT 0,
      is_published boolean DEFAULT false,
      resource_links jsonb,
+     quiz jsonb,
      created_at timestamp DEFAULT now()
     )`,
 
@@ -147,7 +148,8 @@ export const CREATE_TABLES: string[] = [
   `CREATE TABLE IF NOT EXISTS quiz_results (
      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-     module_id uuid NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+     module_id uuid REFERENCES modules(id) ON DELETE CASCADE,
+     lesson_id uuid REFERENCES lessons(id) ON DELETE CASCADE,
      score double precision NOT NULL,
      passed boolean NOT NULL DEFAULT false,
      total_questions integer NOT NULL DEFAULT 0,
@@ -195,7 +197,10 @@ export const MIGRATIONS: string[] = [
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until timestamp",
   "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS resource_links jsonb",
   "ALTER TABLE modules ADD COLUMN IF NOT EXISTS quiz jsonb",
+  "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS quiz jsonb",
   "ALTER TABLE quiz_results ADD COLUMN IF NOT EXISTS lesson_id uuid REFERENCES lessons(id)",
+  // Lesson quizzes insert results without a module_id — allow the column to be empty.
+  "ALTER TABLE quiz_results ALTER COLUMN module_id DROP NOT NULL",
   "ALTER TABLE courses ADD COLUMN IF NOT EXISTS image_url text",
   "ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS skill_level varchar(20) DEFAULT 'beginner'",
   "ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS learning_goal text",
