@@ -17,6 +17,7 @@ export type ApiUser = {
   avatar_url: string | null
   nav_style: 'sidebar' | 'floating'
   nav_collapsed: boolean
+  email_notifications: boolean
   created_at: string
   updated_at: string | null
   last_login: string | null
@@ -32,6 +33,7 @@ export type ProfileUpdatePayload = {
   avatar_url?: string | null
   nav_style?: NavStyle
   nav_collapsed?: boolean
+  email_notifications?: boolean
 }
 
 // Tokens are stored in HttpOnly cookies by the backend, BUT on cross-origin

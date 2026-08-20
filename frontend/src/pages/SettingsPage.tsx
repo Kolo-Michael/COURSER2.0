@@ -1,18 +1,20 @@
-// ─── SettingsPage: profile / navigation / security / account ───────────────
+// ─── SettingsPage: profile / appearance / navigation / notifications / security ─
 // Signed-in settings for every role. Loads the full user profile on mount,
-// then lets the user edit their display name + avatar (uploaded as a data URL),
-// pick the sidebar-vs-floating navigation style + collapsed default, change
-// their password (verified client-side), and sign out.
+// then lets the user edit their display name + avatar (resized + compressed
+// client-side before upload), pick the theme, configure email notifications,
+// change their password (validated client-side), and sign out.
 
-import { getMe, updateProfile, changePassword, logout, type ApiUser, type NavStyle } from '@/api/auth'
+import { getMe, updateProfile, changePassword, logout, type ApiUser } from '@/api/auth'
 import { getSession, clearSession } from '@/auth/session'
 import { DashboardLayout, type DashboardNavItem } from '@/components/layout/DashboardLayout'
 import { navItemsFor } from '@/components/layout/navItems'
-import { getNavCollapsed, getNavStyle, setNavCollapsed, setNavStyle } from '@/auth/preferences'
+import { getNavCollapsed, setNavCollapsed, setNavStyle } from '@/auth/preferences'
+import { useTheme } from '@/theme'
+import { resizeImage, validateAvatarFile } from '@/utils/image'
 import { useEffect, useRef, useState } from 'react'
 
 // Fine-grained submit status per section: idle -> saving -> saved / error.
-type ProfileStatus = 'idle' | 'saving' | 'saved' | 'error'
+type Status = 'idle' | 'saving' | 'saved' | 'error'
 
 // Shared card shell for each settings section (icon, heading, body).
 function SectionCard({
@@ -45,82 +47,101 @@ function SectionCard({
 export function SettingsPage() {
   const session = getSession()
   const role = session?.role ?? 'student'
+  const { theme, setTheme } = useTheme()
+
   const [profile, setProfile] = useState<ApiUser | null>(null)
 
   // Profile form
   const [username, setUsername] = useState('')
   const [fullName, setFullName] = useState('')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [profileStatus, setProfileStatus] = useState<ProfileStatus>('idle')
+  const [profileStatus, setProfileStatus] = useState<Status>('idle')
   const [profileError, setProfileError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Nav preference — initialized from localStorage synchronously.
-  const [navStyle, setNavStyleState] = useState<NavStyle>(() => getNavStyle())
+  // Navigation preference — collapsed sidebar state, mirrored to localStorage.
   const [navCollapsed, setNavCollapsedState] = useState<boolean>(() => getNavCollapsed())
+
+  // Notifications preference (email updates), persisted to the account.
+  const [emailNotif, setEmailNotif] = useState<boolean>(true)
 
   // Password form
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [pwStatus, setPwStatus] = useState<ProfileStatus>('idle')
+  const [pwStatus, setPwStatus] = useState<Status>('idle')
   const [pwError, setPwError] = useState<string | null>(null)
 
-  // On mount, hydrate every form from the server profile; server nav prefs
-  // win over the localStorage defaults when present.
+  // On mount, hydrate every form from the server profile. Users who were on the
+  // old floating-nav layout are migrated back to the sidebar (the floating bar
+  // is no longer offered) and the preference is persisted.
   useEffect(() => {
+    let cancelled = false
     getMe()
       .then((user) => {
+        if (cancelled) return
         setProfile(user)
         setUsername(user.username ?? '')
         setFullName(user.full_name ?? '')
         setAvatarPreview(user.avatar_url ?? null)
-        setNavStyleState(user.nav_style ?? getNavStyle())
         setNavCollapsedState(user.nav_collapsed ?? getNavCollapsed())
+        setEmailNotif(user.email_notifications !== false)
+        if (user.nav_style === 'floating') {
+          setNavCollapsedState(false)
+          setNavStyle('sidebar')
+        }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        if (cancelled) return
         setProfileStatus('error')
-        setProfileError('Could not load your profile.')
+        setProfileError(
+          err instanceof Error && err.message ? err.message : 'Could not load your profile.'
+        )
       })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  // File picker handler: reject images over 2 MB, otherwise read as a data
-  // URL, show it in the avatar preview, and persist it to the server so the
-  // profile picture survives reloads without a separate "Save profile" step.
+  // File picker handler: validate size/type, resize + compress the image in the
+  // browser (so the data URL stays under the API cap), then persist it so the
+  // avatar survives reloads without a separate "Save profile" step.
   async function onAvatarSelected(file: File) {
-    if (file.size > 2 * 1024 * 1024) {
+    const validationError = validateAvatarFile(file)
+    if (validationError) {
       setProfileStatus('error')
-      setProfileError('Image is too large — pick one under 2 MB.')
+      setProfileError(validationError)
       return
     }
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const dataUrl = reader.result as string
-      setAvatarPreview(dataUrl)
-      try {
-        setProfileStatus('saving')
-        const updated = await updateProfile({ avatar_url: dataUrl })
-        setProfile(updated)
-        setProfileStatus('saved')
-      } catch (err) {
-        setProfileStatus('error')
-        setProfileError(err instanceof Error ? err.message : 'Could not save your avatar.')
-      }
+    setProfileStatus('saving')
+    setProfileError(null)
+    try {
+      const resized = await resizeImage(file)
+      setAvatarPreview(resized)
+      const updated = await updateProfile({ avatar_url: resized })
+      setProfile(updated)
+      setProfileStatus('saved')
+    } catch (err) {
+      setProfileStatus('error')
+      setProfileError(err instanceof Error ? err.message : 'Could not save your avatar.')
     }
-    reader.readAsDataURL(file)
   }
 
-  // Persist username + display name + avatar via updateProfile(), then keep
-  // the returned user as the source of truth.
+  // Persist username + display name via updateProfile(), then keep the returned
+  // user as the source of truth.
   async function handleSaveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (username.trim().length < 3) {
+      setProfileStatus('error')
+      setProfileError('Username must be at least 3 characters.')
+      return
+    }
     setProfileStatus('saving')
     setProfileError(null)
     try {
       const updated = await updateProfile({
         username: username.trim() || undefined,
         full_name: fullName.trim() || undefined,
-        avatar_url: avatarPreview,
       })
       setProfile(updated)
       setUsername(updated.username ?? '')
@@ -131,16 +152,27 @@ export function SettingsPage() {
     }
   }
 
-  // Nav preference handlers: update React state AND mirror into localStorage
-  // (via setNavStyle / setNavCollapsed) so the layout reads it immediately.
-  function handleNavStyleChange(style: NavStyle) {
-    setNavStyleState(style)
-    setNavStyle(style)
-  }
-
+  // Collapsed-sidebar handler: update React state AND mirror into localStorage
+  // so the layout reads it immediately, then persist to the account.
   function handleNavCollapsedChange(collapsed: boolean) {
     setNavCollapsedState(collapsed)
     setNavCollapsed(collapsed)
+  }
+
+  // Email-notification toggle: optimistic update + persist; revert on failure.
+  async function handleEmailNotifChange(next: boolean) {
+    const previous = emailNotif
+    setEmailNotif(next)
+    try {
+      const updated = await updateProfile({ email_notifications: next })
+      setProfile(updated)
+      setProfileStatus('saved')
+      setProfileError(null)
+    } catch (err) {
+      setEmailNotif(previous)
+      setProfileStatus('error')
+      setProfileError(err instanceof Error ? err.message : 'Could not update your preferences.')
+    }
   }
 
   // Change-password flow: simple client-side validation (min length, match),
@@ -150,6 +182,11 @@ export function SettingsPage() {
     if (newPassword.length < 8) {
       setPwStatus('error')
       setPwError('New password must be at least 8 characters.')
+      return
+    }
+    if (!/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setPwStatus('error')
+      setPwError('New password needs a lowercase letter, an uppercase letter, and a number.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -186,7 +223,7 @@ export function SettingsPage() {
   return (
     <DashboardLayout
       title="Settings"
-      subtitle="Manage your profile, navigation, and security"
+      subtitle="Manage your profile, appearance, navigation, and security"
       navItems={navItems}
     >
       <div className="mx-auto max-w-3xl space-y-6">
@@ -280,45 +317,62 @@ export function SettingsPage() {
           </form>
         </SectionCard>
 
-        {/* Navigation */}
+        {/* Appearance */}
         <SectionCard
-          icon="fa-window-restore"
-          title="Navigation"
-          description="Choose how the workspace menu behaves — a side menu or a floating, collapsible bar."
+          icon="fa-moon"
+          title="Appearance"
+          description="Switch between light and dark mode. Your choice is remembered on this device."
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => handleNavStyleChange('sidebar')}
+              onClick={() => setTheme('light')}
               className={[
-                'flex items-start gap-3 rounded-xl border p-4 text-left transition',
-                navStyle === 'sidebar'
+                'flex items-center gap-3 rounded-xl border p-4 text-left transition',
+                theme === 'light'
                   ? 'border-primary bg-primary/5 ring-1 ring-primary/30 dark:bg-primary-dark/10'
                   : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
               ].join(' ')}
             >
-              <i className={`fa-solid fa-table-columns mt-0.5 ${navStyle === 'sidebar' ? 'text-primary dark:text-primary-dark' : 'text-stone-400'}`} aria-hidden />
+              <i className={`fa-solid fa-sun mt-0.5 ${theme === 'light' ? 'text-primary dark:text-primary-dark' : 'text-stone-400'}`} aria-hidden />
               <div>
-                <p className="font-bold text-stone-900 dark:text-stone-50">Side menu</p>
-                <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">A fixed sidebar you can collapse to icons.</p>
+                <p className="font-bold text-stone-900 dark:text-stone-50">Light</p>
+                <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">Bright and crisp, best for daytime.</p>
               </div>
             </button>
             <button
               type="button"
-              onClick={() => handleNavStyleChange('floating')}
+              onClick={() => setTheme('dark')}
               className={[
-                'flex items-start gap-3 rounded-xl border p-4 text-left transition',
-                navStyle === 'floating'
+                'flex items-center gap-3 rounded-xl border p-4 text-left transition',
+                theme === 'dark'
                   ? 'border-primary bg-primary/5 ring-1 ring-primary/30 dark:bg-primary-dark/10'
                   : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
               ].join(' ')}
             >
-              <i className={`fa-solid fa-bars-staggered mt-0.5 ${navStyle === 'floating' ? 'text-primary dark:text-primary-dark' : 'text-stone-400'}`} aria-hidden />
+              <i className={`fa-solid fa-moon mt-0.5 ${theme === 'dark' ? 'text-primary dark:text-primary-dark' : 'text-stone-400'}`} aria-hidden />
               <div>
-                <p className="font-bold text-stone-900 dark:text-stone-50">Floating nav</p>
-                <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">A floating button that expands into a collapsible menu.</p>
+                <p className="font-bold text-stone-900 dark:text-stone-50">Dark</p>
+                <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">Easy on the eyes at night.</p>
               </div>
             </button>
+          </div>
+        </SectionCard>
+
+        {/* Navigation */}
+        <SectionCard
+          icon="fa-table-columns"
+          title="Navigation"
+          description="The course workspace always uses the fixed side menu."
+        >
+          <div className="flex items-start gap-3 rounded-xl border border-primary bg-primary/5 p-4 ring-1 ring-primary/30 dark:bg-primary-dark/10">
+            <i className="fa-solid fa-table-columns mt-0.5 text-primary dark:text-primary-dark" aria-hidden />
+            <div>
+              <p className="font-bold text-stone-900 dark:text-stone-50">Side menu</p>
+              <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+                A fixed sidebar you can collapse to icons.
+              </p>
+            </div>
           </div>
 
           <label className="mt-4 flex items-center justify-between rounded-xl border border-stone-200 bg-white/60 p-4 dark:border-stone-700 dark:bg-white/5">
@@ -330,6 +384,28 @@ export function SettingsPage() {
               type="checkbox"
               checked={navCollapsed}
               onChange={(e) => handleNavCollapsedChange(e.target.checked)}
+              className="h-5 w-5 rounded border-stone-300 text-primary focus:ring-primary"
+            />
+          </label>
+        </SectionCard>
+
+        {/* Notifications */}
+        <SectionCard
+          icon="fa-bell"
+          title="Notifications"
+          description="Choose what COURSER emails you about your learning."
+        >
+          <label className="flex items-center justify-between rounded-xl border border-stone-200 bg-white/60 p-4 dark:border-stone-700 dark:bg-white/5">
+            <div>
+              <p className="text-sm font-bold text-stone-900 dark:text-stone-50">Email updates</p>
+              <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+                Course news, new lessons, and account updates.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={emailNotif}
+              onChange={(e) => handleEmailNotifChange(e.target.checked)}
               className="h-5 w-5 rounded border-stone-300 text-primary focus:ring-primary"
             />
           </label>

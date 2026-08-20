@@ -103,13 +103,6 @@ export const config = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
   GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || "",
-  // Abstract Email Reputation API (forgot-password deliverability check).
-  // GET {ABSTRACT_API_URL}?api_key=KEY&email=EMAIL →
-  // { email_deliverability: { status: "deliverable"|"undeliverable"|"unknown" } }.
-  // When ABSTRACT_API_KEY is unset the reset flow skips verification.
-  ABSTRACT_API_URL:
-    process.env.ABSTRACT_API_URL || "https://emailreputation.abstractapi.com/v1",
-  ABSTRACT_API_KEY: process.env.ABSTRACT_API_KEY || "",
   // Emails that skip the verify-your-email step at signup (test accounts).
   // Comma-separated; compared case-insensitively. These are also treated as
   // verified when found via Google OAuth. Mirrors backend/app/core/config.py.

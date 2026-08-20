@@ -31,6 +31,7 @@ export interface UserRow {
   avatar_url: string | null;
   nav_style: string;
   nav_collapsed: boolean;
+  email_notifications: boolean;
 }
 
 export interface SessionRow {
@@ -248,38 +249,6 @@ export async function requestPasswordReset(email: string): Promise<boolean> {
   const user = await getUserByEmail(email);
   if (!user) return true; // never reveal whether the email exists
 
-  // Check deliverability via the Abstract Email Reputation API before spending
-  // a reset code on a dead mailbox. GET {url}?api_key=KEY&email=EMAIL returns
-  // { email_deliverability: { status: "deliverable"|"undeliverable"|"unknown" } }.
-  // When the key is unset, the API errors, or the result is unknown we proceed
-  // normally — an upstream outage can never block a legitimate reset.
-  let undeliverable = false;
-  if (config.ABSTRACT_API_KEY) {
-    try {
-      const url = new URL(config.ABSTRACT_API_URL);
-      url.searchParams.set("api_key", config.ABSTRACT_API_KEY);
-      url.searchParams.set("email", email);
-      const resp = await fetch(url.toString(), { method: "GET" });
-      if (resp.ok) {
-        const data = (await resp.json()) as {
-          email_deliverability?: { status?: string };
-        } | null;
-        const status = (data?.email_deliverability?.status || "unknown").toLowerCase();
-        if (status === "undeliverable") {
-          undeliverable = true;
-          console.warn(`Abstract API: skipping reset for undeliverable address ${email}`);
-        }
-      }
-    } catch {
-      // API error → unknown → proceed
-    }
-  }
-
-  if (undeliverable) {
-    return true; // same generic response — don't leak the classification
-  }
-
-  // "Deliverable" or "Unknown" → proceed to send reset code
   await db.query(`DELETE FROM password_reset_tokens WHERE user_id = $1`, [user.id]);
   const code = generateResetCode();
   const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();

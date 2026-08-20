@@ -1,8 +1,9 @@
 // ─── preferences.ts : dashboard nav layout preferences ──────────────────
-// Read/write the user's navigation preference (sidebar vs floating nav,
-// and whether the sidebar starts collapsed). Values live both in
-// localStorage (immediate, offline-safe) and on the account via
-// updateProfile() so the choice follows the user across devices.
+// Read/write the user's navigation preference (always the sidebar layout now —
+// the floating-nav option was removed from Settings) and whether the sidebar
+// starts collapsed. Values live both in localStorage (immediate, offline-safe)
+// and on the account via updateProfile() so the choice follows the user
+// across devices.
 //
 // Priority: the account value carried in the courser_session cookie wins,
 // then the local fallback.

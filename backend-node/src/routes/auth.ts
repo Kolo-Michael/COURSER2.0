@@ -68,9 +68,10 @@ const AdminCreateSchema = z.object({
 const ProfileUpdateSchema = z.object({
   username: z.string().min(3).max(50).optional(),
   full_name: z.string().max(100).nullish(),
-  avatar_url: z.string().max(20000).nullish(),
+  avatar_url: z.string().max(30000).nullish(),
   nav_style: z.enum(["sidebar", "floating"]).nullish(),
   nav_collapsed: z.boolean().nullish(),
+  email_notifications: z.boolean().nullish(),
 });
 
 const ChangePasswordSchema = z.object({
@@ -116,6 +117,7 @@ function userJson(user: UserRow): Record<string, unknown> {
     avatar_url: user.avatar_url,
     nav_style: user.nav_style || "sidebar",
     nav_collapsed: Boolean(user.nav_collapsed),
+    email_notifications: user.email_notifications !== false,
     created_at: normalizeDt(user.created_at),
     updated_at: normalizeDt(user.updated_at),
     last_login: normalizeDt(user.last_login),

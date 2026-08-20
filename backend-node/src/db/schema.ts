@@ -26,7 +26,8 @@ export const CREATE_TABLES: string[] = [
      locked_until timestamp,
      avatar_url text,
      nav_style varchar(20) NOT NULL DEFAULT 'sidebar',
-     nav_collapsed boolean NOT NULL DEFAULT false
+     nav_collapsed boolean NOT NULL DEFAULT false,
+     email_notifications boolean NOT NULL DEFAULT true
    )`,
 
   `CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -203,6 +204,7 @@ export const MIGRATIONS: string[] = [
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url text",
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS nav_style varchar(20) NOT NULL DEFAULT 'sidebar'",
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS nav_collapsed boolean NOT NULL DEFAULT false",
+  "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications boolean NOT NULL DEFAULT true",
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts integer NOT NULL DEFAULT 0",
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until timestamp",
   "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS resource_links jsonb",

@@ -741,24 +741,61 @@ linked with `vercel link --yes --project <name>`:
   live `/api/auth/google` ? 302 config-error redirect; bundle contains
   "Sign in with Google" + `api/auth/google` + "Signing you in with Google".
 
-## Verifalia email verification in the forgot-password flow (18 Aug 2026)
+## Brevo SMTP for signup + forgot-password email (19 Aug 2026)
 
- - `backend-node/src/services/verifaliaService.ts` — NEW. `verifyEmailDeliverability(email)`
-   POSTs to `https://api.verifalia.com/v2.7/email-validations?waitTime=30000` with
-   HTTP Basic auth (username = sub-account SID, password = auth token) and a
-   single-entry body. Returns `{ classification, status }` from the completed
-   job, or `null` when unconfigured / auth failed / API errored / job didn't
-   finish in the wait window.
- - `backend-node/src/services/authService.ts` — `requestPasswordReset()` now calls
-   Verifalia first; when the classification is `Undeliverable` it logs + skips
-   issuing the code but STILL returns the generic message (never leaks whether
-   the email exists or its classification). `null` (unknown) → proceed as before,
-   so a Verifalia outage can't block legitimate resets. **Fail-soft by design.**
- - Env (optional): `VERIFALIA_SID` + `VERIFALIA_TOKEN` added to
-   `backend-node/src/config.ts`, `backend-node/.env.example`, and
-   `backend/.env.local` (paste the placeholders from the Verifalia client area
-   → "API and sub-accounts" → sub-account SID / auth token). If unset, the
-   reset flow behaves exactly as before.
+ - Both auth emails — signup email verification (`sendVerificationEmail`) and
+   password reset (`sendPasswordResetEmail`) — are sent through Brevo SMTP
+   (`smtp-relay.brevo.com:587`, `SMTP_USER` = `7xxxxx@smtp-brevo.com` SMTP login,
+   `SMTP_PASSWORD` = Brevo SMTP master key, `FROM_EMAIL` must be a verified
+   sender) via nodemailer in `backend-node/src/services/emailService.ts`. In
+   dev (`APP_ENV=development`) the code is printed to the console instead.
+ - The third-party **deliverability pre-check was removed entirely** (it had
+   been Verifalia, then Abstract Email Reputation). `requestPasswordReset()` in
+   `backend-node/src/services/authService.ts` now goes straight to storing the
+   15-minute reset code and emailing it. No `VERIFALIA_*`/`ABSTRACT_*` env vars,
+   no `verifaliaService.ts`, no config entries.
+ - Fail-soft preserved: SMTP missing/errored → email not sent but the route
+   still returns the generic message (email addresses can't be enumerated).
  - Verified: backend `tsc --noEmit` + 12/12 vitest green.
- - Note: Verifalia is verification only (never sends email); the reset code is
-   still delivered via the existing SMTP/nodemailer path.
+
+## Settings page overhaul + Brevo env sync (20 Aug 2026)
+
+### Profile picture actually saves (client-side resize)
+ - Root cause of "Settings → upload picture → error / doesn't save": the page
+   read any file up to 2 MB straight to a base64 data URL (~2.7 M chars) and
+   `PATCH /auth/me` caps `avatar_url` at 20 000 chars → zod 422 on every save.
+ - Fix: `frontend/src/utils/image.ts` — NEW `resizeImage()` scales the image to
+   max 256 px longest edge on a white-backed canvas and exports JPEG at
+   falling quality (0.85 → 0.3) until the data URL is ≤ 15 000 chars (safely
+   under the cap). `validateAvatarFile()` rejects non-images and > 2 MB.
+   `SettingsPage` uses it before upload; backend `avatar_url` cap raised to
+   30 000 in `ProfileUpdateSchema` for headroom.
+
+### Floating nav option removed; sidebar is the only layout
+ - `SettingsPage` no longer offers the floating-nav choice — the Navigation
+   card shows the Side menu as the fixed option plus the "start collapsed"
+   toggle. Users still on `nav_style='floating'` are migrated to `sidebar` on
+   mount (`setNavStyle('sidebar')`, persisted). `NavStyle`/floating rendering
+   in `DashboardLayout`/`preferences.ts` kept for backward compatibility.
+
+### New settings sections (more changeable options)
+ - **Appearance** — Light/Dark theme buttons wired to `useTheme()` (the
+   existing `courser.theme` localStorage system; client-side only).
+ - **Notifications** — "Email updates" toggle persisted to the new
+   `users.email_notifications` boolean column (default true) via
+   `PATCH /auth/me` (optimistic + revert on failure).
+ - Backend: `email_notifications` added to `CREATE TABLE` + idempotent ALTER
+   in `backend-node/src/db/schema.ts`, `UserRow`, `userJson`, and
+   `ProfileUpdateSchema`. Applied to Neon via `npm run init:db` (26 users).
+ - All settings saves now surface the real error message instead of a generic
+   failure, and change-password validates the full policy client-side.
+
+### Env files synced to Brevo (Abstract removed everywhere)
+ - `ABSTRACT_API_KEY`/`ABSTRACT_API_URL` deleted from `backend-node/.env.local`,
+   `backend/.env`, `backend/.env.local` (the Python backend never read them).
+   Same Brevo SMTP block (`SMTP_HOST/PORT/USER/PASSWORD/FROM_EMAIL`) now lives
+   in every env file except the `.env.example` copies: `backend-node/.env.local`,
+   `backend/.env`, `backend/.env.local`, `api_deploy/backend/.env`,
+   `api_deploy/backend/.env.local`, `frontend/.env.local`, root `.env.local`.
+ - Verified: backend `tsc --noEmit` + 12/12 vitest; frontend `tsc -b` +
+   `vite build`; `email_notifications` column present on Neon.
