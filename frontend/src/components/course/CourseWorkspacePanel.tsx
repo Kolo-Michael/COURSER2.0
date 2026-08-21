@@ -127,13 +127,58 @@ export function CourseWorkspacePanel({
   const [readingExpanded, setReadingExpanded] = useState<boolean>(false)
 
   const allLessons = useMemo(() => workCourse?.modules?.flatMap((module) => module.lessons) ?? [], [workCourse])
-  const [activeLessonId, setActiveLessonId] = useState<string | null>(() => defaultLessonId ?? allLessons[0]?.id ?? null)
 
-  // Keep the selected lesson valid: fall back to the first lesson whenever the
-  // course data changes or the active id stops matching a real lesson.
+  // Sequential module unlocking: module i is reachable only once EVERY lesson
+  // of modules 0..i-1 is completed (`is_completed` comes from the per-(user,
+  // lesson) progress API). Module 0 is always open; empty modules never block.
+  const moduleUnlocked = useMemo(() => {
+    const flags: boolean[] = []
+    let open = true
+    for (const module of workCourse?.modules ?? []) {
+      flags.push(open)
+      open = open && (module.lessons ?? []).every((item) => item.is_completed)
+    }
+    return flags
+  }, [workCourse])
+
+  // First lesson of the furthest unlocked (not-yet-finished) module — the
+  // landing spot when the requested lesson lives in a locked module.
+  function firstOpenLessonId(): string | null {
+    let open = true
+    for (const module of workCourse?.modules ?? []) {
+      const lessons = module.lessons ?? []
+      if (open && lessons.length) return lessons[0].id
+      open = open && lessons.every((item) => item.is_completed)
+    }
+    return allLessons[0]?.id ?? null
+  }
+
+  // Initial lesson: honor defaultLessonId only when its module is unlocked;
+  // otherwise start at the first lesson of the furthest unlocked module.
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(() => {
+    const modules = course?.modules ?? []
+    let fallback: string | null = null
+    let open = true
+    for (const module of modules) {
+      const lessons = module.lessons ?? []
+      if (open && lessons.length && !fallback) fallback = lessons[0].id
+      if (open && defaultLessonId && lessons.some((item) => item.id === defaultLessonId)) return defaultLessonId
+      open = open && lessons.every((item) => item.is_completed)
+    }
+    return fallback ?? allLessons[0]?.id ?? null
+  })
+
+  // Keep the selected lesson valid AND unlocked: fall back whenever the active
+  // id stops matching a real lesson or lands inside a locked module.
   useEffect(() => {
     if (!allLessons.length) return
-    setActiveLessonId((prev) => (prev && allLessons.some((item) => item.id === prev) ? prev : allLessons[0].id))
+    setActiveLessonId((prev) => {
+      if (prev && allLessons.some((item) => item.id === prev)) {
+        const idx = course?.modules?.findIndex((m) => m.lessons?.some((i) => i.id === prev)) ?? -1
+        return idx >= 0 && !moduleUnlocked[idx] ? firstOpenLessonId() : prev
+      }
+      return allLessons[0].id
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workCourse, allLessons.length])
 
@@ -160,8 +205,40 @@ export function CourseWorkspacePanel({
   )
   const totalModules = workCourse?.modules?.length ?? 0
 
-  // Jump to a specific module by index, landing on its first lesson.
+  // Completion stats for the active module — drive the "Next module" gate and
+  // the "X of Y lessons done" chip in the module header.
+  const moduleCompletedCount = moduleLessons.filter((item) => item.is_completed).length
+  const moduleLessonsComplete = moduleLessons.every((item) => item.is_completed)
+
+  // Dismissible banner explaining why a locked module/lesson can't be opened.
+  const [lockedNotice, setLockedNotice] = useState<string | null>(null)
+  useEffect(() => setLockedNotice(null), [activeLesson?.id])
+
+  // Why advancing to the next module is currently blocked (null ⇒ allowed).
+  // Every lesson in the active module must be completed first; authored
+  // quizzes (per-lesson + end-of-module) must also be passed when present.
+  function nextModuleLockReason(): string | null {
+    if (moduleLessons.length && !moduleLessonsComplete) {
+      const left = moduleLessons.length - moduleCompletedCount
+      return `Complete all ${moduleLessons.length} lessons in this module to unlock the next one — ${left} left.`
+    }
+    if (lessonHasQuiz && !(lessonQuizResult?.passed ?? false)) {
+      return 'Pass this lesson quiz to unlock the next module.'
+    }
+    if (quizResult && !quizResult.passed) {
+      return 'Pass the module quiz to unlock the next module.'
+    }
+    return null
+  }
+
+  // Jump to a specific module by index, landing on its first lesson. Locked
+  // modules are refused (with a notice) — backward jumps always work because
+  // unlocking is prefix-based.
   function jumpToModule(at: number) {
+    if (!moduleUnlocked[at]) {
+      setLockedNotice(`Module ${at + 1} is locked — finish every lesson in the earlier modules first.`)
+      return
+    }
     const target = workCourse?.modules?.[at]
     if (target?.lessons?.[0]) setActiveLessonId(target.lessons[0].id)
   }
@@ -169,7 +246,13 @@ export function CourseWorkspacePanel({
     if (moduleIndex > 0) jumpToModule(moduleIndex - 1)
   }
   const handleNextModule = () => {
-    if (moduleIndex >= 0 && moduleIndex < totalModules - 1) jumpToModule(moduleIndex + 1)
+    if (moduleIndex < 0 || moduleIndex >= totalModules - 1) return
+    const reason = nextModuleLockReason()
+    if (reason) {
+      setLockedNotice(reason)
+      return
+    }
+    jumpToModule(moduleIndex + 1)
   }
 
   // Tab + personal-notes state (notes persist to localStorage, see below).
@@ -363,12 +446,26 @@ export function CourseWorkspacePanel({
                     </span>
                   </span>
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-sm">
-                  <i
-                    className={`fa-solid ${currentModule ? 'fa-book-open' : 'fa-circle'} text-primary dark:text-primary-dark`}
-                    aria-hidden
-                  />
-                  <span className="truncate font-semibold text-stone-800 dark:text-stone-200">{currentModule?.title ?? '—'}</span>
+                <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <i
+                      className={`fa-solid ${currentModule ? 'fa-book-open' : 'fa-circle'} text-primary dark:text-primary-dark`}
+                      aria-hidden
+                    />
+                    <span className="truncate font-semibold text-stone-800 dark:text-stone-200">{currentModule?.title ?? '—'}</span>
+                  </span>
+                  {moduleLessons.length ? (
+                    <span
+                      className={[
+                        'shrink-0 rounded-full px-3 py-1 text-xs font-semibold',
+                        moduleLessonsComplete
+                          ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                          : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
+                      ].join(' ')}
+                    >
+                      {moduleCompletedCount}/{moduleLessons.length} lessons done
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -437,11 +534,15 @@ export function CourseWorkspacePanel({
                   <button
                     type="button"
                     onClick={handleNextModule}
-                    disabled={!hasNextModule}
+                    disabled={!hasNextModule || Boolean(nextModuleLockReason())}
+                    title={hasNextModule ? (nextModuleLockReason() ?? undefined) : undefined}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-dark"
                   >
                     Next module
-                    <i className={`fa-solid ${hasNextModule ? 'fa-arrow-right' : 'fa-lock'} text-xs`} aria-hidden />
+                    <i
+                      className={`fa-solid ${hasNextModule && !nextModuleLockReason() ? 'fa-arrow-right' : 'fa-lock'} text-xs`}
+                      aria-hidden
+                    />
                   </button>
                 </div>
               ) : null}
@@ -469,6 +570,25 @@ export function CourseWorkspacePanel({
                 {headerAction}
               </div>
             </div>
+
+            {/* Shown when a locked module/lesson is requested (Next module
+               while lessons are unfinished, or a Cora deep-link ahead). */}
+            {lockedNotice ? (
+              <div className="mt-4 flex items-start justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                <span className="flex items-start gap-2">
+                  <i className="fa-solid fa-lock mt-0.5 text-xs" aria-hidden />
+                  {lockedNotice}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLockedNotice(null)}
+                  aria-label="Dismiss"
+                  className="shrink-0 text-amber-700 transition hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
+                >
+                  <i className="fa-solid fa-xmark" aria-hidden />
+                </button>
+              </div>
+            ) : null}
 
             {isLocked ? (
               <div className="mt-5 rounded-xl border border-dashed border-stone-300 bg-stone-50/60 p-8 text-center dark:border-stone-700 dark:bg-stone-800/30">
@@ -731,18 +851,11 @@ export function CourseWorkspacePanel({
                   <button
                     type="button"
                     onClick={handleNextModule}
-                    disabled={
-                      (lessonHasQuiz && !(lessonQuizResult?.passed ?? false)) ||
-                      (!!quizResult && !quizResult.passed)
-                    }
-                    title={
-                      lessonHasQuiz && !(lessonQuizResult?.passed ?? false)
-                        ? 'Pass the lesson quiz to unlock the next module.'
-                        : undefined
-                    }
+                    disabled={Boolean(nextModuleLockReason())}
+                    title={nextModuleLockReason() ?? undefined}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-dark"
                   >
-                    <i className="fa-solid fa-book-open text-xs" aria-hidden />
+                    <i className={`fa-solid ${nextModuleLockReason() ? 'fa-lock' : 'fa-book-open'} text-xs`} aria-hidden />
                     Next module
                   </button>
                 ) : (
@@ -804,7 +917,17 @@ export function CourseWorkspacePanel({
                 activeLessonId={activeLesson?.id}
                 onSelectLesson={(lessonId) => {
                   const lesson = allLessons.find((item) => item.id === lessonId)
-                  if (lesson) selectLesson(lesson)
+                  if (!lesson) return
+                  // Cora can deep-link lessons, but never into locked modules.
+                  const targetIdx =
+                    workCourse?.modules?.findIndex((m) => m.lessons?.some((i) => i.id === lessonId)) ?? -1
+                  if (targetIdx >= 0 && !moduleUnlocked[targetIdx]) {
+                    setLockedNotice(
+                      `That lesson is in Module ${targetIdx + 1} — finish every lesson in the earlier modules to unlock it.`,
+                    )
+                    return
+                  }
+                  selectLesson(lesson)
                 }}
                 expanded={isExpanded}
                 onExpandChange={(expanded) => setIsExpanded(expanded)}
